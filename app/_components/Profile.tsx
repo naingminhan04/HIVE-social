@@ -36,6 +36,7 @@ import ImageViewer from "./ImageViewer";
 import DummyProfile from "./DummyProfile";
 import PointsModal from "./PointsModal";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import OverlayPortal from "./OverlayPortal";
 
 type ProfileFormValues = {
   name: string;
@@ -54,7 +55,12 @@ type PasswordFormValues = {
 
 type EditProfileTab = "photo" | "basic" | "username" | "password";
 
-const Profile = ({ userId }: { userId: string }) => {
+type ProfileProps = {
+  userId: string;
+  isPortal?: boolean;
+};
+
+const Profile = ({ userId, isPortal = false }: ProfileProps) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const viewer = useAuthStore((state) => state.user);
@@ -226,7 +232,9 @@ const Profile = ({ userId }: { userId: string }) => {
           setViewer({ ...viewer, username: result.data.username });
         }
         setIsEditOpen(false);
-        router.replace(`/users/${result.data.username}`);
+        if (!isPortal) {
+          router.replace(`/users/${result.data.username}`);
+        }
       } else {
         await syncUser();
       }
@@ -344,7 +352,7 @@ const Profile = ({ userId }: { userId: string }) => {
     }
   };
 
-  if (isLoading) return <DummyProfile />;
+  if (isLoading) return <DummyProfile isPortal={isPortal} />;
   if (error) {
     return (
       <div className="flex justify-center items-center lg:h-dvh h-[calc(100dvh-60px)]">
@@ -362,16 +370,30 @@ const Profile = ({ userId }: { userId: string }) => {
   }
 
   return (
-    <main className="bg-white relative text-sm sm:text-base dark:bg-neutral-900 lg:min-h-dvh min-h-[calc(100dvh-60px)]">
-      <div className="flex w-full sticky top-15 bg-white dark:bg-neutral-900 lg:top-0 z-10 justify-between h-12 lg:h-15 font-semibold">
+    <main
+      className={`bg-white relative text-sm sm:text-base dark:bg-neutral-900 ${
+        isPortal ? "" : "lg:min-h-dvh min-h-[calc(100dvh-60px)]"
+      }`}
+    >
+      <div
+        className={`flex w-full bg-white dark:bg-neutral-900 z-10 justify-between h-12 lg:h-15 font-semibold ${
+          isPortal
+            ? "items-center border-b border-black/5 px-3 dark:border-white/10"
+            : "sticky top-15 lg:top-0"
+        }`}
+      >
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => router.back()}
-            className="p-2 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
-          >
-            <ArrowBigLeft fill="black" className="dark:fill-white" />
-          </button>
-          <span className="text-lg">{user?.name}&apos;s Profile</span>
+          {!isPortal && (
+            <button
+              onClick={() => router.back()}
+              className="p-2 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              <ArrowBigLeft fill="black" className="dark:fill-white" />
+            </button>
+          )}
+          <span className="text-lg">
+            {isPortal ? "Your Profile" : `${user?.name}'s Profile`}
+          </span>
         </div>
 
         {isOwner && (
@@ -539,7 +561,11 @@ const Profile = ({ userId }: { userId: string }) => {
         </div>
       </section>
 
-      <section className="bg-neutral-100 dark:bg-neutral-950 md:-mx-2">
+      <section
+        className={`bg-neutral-100 dark:bg-neutral-950 ${
+          isPortal ? "" : "md:-mx-2"
+        }`}
+      >
         <PostReel userId={user?.id} />
       </section>
 
@@ -568,228 +594,230 @@ const Profile = ({ userId }: { userId: string }) => {
       )}
 
       {isEditOpen && isOwner && (
-        <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-black/5 bg-white/95 px-5 py-4 dark:border-white/10 dark:bg-neutral-900/95">
-              <div>
-                <h2 className="text-xl font-semibold text-black dark:text-white">
-                  Edit Profile
-                </h2>
-                <p className="hidden text-sm text-gray-600 dark:text-gray-400 md:block">
-                  Update your photo, basic info, username, and password in one
-                  place.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsEditOpen(false)}
-                className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-neutral-800"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="border-b border-black/5 px-5 py-4 dark:border-white/10">
-              <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
-                {editTabs.map((tab) => {
-                  const Icon = tab.icon;
-
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveEditTab(tab.id)}
-                      className={`flex flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
-                        activeEditTab === tab.id
-                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/10 dark:text-blue-200"
-                          : "border-black/5 bg-slate-50 text-gray-700 hover:border-blue-200 hover:bg-blue-50/60 dark:border-white/10 dark:bg-neutral-950 dark:text-gray-300 dark:hover:border-blue-500/50 dark:hover:bg-neutral-800"
-                      }`}
-                    >
-                      <span className="rounded-xl bg-white p-2 shadow-sm dark:bg-neutral-900">
-                        <Icon size={16} />
-                      </span>
-                      <span className="hidden sm:inline">{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="max-h-[calc(90vh-154px)] overflow-y-auto p-5 scrollbar-none">
-              {activeEditTab === "photo" && (
-                <div className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
-                    <ImageUp size={18} />
-                    Profile Photo
-                  </div>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Choose a new photo and preview it before saving.
+        <OverlayPortal>
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
+              <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-black/5 bg-white/95 px-5 py-4 dark:border-white/10 dark:bg-neutral-900/95">
+                <div>
+                  <h2 className="text-xl font-semibold text-black dark:text-white">
+                    Edit Profile
+                  </h2>
+                  <p className="hidden text-sm text-gray-600 dark:text-gray-400 md:block">
+                    Update your photo, basic info, username, and password in one
+                    place.
                   </p>
-                  <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:flex-row sm:items-center">
-                    <Image
-                      src={
-                        profilePreviewUrl
-                          ? profilePreviewUrl
-                          : user?.profilePic || "/default-avatar.png"
-                      }
-                      alt="Profile preview"
-                      width={96}
-                      height={96}
-                      className="h-24 w-24 rounded-full border border-gray-200 object-cover dark:border-neutral-700"
-                    />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label className="inline-flex h-11 cursor-pointer items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600">
-                        Choose Photo
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          disabled={isProfilePicPending || isCoverPending}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            if (profilePreviewUrl) {
-                              URL.revokeObjectURL(profilePreviewUrl);
-                            }
-                            setSelectedProfileFile(file);
-                            setProfilePreviewUrl(URL.createObjectURL(file));
-                          }}
-                        />
-                      </label>
+                </div>
+                <button
+                  onClick={() => setIsEditOpen(false)}
+                  className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-neutral-800"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-                      {selectedProfileFile && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={isProfilePicPending}
-                            onClick={saveProfilePicture}
-                            className="inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
-                          >
-                            {isProfilePicPending ? "Updating..." : "Update Photo"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isProfilePicPending}
-                            onClick={() => {
-                              setSelectedProfileFile(null);
+              <div className="border-b border-black/5 px-5 py-4 dark:border-white/10">
+                <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
+                  {editTabs.map((tab) => {
+                    const Icon = tab.icon;
+
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveEditTab(tab.id)}
+                        className={`flex flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
+                          activeEditTab === tab.id
+                            ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/10 dark:text-blue-200"
+                            : "border-black/5 bg-slate-50 text-gray-700 hover:border-blue-200 hover:bg-blue-50/60 dark:border-white/10 dark:bg-neutral-950 dark:text-gray-300 dark:hover:border-blue-500/50 dark:hover:bg-neutral-800"
+                        }`}
+                      >
+                        <span className="rounded-xl bg-white p-2 shadow-sm dark:bg-neutral-900">
+                          <Icon size={16} />
+                        </span>
+                        <span className="hidden sm:inline">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="max-h-[calc(90vh-154px)] overflow-y-auto p-5 scrollbar-none">
+                {activeEditTab === "photo" && (
+                  <div className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
+                      <ImageUp size={18} />
+                      Profile Photo
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      Choose a new photo and preview it before saving.
+                    </p>
+                    <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:flex-row sm:items-center">
+                      <Image
+                        src={
+                          profilePreviewUrl
+                            ? profilePreviewUrl
+                            : user?.profilePic || "/default-avatar.png"
+                        }
+                        alt="Profile preview"
+                        width={96}
+                        height={96}
+                        className="h-24 w-24 rounded-full border border-gray-200 object-cover dark:border-neutral-700"
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="inline-flex h-11 cursor-pointer items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600">
+                          Choose Photo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={isProfilePicPending || isCoverPending}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
                               if (profilePreviewUrl) {
                                 URL.revokeObjectURL(profilePreviewUrl);
-                                setProfilePreviewUrl(null);
                               }
+                              setSelectedProfileFile(file);
+                              setProfilePreviewUrl(URL.createObjectURL(file));
                             }}
-                            className="inline-flex h-11 items-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-semibold text-black transition hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:border-blue-500/50 dark:hover:text-blue-200"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
+                          />
+                        </label>
+
+                        {selectedProfileFile && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={isProfilePicPending}
+                              onClick={saveProfilePicture}
+                              className="inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                            >
+                              {isProfilePicPending ? "Updating..." : "Update Photo"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isProfilePicPending}
+                              onClick={() => {
+                                setSelectedProfileFile(null);
+                                if (profilePreviewUrl) {
+                                  URL.revokeObjectURL(profilePreviewUrl);
+                                  setProfilePreviewUrl(null);
+                                }
+                              }}
+                              className="inline-flex h-11 items-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-semibold text-black transition hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:border-blue-500/50 dark:hover:text-blue-200"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {activeEditTab === "basic" && (
-                <form
-                  onSubmit={handleSubmitProfile(onSubmitProfile)}
-                  className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
-                >
-                  <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
-                    <UserRoundCog size={18} />
-                    Basic Info
-                  </div>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Update your display name and bio.
-                  </p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <input
-                      {...registerProfile("name")}
-                      placeholder="Name"
-                      className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
-                    />
-                    <textarea
-                      {...registerProfile("bio")}
-                      placeholder="Bio"
-                      rows={4}
-                      className="resize-none rounded-2xl border border-gray-300 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900 sm:col-span-2"
-                    />
-                  </div>
-                  <button
-                    disabled={isProfilePending}
-                    className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                {activeEditTab === "basic" && (
+                  <form
+                    onSubmit={handleSubmitProfile(onSubmitProfile)}
+                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
                   >
-                    {isProfilePending ? "Saving..." : "Save Basic Info"}
-                  </button>
-                </form>
-              )}
+                    <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
+                      <UserRoundCog size={18} />
+                      Basic Info
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      Update your display name and bio.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <input
+                        {...registerProfile("name")}
+                        placeholder="Name"
+                        className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
+                      />
+                      <textarea
+                        {...registerProfile("bio")}
+                        placeholder="Bio"
+                        rows={4}
+                        className="resize-none rounded-2xl border border-gray-300 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900 sm:col-span-2"
+                      />
+                    </div>
+                    <button
+                      disabled={isProfilePending}
+                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                    >
+                      {isProfilePending ? "Saving..." : "Save Basic Info"}
+                    </button>
+                  </form>
+                )}
 
-              {activeEditTab === "username" && (
-                <form
-                  onSubmit={handleSubmitUsername(onSubmitUsername)}
-                  className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
-                >
-                  <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
-                    <AtSign size={18} />
-                    Username
-                  </div>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Change your username and keep your profile identity current.
-                  </p>
-                  <input
-                    {...registerUsername("username")}
-                    placeholder="Username"
-                    className="mt-4 h-11 w-full rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
-                  />
-                  <button
-                    disabled={isUsernamePending}
-                    className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                {activeEditTab === "username" && (
+                  <form
+                    onSubmit={handleSubmitUsername(onSubmitUsername)}
+                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
                   >
-                    {isUsernamePending ? "Updating..." : "Update Username"}
-                  </button>
-                </form>
-              )}
+                    <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
+                      <AtSign size={18} />
+                      Username
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      Change your username and keep your profile identity current.
+                    </p>
+                    <input
+                      {...registerUsername("username")}
+                      placeholder="Username"
+                      className="mt-4 h-11 w-full rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
+                    />
+                    <button
+                      disabled={isUsernamePending}
+                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                    >
+                      {isUsernamePending ? "Updating..." : "Update Username"}
+                    </button>
+                  </form>
+                )}
 
-              {activeEditTab === "password" && (
-                <form
-                  onSubmit={handleSubmitPassword(onSubmitPassword)}
-                  className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
-                >
-                  <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
-                    <KeyRound size={18} />
-                    Password
-                  </div>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Update your password with your current credentials.
-                  </p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <input
-                      type="password"
-                      {...registerPassword("oldPassword")}
-                      placeholder="Old password"
-                      className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
-                    />
-                    <input
-                      type="password"
-                      {...registerPassword("newPassword")}
-                      placeholder="New password"
-                      className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
-                    />
-                    <input
-                      type="password"
-                      {...registerPassword("confirmPassword")}
-                      placeholder="Confirm password"
-                      className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
-                    />
-                  </div>
-                  <button
-                    disabled={isPasswordPending}
-                    className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                {activeEditTab === "password" && (
+                  <form
+                    onSubmit={handleSubmitPassword(onSubmitPassword)}
+                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
                   >
-                    {isPasswordPending ? "Changing..." : "Change Password"}
-                  </button>
-                </form>
-              )}
+                    <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
+                      <KeyRound size={18} />
+                      Password
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      Update your password with your current credentials.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <input
+                        type="password"
+                        {...registerPassword("oldPassword")}
+                        placeholder="Old password"
+                        className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
+                      />
+                      <input
+                        type="password"
+                        {...registerPassword("newPassword")}
+                        placeholder="New password"
+                        className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
+                      />
+                      <input
+                        type="password"
+                        {...registerPassword("confirmPassword")}
+                        placeholder="Confirm password"
+                        className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
+                      />
+                    </div>
+                    <button
+                      disabled={isPasswordPending}
+                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                    >
+                      {isPasswordPending ? "Changing..." : "Change Password"}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </OverlayPortal>
       )}
     </main>
   );

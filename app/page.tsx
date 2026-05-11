@@ -15,7 +15,7 @@ const Home = () => {
         />
         <h1 className="text-2xl text-black dark:text-white font-bold mb-1">Welcome Back</h1>
         <p className="text-gray-600 dark:text-gray-300 text-sm">
-          Sign in to continue your learning journey
+          Sign in to continue your social journey
         </p>
       </div>
       <div className="mt-4 w-full flex justify-center">

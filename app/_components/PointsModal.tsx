@@ -23,6 +23,7 @@ import OverviewTab from "./points-modal/OverviewTab";
 import HistoryTab from "./points-modal/HistoryTab";
 import TransferTab from "./points-modal/TransferTab";
 import LookupTab from "./points-modal/LookupTab";
+import OverlayPortal from "./OverlayPortal";
 
 type PointsModalProps = {
   isOpen: boolean;
@@ -298,102 +299,104 @@ const PointsModal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-90 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-black/5 bg-white/95 px-5 py-4 dark:border-white/10 dark:bg-neutral-900/95">
-          <div>
-            <h2 className="text-xl font-semibold text-black dark:text-white">
-              Points Center
-            </h2>
-            <p className="text-sm hidden md:block text-gray-600 dark:text-gray-400">
-              Claim rewards, review history, transfer points, and lookup
-              transactions.
-            </p>
+    <OverlayPortal>
+      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-black/5 bg-white/95 px-5 py-4 dark:border-white/10 dark:bg-neutral-900/95">
+            <div>
+              <h2 className="text-xl font-semibold text-black dark:text-white">
+                Points Center
+              </h2>
+              <p className="text-sm hidden md:block text-gray-600 dark:text-gray-400">
+                Claim rewards, review history, transfer points, and lookup
+                transactions.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-neutral-800"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-neutral-800"
-          >
-            <X size={18} />
-          </button>
-        </div>
 
-        <div className="border-b border-black/5 px-5 py-4 dark:border-white/10">
-          <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
+          <div className="border-b border-black/5 px-5 py-4 dark:border-white/10">
+            <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
 
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
-                    activeTab === tab.id
-                      ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/10 dark:text-blue-200"
-                      : "border-black/5 bg-slate-50 text-gray-700 hover:border-blue-200 hover:bg-blue-50/60 dark:border-white/10 dark:bg-neutral-950 dark:text-gray-300 dark:hover:border-blue-500/50 dark:hover:bg-neutral-800"
-                  }`}
-                >
-                  <span className="rounded-xl bg-white p-2 shadow-sm dark:bg-neutral-900">
-                    <Icon size={16} />
-                  </span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
+                      activeTab === tab.id
+                        ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/10 dark:text-blue-200"
+                        : "border-black/5 bg-slate-50 text-gray-700 hover:border-blue-200 hover:bg-blue-50/60 dark:border-white/10 dark:bg-neutral-950 dark:text-gray-300 dark:hover:border-blue-500/50 dark:hover:bg-neutral-800"
+                    }`}
+                  >
+                    <span className="rounded-xl bg-white p-2 shadow-sm dark:bg-neutral-900">
+                      <Icon size={16} />
+                    </span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        <div className="max-h-[calc(90vh-154px)] overflow-y-auto p-5 scrollbar-none">
-          {activeTab === "overview" && (
-            <OverviewTab
-              currentPoints={currentPoints}
-              dailyInfo={dailyInfo}
-              summary={summary}
-              formattedLastClaim={formattedLastClaim}
-              isClaiming={isClaiming}
-              isInfoLoading={isInfoLoading}
-              isSummaryLoading={isSummaryLoading}
-              onClaimDaily={handleClaimDaily}
-              onOpenHistory={() => setActiveTab("history")}
-            />
-          )}
+          <div className="max-h-[calc(90vh-154px)] overflow-y-auto p-5 scrollbar-none">
+            {activeTab === "overview" && (
+              <OverviewTab
+                currentPoints={currentPoints}
+                dailyInfo={dailyInfo}
+                summary={summary}
+                formattedLastClaim={formattedLastClaim}
+                isClaiming={isClaiming}
+                isInfoLoading={isInfoLoading}
+                isSummaryLoading={isSummaryLoading}
+                onClaimDaily={handleClaimDaily}
+                onOpenHistory={() => setActiveTab("history")}
+              />
+            )}
 
-          {activeTab === "history" && (
-            <HistoryTab
-              page={page}
-              transactions={transactions}
-              isLoading={isTransactionsLoading}
-              isFetching={isTransactionsFetching}
-              onNextPage={() => setPage((prev) => prev + 1)}
-              onPrevPage={() => setPage((prev) => Math.max(prev - 1, 1))}
-            />
-          )}
+            {activeTab === "history" && (
+              <HistoryTab
+                page={page}
+                transactions={transactions}
+                isLoading={isTransactionsLoading}
+                isFetching={isTransactionsFetching}
+                onNextPage={() => setPage((prev) => prev + 1)}
+                onPrevPage={() => setPage((prev) => Math.max(prev - 1, 1))}
+              />
+            )}
 
-          {activeTab === "transfer" && (
-            <TransferTab
-              recipient={recipient}
-              transferAmount={transferAmount}
-              currentPoints={currentPoints}
-              isTransferring={isTransferring}
-              onRecipientChange={setRecipient}
-              onTransferAmountChange={setTransferAmount}
-              onSubmit={handleTransfer}
-            />
-          )}
+            {activeTab === "transfer" && (
+              <TransferTab
+                recipient={recipient}
+                transferAmount={transferAmount}
+                currentPoints={currentPoints}
+                isTransferring={isTransferring}
+                onRecipientChange={setRecipient}
+                onTransferAmountChange={setTransferAmount}
+                onSubmit={handleTransfer}
+              />
+            )}
 
-          {activeTab === "lookup" && (
-            <LookupTab
-              transactionId={transactionId}
-              selectedTransaction={selectedTransaction}
-              isLookingUp={isLookingUp}
-              onTransactionIdChange={setTransactionId}
-              onSubmit={handleLookupTransaction}
-            />
-          )}
+            {activeTab === "lookup" && (
+              <LookupTab
+                transactionId={transactionId}
+                selectedTransaction={selectedTransaction}
+                isLookingUp={isLookingUp}
+                onTransactionIdChange={setTransactionId}
+                onSubmit={handleLookupTransaction}
+              />
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </OverlayPortal>
   );
 };
 

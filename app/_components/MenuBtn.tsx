@@ -10,14 +10,18 @@ import { getMenuArr } from "./SideBar";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth";
 import Image from "next/image";
+import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
 
 const MenuBtn = () => {
   const [menu, setMenu] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const isPortalBarVisible = usePortalBarVisible();
   const username = user?.username;
-  const MenuArr = getMenuArr(username as string);
+  const MenuArr = getMenuArr(username as string).filter(
+    (item) => !isPortalBarVisible || item.name !== "Profile",
+  );
   
   return (
     <div className="flex lg:hidden">
@@ -58,10 +62,14 @@ const MenuBtn = () => {
             {user && (
               <div
                 onClick={() => {
-                  router.push(`/users/${user.username}`);
+                  if (!isPortalBarVisible) {
+                    router.push(`/users/${user.username}`);
+                  }
                   setMenu(false);
                 }}
-                className="mx-2 mb-2 rounded-xl overflow-hidden border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 cursor-pointer"
+                className={`mx-2 mb-2 rounded-xl overflow-hidden border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 ${
+                  isPortalBarVisible ? "" : "cursor-pointer"
+                }`}
               >
                 <div className="relative h-20 bg-gray-200 dark:bg-neutral-800">
                   {user.coverPic && (

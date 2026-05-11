@@ -3,12 +3,24 @@ import DummyPostCard from "./DummyPostCard";
 const textOrder = [2, 2, 1, 1, 2];
 const imageOrder = [3, 1, 4, 3, 2];
 
-const DummyProfile = () => {
+const DummyProfile = ({ isPortal = false }: { isPortal?: boolean }) => {
   return (
-    <main className="relative text-sm sm:text-base w-full lg:min-h-dvh min-h-[calc(100dvh-60px)] ">
-      <div className="bg-white dark:bg-neutral-900 flex w-full sticky top-15 lg:top-0 z-10 justify-between h-12 lg:h-15 px-2 items-center">
+    <main
+      className={`relative w-full text-sm sm:text-base ${
+        isPortal
+          ? "bg-white dark:bg-neutral-900"
+          : "lg:min-h-dvh min-h-[calc(100dvh-60px)]"
+      }`}
+    >
+      <div
+        className={`bg-white dark:bg-neutral-900 flex w-full z-10 justify-between h-12 lg:h-15 px-2 items-center ${
+          isPortal ? "border-b border-black/5 dark:border-white/10" : "sticky top-15 lg:top-0"
+        }`}
+      >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md bg-gray-200 dark:bg-neutral-700" />
+          {!isPortal && (
+            <div className="w-8 h-8 rounded-md bg-gray-200 dark:bg-neutral-700" />
+          )}
           <div className="w-48 h-8 rounded bg-gray-200 dark:bg-neutral-700" />
         </div>
         <div className="w-8 h-8 rounded-md bg-gray-200 dark:bg-neutral-700" />
@@ -60,7 +72,11 @@ const DummyProfile = () => {
         </div>
       </div>
 
-      <section className="flex flex-col w-full gap-2 md:px-0 p-2 lg:h-dvh h-[calc(100dvh-60px)] overflow-hidden">
+      <section
+        className={`flex w-full flex-col gap-2 p-2 overflow-hidden ${
+          isPortal ? "" : "md:px-0 lg:h-dvh h-[calc(100dvh-60px)]"
+        }`}
+      >
         {Array.from({ length: 5 }).map((_, i) => (
           <DummyPostCard key={i} text={textOrder[i]} image={imageOrder[i]} />
         ))}
