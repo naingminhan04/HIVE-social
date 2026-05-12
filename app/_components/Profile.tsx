@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  getUserAction,
+  getUserByUsernameAction,
   checkUniqueUsernameAction,
   updateUsernameAction,
   updateCoverPicAction,
@@ -56,16 +56,17 @@ type PasswordFormValues = {
 type EditProfileTab = "photo" | "basic" | "username" | "password";
 
 type ProfileProps = {
-  userId: string;
+  username: string;
   isPortal?: boolean;
 };
 
-const Profile = ({ userId, isPortal = false }: ProfileProps) => {
+const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const viewer = useAuthStore((state) => state.user);
   const setViewer = useAuthStore((state) => state.setUser);
   const viewerId = viewer?.id;
+  const normalizedUsername = username.trim();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPointsOpen, setIsPointsOpen] = useState(false);
@@ -105,14 +106,15 @@ const Profile = ({ userId, isPortal = false }: ProfileProps) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["user", userId],
+    queryKey: ["user", normalizedUsername],
     queryFn: async () => {
-      const result = await getUserAction(userId);
+      const result = await getUserByUsernameAction(normalizedUsername);
       if (!result.success) {
         throw new Error(result.error);
       }
       return result.data;
     },
+    enabled: !!normalizedUsername,
   });
 
   const {
@@ -168,7 +170,7 @@ const Profile = ({ userId, isPortal = false }: ProfileProps) => {
   }, [isEditOpen]);
 
   const syncUser = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["user", userId] });
+    await queryClient.invalidateQueries({ queryKey: ["user"] });
     const refreshed = await refetch();
     if (isOwner && refreshed.data) {
       setViewer(refreshed.data);
@@ -372,13 +374,13 @@ const Profile = ({ userId, isPortal = false }: ProfileProps) => {
   return (
     <main
       className={`bg-white relative text-sm sm:text-base dark:bg-neutral-900 ${
-        isPortal ? "" : "lg:min-h-dvh min-h-[calc(100dvh-60px)]"
+        isPortal ? "min-h-full" : "lg:min-h-dvh min-h-[calc(100dvh-60px)]"
       }`}
     >
       <div
         className={`flex w-full bg-white dark:bg-neutral-900 z-10 justify-between h-12 lg:h-15 font-semibold ${
           isPortal
-            ? "items-center border-b border-black/5 px-3 dark:border-white/10"
+            ? "sticky top-0 items-center border-b border-black/5 px-3 dark:border-white/10"
             : "sticky top-15 lg:top-0"
         }`}
       >
@@ -562,11 +564,12 @@ const Profile = ({ userId, isPortal = false }: ProfileProps) => {
       </section>
 
       <section
-        className={`bg-neutral-100 dark:bg-neutral-950 ${
-          isPortal ? "" : "md:-mx-2"
-        }`}
+        className="bg-neutral-100 dark:bg-neutral-950 md:-mx-2"
       >
-        <PostReel userId={user?.id} />
+        <PostReel
+          userId={user?.id}
+          scrollContainerId={isPortal ? "portal-scroll-container" : undefined}
+        />
       </section>
 
       <PointsModal

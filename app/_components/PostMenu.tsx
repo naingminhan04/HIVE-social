@@ -14,6 +14,7 @@ const PostMenu = ({ post,onDeletingChange,view }: { post: PostType, view: boolea
   const queryClient = useQueryClient();
   const auth = useAuthStore();
   const user = auth.user?.id;
+  const username = auth.user?.username?.trim();
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
@@ -29,14 +30,17 @@ const PostMenu = ({ post,onDeletingChange,view }: { post: PostType, view: boolea
       return result.data;
     },
     onSuccess: async () => {
-      
       await queryClient.invalidateQueries({ queryKey: ["posts"] });
+      await queryClient.invalidateQueries({ queryKey: ["user"] });
+      if (username) {
+        await queryClient.invalidateQueries({ queryKey: ["user", username] });
+      }
       if (view) {
         router.back();
       }
       toast.success("Post Deleted Successfully");
     },
-    onError: (error: Error) => {
+    onError: () => {
       toast.error("Couldn't Delete Post");
       onDeletingChange(false);
     },

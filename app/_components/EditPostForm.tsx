@@ -17,6 +17,7 @@ import toast from "react-hot-toast";
 import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 import { formatDate } from "@/utils/formatDate";
 import { useAuthStore } from "@/store/auth";
+import OverlayPortal from "./OverlayPortal";
 
 type FormValues = {
   content: string;
@@ -36,6 +37,7 @@ export default function EditPostForm({
   const relativeTime = formatDate(post.createdAt);
   const user = useAuthStore((state) => state.user);
   const userId = user?.id;
+  const username = user?.username?.trim();
   useLockBodyScroll(true);
 
   const [existingImages, setExistingImages] = useState<PostImageType[]>(
@@ -73,9 +75,13 @@ export default function EditPostForm({
       }
       return result.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["post", post.id] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["posts"] });
+      await queryClient.invalidateQueries({ queryKey: ["post", post.id] });
+      await queryClient.invalidateQueries({ queryKey: ["user"] });
+      if (username) {
+        await queryClient.invalidateQueries({ queryKey: ["user", username] });
+      }
       setSelectedFiles([]);
       previewUrls.forEach((url) => URL.revokeObjectURL(url));
       setPreviewUrls([]);
@@ -273,8 +279,8 @@ export default function EditPostForm({
     isLoading || (allImagesCount === 0 && allAttachmentsCount === 0 && contentValue.trim() === "");
 
   return (
-    <>
-      <div className="fixed inset-0 bg-neutral-50 dark:bg-neutral-950 flex justify-center items-start p-4 overflow-auto z-70 scrollbar-none">
+    <OverlayPortal>
+      <div className="fixed inset-0 z-[120] bg-neutral-50 dark:bg-neutral-950 flex justify-center items-start p-4 overflow-auto scrollbar-none">
         <div className="w-full max-w-2xl my-auto">
           <form
             className="w-full flex flex-col gap-4"
@@ -512,6 +518,6 @@ export default function EditPostForm({
           </form>
         </div>
       </div>
-    </>
+    </OverlayPortal>
   );
 }

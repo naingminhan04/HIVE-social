@@ -10,8 +10,9 @@ import {
   ReactionCountType,
   PostReactionType,
 } from "@/types/post";
-import { useAuthStore } from "@/store/auth";
 import Link from "next/link";
+import OverlayPortal from "./OverlayPortal";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 type ReactionFilter = ReactionType | "ALL";
 
@@ -31,7 +32,7 @@ const REACTIONS: {
 const ViewReaction = ({ post }: { post: PostType }) => {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<ReactionFilter>("ALL");
-  
+  useLockBodyScroll(open);
 
   const stats = post.stats.reactions;
 
@@ -60,61 +61,64 @@ const ViewReaction = ({ post }: { post: PostType }) => {
       </button>
 
       {open && (
-        <>
+        <OverlayPortal>
           <div
-            className="fixed overscroll-contain overflow-hidden inset-0 z-60 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[130] flex items-end justify-center bg-black/40 backdrop-blur-sm md:items-center"
             onClick={() => setOpen(false)}
-          />
-
-          <div className="fixed overscroll-contain overflow-hidden md:max-w-xl mx-auto z-60 bottom-0 md:bottom-1/2 md:translate-y-1/2 md:rounded-xl right-0 left-0 w-full h-100 bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 p-5 flex flex-col">
-            <div className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-neutral-800">
-              <div>
-                <h1 className="font-semibold text-lg">Reactions</h1>
-                <p className="text-gray-500 text-xs">
-                  See who reacted to this post
-                </p>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="px-4 py-2 rounded-full bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700 active:scale-90 transition"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="flex overflow-x-scroll overflow-y-hidden scrollbar-none gap-2 pt-4">
-              <button
-                onClick={() => setActive("ALL")}
-                className={`h-10 mx-1 shrink-0 rounded-xl w-15 text-sm font-medium transition ${
-                  active === "ALL"
-                    ? "bg-blue-300 dark:bg-black scale-110"
-                    : "bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700"
-                }`}
-              >
-                All {stats.total}
-              </button>
-
-              {sortedReactions.map((r) => (
+          >
+            <div
+              className="flex h-[min(42rem,100dvh)] w-full flex-col bg-neutral-100 p-5 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100 md:max-w-xl md:rounded-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-gray-300 pb-4 dark:border-neutral-800">
+                <div>
+                  <h1 className="text-lg font-semibold">Reactions</h1>
+                  <p className="text-xs text-gray-500">
+                    See who reacted to this post
+                  </p>
+                </div>
                 <button
-                  key={r.key}
-                  onClick={() => setActive(r.type)}
-                  className={`h-10 mx-1 shrink-0 rounded-xl w-15 flex items-center justify-center gap-1 text-sm transition ${
-                    active === r.type
-                      ? "bg-blue-300 dark:bg-black scale-110"
-                      : "bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700"
+                  onClick={() => setOpen(false)}
+                  className="rounded-full bg-gray-200 px-4 py-2 transition hover:bg-gray-300 active:scale-90 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="flex gap-2 overflow-x-scroll overflow-y-hidden scrollbar-none pt-4">
+                <button
+                  onClick={() => setActive("ALL")}
+                  className={`mx-1 h-10 w-15 shrink-0 rounded-xl text-sm font-medium transition ${
+                    active === "ALL"
+                      ? "scale-110 bg-blue-300 dark:bg-black"
+                      : "bg-gray-200 hover:bg-gray-300 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                   }`}
                 >
-                  <Image src={r.src} alt={r.key} width={16} height={16} />
-                  <span>{r.count}</span>
+                  All {stats.total}
                 </button>
-              ))}
-            </div>
 
-            <div className="flex-1 mt-2 overflow-y-scroll overscroll-contain scrollbar-none">
-              <ReactionPage postId={post.id} reaction={active} />
+                {sortedReactions.map((r) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setActive(r.type)}
+                    className={`mx-1 flex h-10 w-15 shrink-0 items-center justify-center gap-1 rounded-xl text-sm transition ${
+                      active === r.type
+                        ? "scale-110 bg-blue-300 dark:bg-black"
+                        : "bg-gray-200 hover:bg-gray-300 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                    }`}
+                  >
+                    <Image src={r.src} alt={r.key} width={16} height={16} />
+                    <span>{r.count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-2 flex-1 overflow-y-auto overscroll-contain scrollbar-none">
+                <ReactionPage postId={post.id} reaction={active} />
+              </div>
             </div>
           </div>
-        </>
+        </OverlayPortal>
       )}
     </>
   );

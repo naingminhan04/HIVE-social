@@ -194,7 +194,7 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
       </div>
 
       {viewerOpen && (
-        <div className="z-100">
+        <div className="z-[100]">
           <ImageViewer
             images={images}
             index={viewerIndex}

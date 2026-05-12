@@ -13,7 +13,13 @@ const LIMIT = 10;
 const textOrder = [2, 2, 1, 1, 2];
 const imageOrder = [3, 1, 4, 3, 2];
 
-const PostReel = ({ userId }: { userId?: string }) => {
+const PostReel = ({
+  userId,
+  scrollContainerId,
+}: {
+  userId?: string;
+  scrollContainerId?: string;
+}) => {
   const isTouchDevice =
   typeof window !== "undefined" &&
   ("ontouchstart" in window || navigator.maxTouchPoints > 0);
@@ -58,6 +64,14 @@ const PostReel = ({ userId }: { userId?: string }) => {
   };
 
   const scrollToTop = () => {
+    if (scrollContainerId) {
+      const scrollContainer = document.getElementById(scrollContainerId);
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+    }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -72,13 +86,18 @@ const PostReel = ({ userId }: { userId?: string }) => {
           fetchNextPage();
         }
       },
-      { root: null, rootMargin: "5000px" },
+      {
+        root: scrollContainerId
+          ? document.getElementById(scrollContainerId)
+          : null,
+        rootMargin: "5000px",
+      },
     );
 
     observer.observe(loadMoreRef.current);
 
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, scrollContainerId]);
 
   if (isLoading) {
     return (

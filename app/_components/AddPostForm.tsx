@@ -11,6 +11,7 @@ import { uploadFiles } from "@/utils/uploadUtils";
 import toast from "react-hot-toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useAuthStore } from "@/store/auth";
+import OverlayPortal from "./OverlayPortal";
 
 type FormValues = {
   content: string;
@@ -32,6 +33,7 @@ export default function AddPostBtn({
   const { register, handleSubmit, reset, watch } = useForm<FormValues>();
   const user = useAuthStore((state) => state.user);
   const userId = user?.id;
+  const username = user?.username?.trim();
   useLockBodyScroll(isOpen);
 
   const uploadMutation = useMutation({
@@ -49,8 +51,12 @@ export default function AddPostBtn({
       }
       return result.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["posts"] });
+      await queryClient.invalidateQueries({ queryKey: ["user"] });
+      if (username) {
+        await queryClient.invalidateQueries({ queryKey: ["user", username] });
+      }
       handleClose();
     },
     onError: (error: Error) =>
@@ -204,12 +210,13 @@ export default function AddPostBtn({
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-neutral-50 dark:bg-neutral-950 flex justify-center items-start p-4 overflow-auto z-70">
-          <div className="w-full max-w-2xl my-auto">
-            <form
-              className="w-full flex flex-col gap-4"
-              onSubmit={handleSubmit(onSubmit)}
-            >
+        <OverlayPortal>
+          <div className="fixed inset-0 z-[120] bg-neutral-50 dark:bg-neutral-950 flex justify-center items-start p-4 overflow-auto">
+            <div className="w-full max-w-2xl my-auto">
+              <form
+                className="w-full flex flex-col gap-4"
+                onSubmit={handleSubmit(onSubmit)}
+              >
               <div className="flex justify-between items-center">
                 <button
                   type="button"
@@ -381,9 +388,10 @@ export default function AddPostBtn({
                     : "Creating post..."}
                 </div>
               )}
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        </OverlayPortal>
       )}
     </>
   );

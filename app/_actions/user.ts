@@ -6,6 +6,54 @@ import { UserResponseType, UserType, UniqueUsernameResponseType} from "@/types/u
 import { APIError } from "@/types/error";
 import { ActionResponse } from "@/types/action";
 import { ImageType } from "@/types/post";
+import { SearchResponseType } from "@/types/search";
+
+const normalizeUserPayload = (payload: unknown): UserType | null => {
+    const visited = new WeakSet<object>();
+
+    const findUser = (value: unknown, depth: number): UserType | null => {
+        if (depth > 5 || !value || typeof value !== "object") {
+            return null;
+        }
+
+        if (visited.has(value as object)) {
+            return null;
+        }
+
+        visited.add(value as object);
+
+        const candidate = value as Partial<UserType>;
+        if (
+            typeof candidate.id === "string" &&
+            typeof candidate.username === "string" &&
+            typeof candidate.name === "string"
+        ) {
+            return candidate as UserType;
+        }
+
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                const nested = findUser(item, depth + 1);
+                if (nested) {
+                    return nested;
+                }
+            }
+
+            return null;
+        }
+
+        for (const nestedValue of Object.values(value as Record<string, unknown>)) {
+            const nested = findUser(nestedValue, depth + 1);
+            if (nested) {
+                return nested;
+            }
+        }
+
+        return null;
+    };
+
+    return findUser(payload, 0);
+};
 
 export async function getAllUserAction(nextPage: number = 1, limit: number = 10, keyword: string | null): Promise<ActionResponse<UserResponseType>> {
     try {
@@ -45,20 +93,99 @@ export async function getUserAction(userId: string): Promise<ActionResponse<User
     }
 }
 
-export async function getUserByUsernameAction(username: string): Promise<ActionResponse<UserType>> {
+export async function getUserByUsernameAction(username: string | null | undefined): Promise<ActionResponse<UserType>> {
+    const normalizedUsername =
+        typeof username === "string" ? username.trim() : "";
+
+    if (!normalizedUsername) {
+        return {
+            success: false,
+            error: "Invalid username",
+        };
+    }
+
     try {
-        const res = await api.get(`/users/username/${username}`);
-        return { success: true, data: res.data };
+        const res = await api.get(`/users/username/${encodeURIComponent(normalizedUsername)}`);
+        const user = normalizeUserPayload(res.data);
+
+        if (user) {
+            return { success: true, data: user };
+        }
+    } catch {}
+
+    try {
+        const res = await api.get<UserResponseType>("/users", {
+            params: {
+                page: 1,
+                size: 20,
+                keyword: normalizedUsername,
+            },
+        });
+
+        const matchedUser = res.data.users.find(
+            (user) => user.username.toLowerCase() === normalizedUsername.toLowerCase(),
+        );
+
+        if (!matchedUser) {
+            throw new Error("User not found");
+        }
+
+        const profileRes = await api.get(`/users/profile/${matchedUser.id}`);
+        const user = normalizeUserPayload(profileRes.data);
+
+        if (user) {
+            return { success: true, data: user };
+        }
+    } catch {}
+
+    try {
+        const res = await api.get(`/users/profile/${encodeURIComponent(normalizedUsername)}`);
+        const user = normalizeUserPayload(res.data);
+
+        if (user) {
+            return { success: true, data: user };
+        }
+    } catch {}
+
+    try {
+        const searchRes = await api.get<SearchResponseType>("/search", {
+            params: {
+                keyword: normalizedUsername,
+                limit: 20,
+            },
+        });
+
+        const matchedUser = searchRes.data.users.find(
+            (user) => user.username.toLowerCase() === normalizedUsername.toLowerCase(),
+        );
+
+        if (!matchedUser) {
+            throw new Error("User not found");
+        }
+
+        const profileRes = await api.get(`/users/profile/${matchedUser.id}`);
+        const user = normalizeUserPayload(profileRes.data);
+
+        if (user) {
+            return { success: true, data: user };
+        }
     } catch (error) {
         let message = "Unexpected error loading user's profile";
 
         if (axios.isAxiosError(error)) {
             const data = error.response?.data as APIError | undefined;
             message = data?.message || data?.error || "Failed to load user's profile";
+        } else if (error instanceof Error) {
+            message = error.message;
         }
         
         return { success: false, error: message };
     }
+
+    return {
+        success: false,
+        error: "Failed to load user's profile",
+    };
 }
 
 export async function checkUniqueUsernameAction(username: string):Promise<ActionResponse<UniqueUsernameResponseType>> {

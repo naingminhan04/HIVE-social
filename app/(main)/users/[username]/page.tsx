@@ -1,36 +1,58 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Profile from "@/app/_components/Profile";
 import { useAuthStore } from "@/store/auth";
 import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
 
-type UserProfilePageProps = {
-  params: {
-    username: string;
-  };
-};
-
-const UserProfilePage = ({ params }: UserProfilePageProps) => {
+const UserProfilePage = () => {
   const router = useRouter();
+  const params = useParams<{ username: string | string[] }>();
   const viewer = useAuthStore((state) => state.user);
   const isPortalBarVisible = usePortalBarVisible();
-  const isOwnProfile = viewer?.username === params.username;
+  const hasHandledOwnProfile = useRef(false);
+  const routeUsername = Array.isArray(params.username)
+    ? params.username[0]
+    : params.username;
+  const username = routeUsername?.trim() ?? "";
+  const isOwnProfile = viewer?.username === username;
 
   useEffect(() => {
-    if (isPortalBarVisible && isOwnProfile) {
-      router.replace("/home");
+    if (!isPortalBarVisible || !isOwnProfile || hasHandledOwnProfile.current) {
+      return;
     }
+
+    hasHandledOwnProfile.current = true;
+
+    const fallbackTimeout = window.setTimeout(() => {
+      router.replace("/home");
+    }, 250);
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return () => window.clearTimeout(fallbackTimeout);
+    }
+
+    router.replace("/home");
+    return () => window.clearTimeout(fallbackTimeout);
   }, [isOwnProfile, isPortalBarVisible, router]);
 
   if (isPortalBarVisible && isOwnProfile) {
     return null;
   }
 
+  if (!username) {
+    return (
+      <div className="flex min-h-[calc(100dvh-60px)] items-center justify-center p-4 text-sm text-red-500 lg:min-h-dvh">
+        Invalid profile username.
+      </div>
+    );
+  }
+
   return (
     <div className="md:px-2">
-      <Profile userId={params.username} />
+      <Profile username={username} />
     </div>
   );
 };
