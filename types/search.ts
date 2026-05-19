@@ -13,3 +13,13 @@ export interface SearchResponseType {
   totalPosts: number;
   totalUsers: number;
 }
+
+export type SearchTab = "posts" | "users";
+
+export type SearchResultsProps = {
+  keyword: string;
+};
+
+export type SearchButtonFormValues = {
+  keyword: string;
+};

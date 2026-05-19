@@ -1,111 +1,155 @@
 "use client";
 
-import { useAuthStore } from "@/store/auth";
-import { useRouter } from "nextjs-toploader/app";
-import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import verifyAction from "../_actions/verify";
+import { useRouter } from "nextjs-toploader/app";
+import { CheckCircle2, Clock3, LogOut, RefreshCw } from "lucide-react";
+import { useAuthStore } from "@/store/auth";
+import { UserType } from "@/types/user";
+import { logoutAction } from "../_actions/logout";
 
 const Verify = () => {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(60);
-  const [tempEmail, setTempEmail] = useState<string | null>(null);
-
   const user = useAuthStore((state) => state.user);
-  const code = useAuthStore((state) => state.tmpVerificationCode);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const isSessionChecking = useAuthStore((state) => state.isSessionChecking);
   const setUser = useAuthStore((state) => state.setUser);
-  const setCode = useAuthStore((state) => state.setTmpVerificationCode);
+  const logOut = useAuthStore((state) => state.logOut);
+  const isAuthResolved = hasHydrated && !isSessionChecking;
 
-  const [otp, setOtp] = useState("");
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/session", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const result = (await response.json()) as {
+        success: boolean;
+        data?: { user?: UserType | null };
+        error?: string;
+      };
 
-  // Check if user has temp email and is in verification flow
+      if (!response.ok || !result.success || !result.data?.user) {
+        throw new Error(result.error || "Could not refresh your approval status.");
+      }
+
+      return result.data.user;
+    },
+    onSuccess: (nextUser) => {
+      setUser(nextUser);
+      if (nextUser.isVerified) {
+        router.replace("/home");
+      }
+    },
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: logoutAction,
+    onSettled: () => {
+      logOut();
+      router.replace("/");
+    },
+  });
+
   useEffect(() => {
-    const storedTempEmail = localStorage.getItem("tempUserEmail");
-    
-    // If no temp email and no user, redirect to signup
-    if (!storedTempEmail && !user) {
+    if (!isAuthResolved) return;
+
+    if (!user) {
       router.replace("/signup");
       return;
     }
 
-    if (storedTempEmail) {
-      setTempEmail(storedTempEmail);
-    }
-  }, [user, router]);
-
-  useEffect(() => {
-    if (resendCooldown === 0) return;
-
-    const interval = setInterval(() => {
-      setResendCooldown((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [resendCooldown]);
-
-  const verifyMutation = useMutation({
-    mutationFn: async (verificationCode: string) => {
-      const email = tempEmail || user?.email;
-      if (!email) throw new Error("Missing email");
-      const result = await verifyAction(email, verificationCode);
-      if (!result.success) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: (data) => {
-      setUser(data.user);
-      setCode(null);
-      // Clear temp email from localStorage after successful verification
-      localStorage.removeItem("tempUserEmail");
+    if (user.isVerified) {
       router.replace("/home");
-    },
-    onError: (err: Error) => {
-      setError(err.message);
-    },
-  });
+    }
+  }, [isAuthResolved, router, user]);
 
-  const verifyHandler = () => {
-    if (otp.length !== 6) return;
-    verifyMutation.mutate(otp);
-  };
+  if (!isAuthResolved) {
+    return (
+      <main className="flex min-h-dvh w-dvw items-center justify-center p-5">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span className="h-10 w-10 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-900 dark:border-neutral-700 dark:border-t-neutral-100" />
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            Checking your account...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  if (user.isVerified) {
+    return null;
+  }
 
   return (
-    <main className="min-h-dvh w-dvw flex flex-col items-center p-5 gap-5">
-      <div className="flex flex-col items-center justify-center w-full gap-5 pt-5">
-        <h1 className="text-2xl font-bold">Verify Your Email</h1>
-        <p className="text-gray-600 dark:text-gray-300 text-sm text-center">
-          We sent a 6-digit verification code to{" "}
-          <b className="text-blue-600 dark:text-blue-300">{tempEmail || user?.email}</b>
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <input
-          value={otp}
-          onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-          maxLength={6}
-          placeholder={code ? code.toString() : ""}
-          className="w-full border border-gray-300 dark:border-neutral-700 outline-0 focus:border-black dark:focus:border-white p-4 text-3xl text-center text-black dark:text-white"
+    <main className="flex min-h-dvh w-dvw flex-col items-center justify-center p-5">
+      <div className="flex w-full max-w-md flex-col items-center gap-6 text-center">
+        <Image
+          src="/sea-logo.jpg"
+          alt="Star Education Academy Logo"
+          width={96}
+          height={96}
+          className="rounded-full"
         />
 
-        {verifyMutation.isError && (
-          <p className="text-xs text-red-600 dark:text-red-500 text-center">
-            {error}
+        <div className="flex flex-col items-center gap-3">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+            <Clock3 size={24} />
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-950 dark:text-neutral-50">
+              Waiting for admin approval
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+              Your Google account is signed in as{" "}
+              <b className="text-neutral-900 dark:text-neutral-100">{user.email}</b>.
+              An admin needs to approve it before you can access SEA Social.
+            </p>
+          </div>
+        </div>
+
+        {refreshMutation.data?.isVerified ? (
+          <div className="flex items-center gap-2 rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <CheckCircle2 size={16} />
+            Approved. Taking you home...
+          </div>
+        ) : null}
+
+        {refreshMutation.isError ? (
+          <p className="text-sm text-red-600 dark:text-red-500">
+            {refreshMutation.error.message}
           </p>
-        )}
+        ) : null}
 
-        <button
-          onClick={verifyHandler}
-          disabled={verifyMutation.isPending || otp.length !== 6}
-          className="p-2 w-full font-bold bg-black dark:bg-neutral-50 disabled:opacity-50 text-white dark:text-black cursor-pointer"
-        >
-          {verifyMutation.isPending ? "Verifying..." : "Verify"}
-        </button>
+        <div className="flex w-full flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-3 font-semibold text-white transition hover:bg-neutral-700 disabled:opacity-60 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+          >
+            <RefreshCw
+              size={18}
+              className={refreshMutation.isPending ? "animate-spin" : ""}
+            />
+            {refreshMutation.isPending ? "Checking..." : "Check approval status"}
+          </button>
+          <button
+            type="button"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-black/10 px-4 py-3 font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-60 dark:border-white/10 dark:text-neutral-300 dark:hover:bg-neutral-900"
+          >
+            <LogOut size={18} />
+            {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+          </button>
+        </div>
       </div>
-
-      <p className="absolute bottom-3 text-center text-sm">
-        Verification Code will expire in 5 minutes.
-      </p>
     </main>
   );
 };

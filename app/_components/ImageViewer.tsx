@@ -1,5 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 import OverlayPortal from "./OverlayPortal";
 
@@ -21,10 +24,28 @@ const ImageViewer = ({ images, index, onClose, onChange }: Props) => {
       ? [{ id: "single", url: images }]
       : images;
 
-  const safeIndex = Math.max(0, Math.min((index ?? 0), normalizedImages.length - 1));
+  const safeIndex = Math.max(
+    0,
+    Math.min(index ?? 0, normalizedImages.length - 1),
+  );
   const image = normalizedImages[safeIndex];
+  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [isImageBroken, setIsImageBroken] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useLockBodyScroll(true);
+
+  useEffect(() => {
+    setIsImageLoading(true);
+    setIsImageBroken(false);
+    setRetryKey(0);
+  }, [safeIndex, image?.url]);
+
+  if (!image) {
+    return null;
+  }
+
+  const resolvedImageUrl = `${image.url}${image.url.includes("?") ? "&" : "?"}img_retry=${retryKey}`;
 
   return (
     <OverlayPortal>
@@ -49,12 +70,47 @@ const ImageViewer = ({ images, index, onClose, onChange }: Props) => {
         )}
 
         <div className="relative h-dvh w-dvw">
+          {isImageLoading && !isImageBroken && (
+            <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/70">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur">
+                <Loader2 size={20} className="animate-spin" />
+              </span>
+            </div>
+          )}
+          {isImageBroken && (
+            <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center gap-4 bg-black/75 text-white">
+              <p className="text-sm text-white/80">This image could not be loaded.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setRetryKey((previous) => previous + 1);
+                  setIsImageBroken(false);
+                  setIsImageLoading(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 text-sm font-medium backdrop-blur transition hover:bg-white/20 active:scale-95"
+              >
+                <RefreshCw size={16} />
+                Retry image
+              </button>
+            </div>
+          )}
           <Image
-            src={image.url}
+            key={`${image.id}-${safeIndex}-${retryKey}`}
+            src={resolvedImageUrl}
             alt="viewer"
             fill
-            className="object-contain"
+            className={`object-contain transition-opacity duration-200 ${
+              isImageLoading || isImageBroken ? "opacity-0" : "opacity-100"
+            }`}
             priority
+            onLoad={() => {
+              setIsImageLoading(false);
+              setIsImageBroken(false);
+            }}
+            onError={() => {
+              setIsImageLoading(false);
+              setIsImageBroken(true);
+            }}
           />
         </div>
 

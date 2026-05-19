@@ -9,8 +9,9 @@ import LogOutBtn from "./LogOutBtn";
 import { getMenuArr } from "./SideBar";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth";
-import Image from "next/image";
 import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
+import HomeRefreshLink from "./HomeRefreshLink";
+import RecoverableImage from "./RecoverableImage";
 
 const MenuBtn = () => {
   const [menu, setMenu] = useState(false);
@@ -45,16 +46,32 @@ const MenuBtn = () => {
               {MenuArr.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
-                  <Link
-                    key={item.name}
-                    onClick={() => setMenu(false)}
-                    className={`p-4 transition-all active:bg-gray-200 ${isActive
-                    ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"
-                    : "hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-800"}`}
-                    href={item.href}
-                  >
-                    {item.name}
-                  </Link>
+                  item.href === "/home" ? (
+                    <HomeRefreshLink
+                      key={item.name}
+                      onNavigate={() => setMenu(false)}
+                      className={`block p-4 transition-all active:bg-gray-200 ${
+                        isActive
+                          ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"
+                          : "hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-800"
+                      }`}
+                    >
+                      {item.name}
+                    </HomeRefreshLink>
+                  ) : (
+                    <Link
+                      key={item.name}
+                      onClick={() => setMenu(false)}
+                      className={`p-4 transition-all active:bg-gray-200 ${
+                        isActive
+                          ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"
+                          : "hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-800"
+                      }`}
+                      href={item.href}
+                    >
+                      {item.name}
+                    </Link>
+                  )
                 );
               })}
             </ul>
@@ -74,22 +91,29 @@ const MenuBtn = () => {
                 >
                   <div className="relative h-20 bg-gray-200 dark:bg-neutral-800">
                     {user.coverPic && (
-                      <Image
+                      <RecoverableImage
                         src={user.coverPic}
                         alt="Cover"
                         fill
                         className="object-cover"
+                        wrapperClassName="h-full w-full"
+                        showRetryButton
+                        retryButtonClassName="h-10 w-10"
                       />
                     )}
                   </div>
                   <div className="p-3">
                     <div className="flex items-center gap-2 mt-0">
-                      <Image
+                      <RecoverableImage
                         src={user.profilePic || "/default-avatar.png"}
                         alt={user.name}
                         width={48}
                         height={48}
                         className="w-12 h-12 rounded-full border-2 border-white dark:border-neutral-900 bg-gray-300 object-cover"
+                        wrapperClassName="h-12 w-12 shrink-0 rounded-full"
+                        fallbackSrc="/default-avatar.png"
+                        showRetryButton
+                        retryButtonClassName="h-8 w-8"
                       />
                       <div className="min-w-0">
                         <p className="font-semibold truncate">{user.name}</p>

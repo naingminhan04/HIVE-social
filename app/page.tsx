@@ -1,6 +1,5 @@
 import Image from "next/image";
 import LoginForm from "./_components/LoginForm";
-import Link from "next/link";
 
 const Home = () => {
   return (
@@ -20,12 +19,6 @@ const Home = () => {
       </div>
       <div className="mt-4 w-full flex justify-center">
         <LoginForm />
-      </div>
-      <div className="flex justify-center items-center gap-1 mt-5">
-        <p className="text-sm text-gray-600 dark:text-gray-300">Don&apos;t have an account?</p>
-        <Link href="/signup" className="text-blue-600 dark:text-blue-300 text-sm">
-          Sign Up
-        </Link>
       </div>
     </main>
   );

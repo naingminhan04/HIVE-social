@@ -12,7 +12,7 @@ import {
 import { uploadFiles } from "@/utils/uploadUtils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowBigLeft,
+  ArrowLeft,
   ShieldCheck,
   PencilLine,
   X,
@@ -250,6 +250,16 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   };
 
   const onSubmitPassword: SubmitHandler<PasswordFormValues> = async (data) => {
+    if (user?.hasPassword && !data.oldPassword) {
+      toast.error("Old password is required");
+      return;
+    }
+
+    if (!data.newPassword) {
+      toast.error("New password is required");
+      return;
+    }
+
     if (data.newPassword !== data.confirmPassword) {
       toast.error("New password and confirm password do not match");
       return;
@@ -259,13 +269,18 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
     const toastId = toast.loading("Changing password...");
     try {
       const result = await changePasswordAction(
-        data.oldPassword,
+        user?.hasPassword ? data.oldPassword : "",
         data.newPassword,
         data.confirmPassword,
       );
       if (!result.success) throw new Error(result.error);
+      if (isOwner && viewer) {
+        setViewer({ ...viewer, hasPassword: true });
+      }
       resetPassword();
-      toast.success("Password changed", { id: toastId });
+      toast.success(user?.hasPassword ? "Password changed" : "Password added", {
+        id: toastId,
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to change", {
         id: toastId,
@@ -378,22 +393,23 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
       }`}
     >
       <div
-        className={`flex w-full bg-white dark:bg-neutral-900 z-10 justify-between h-12 lg:h-15 font-semibold ${
+        className={`z-10 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${
           isPortal
             ? "sticky top-0 items-center border-b border-black/5 px-3 dark:border-white/10"
-            : "sticky top-15 lg:top-0"
+            : "sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
         }`}
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {!isPortal && (
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              aria-label="Go back"
             >
-              <ArrowBigLeft fill="black" className="dark:fill-white" />
+              <ArrowLeft size={18} />
             </button>
           )}
-          <span className="text-lg">
+          <span className="text-lg text-neutral-950 dark:text-neutral-50">
             {isPortal ? "Your Profile" : `${user?.name}'s Profile`}
           </span>
         </div>
@@ -401,10 +417,10 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         {isOwner && (
           <button
             onClick={() => setIsEditOpen(true)}
-            className="mr-2 my-1 px-3 rounded-lg flex items-center gap-2 bg-blue-400 text-white hover:bg-blue-500 dark:bg-neutral-800 dark:hover:bg-neutral-700 transition-colors"
+            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-blue-300 bg-blue-300 px-4 text-sm text-neutral-950 shadow-sm transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
           >
             <PencilLine size={16} />
-            <span className="text-sm">Edit</span>
+            <span className="text-sm font-medium">Edit Profile</span>
           </button>
         )}
       </div>
@@ -532,9 +548,9 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
           {user?.id === viewerId && (
             <button
               onClick={() => setIsPointsOpen(true)}
-              className="w-20 flex justify-center items-center h-[14vw] md:h-[9vw] lg:h-[clamp(70px,4.5vw,80px)] rounded-lg bg-gray-200 dark:bg-neutral-700"
+              className="flex h-[14vw] w-24 items-center justify-center rounded-2xl border border-black/5 bg-neutral-100 text-neutral-800 shadow-sm transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black md:h-[9vw] lg:h-[clamp(70px,4.5vw,80px)]"
             >
-              <p>Points</p>
+              <p className="font-medium">Points</p>
             </button>
           )}
         </div>
@@ -575,7 +591,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
       <PointsModal
         isOpen={isPointsOpen}
         onClose={() => setIsPointsOpen(false)}
-        currentUserPoints={viewer?.points ?? 0}
+        currentUserPoints={user?.points ?? viewer?.points ?? 0}
         onPointsUpdated={(points) => {
           if (viewer) {
             setViewer({ ...viewer, points });
@@ -599,8 +615,8 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
       {isEditOpen && isOwner && (
         <OverlayPortal>
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
-              <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-black/5 bg-white/95 px-5 py-4 dark:border-white/10 dark:bg-neutral-900/95">
+            <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
+              <div className="sticky top-0 z-10 shrink-0 flex items-center justify-between gap-4 border-b border-black/5 bg-white/95 px-5 py-4 dark:border-white/10 dark:bg-neutral-900/95">
                 <div>
                   <h2 className="text-xl font-semibold text-black dark:text-white">
                     Edit Profile
@@ -612,13 +628,13 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                 </div>
                 <button
                   onClick={() => setIsEditOpen(false)}
-                  className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-neutral-800"
+                  className="rounded-full p-2 text-gray-600 transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:text-gray-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="border-b border-black/5 px-5 py-4 dark:border-white/10">
+              <div className="shrink-0 border-b border-black/5 px-5 py-4 dark:border-white/10">
                 <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
                   {editTabs.map((tab) => {
                     const Icon = tab.icon;
@@ -630,23 +646,29 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                         onClick={() => setActiveEditTab(tab.id)}
                         className={`flex flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
                           activeEditTab === tab.id
-                            ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/10 dark:text-blue-200"
-                            : "border-black/5 bg-slate-50 text-gray-700 hover:border-blue-200 hover:bg-blue-50/60 dark:border-white/10 dark:bg-neutral-950 dark:text-gray-300 dark:hover:border-blue-500/50 dark:hover:bg-neutral-800"
+                            ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
+                            : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                         }`}
                       >
-                        <span className="rounded-xl bg-white p-2 shadow-sm dark:bg-neutral-900">
+                        <span
+                          className={`rounded-xl p-2 shadow-sm ${
+                            activeEditTab === tab.id
+                              ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
+                              : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+                          }`}
+                        >
                           <Icon size={16} />
                         </span>
                         <span className="hidden sm:inline">{tab.label}</span>
                       </button>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="max-h-[calc(90vh-154px)] overflow-y-auto p-5 scrollbar-none">
+              <div className="min-h-0 flex-1 overflow-y-auto p-5 scrollbar-none overscroll-contain">
                 {activeEditTab === "photo" && (
-                  <div className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950">
+                  <div className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-100 p-5 dark:border-white/10 dark:bg-neutral-900">
                     <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
                       <ImageUp size={18} />
                       Profile Photo
@@ -654,7 +676,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                       Choose a new photo and preview it before saving.
                     </p>
-                    <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:flex-row sm:items-center">
+                    <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-800 sm:flex-row sm:items-center">
                       <Image
                         src={
                           profilePreviewUrl
@@ -667,7 +689,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                         className="h-24 w-24 rounded-full border border-gray-200 object-cover dark:border-neutral-700"
                       />
                       <div className="flex flex-wrap items-center gap-2">
-                        <label className="inline-flex h-11 cursor-pointer items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600">
+                        <label className="inline-flex h-11 cursor-pointer items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black">
                           Choose Photo
                           <input
                             type="file"
@@ -692,7 +714,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                               type="button"
                               disabled={isProfilePicPending}
                               onClick={saveProfilePicture}
-                              className="inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                              className="inline-flex h-11 items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                             >
                               {isProfilePicPending ? "Updating..." : "Update Photo"}
                             </button>
@@ -706,7 +728,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                                   setProfilePreviewUrl(null);
                                 }
                               }}
-                              className="inline-flex h-11 items-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-semibold text-black transition hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:border-blue-500/50 dark:hover:text-blue-200"
+                              className="inline-flex h-11 items-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-semibold text-black transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 disabled:opacity-50 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                             >
                               Cancel
                             </button>
@@ -720,7 +742,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                 {activeEditTab === "basic" && (
                   <form
                     onSubmit={handleSubmitProfile(onSubmitProfile)}
-                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
+                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-100 p-5 dark:border-white/10 dark:bg-neutral-900"
                   >
                     <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
                       <UserRoundCog size={18} />
@@ -744,7 +766,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     </div>
                     <button
                       disabled={isProfilePending}
-                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                     >
                       {isProfilePending ? "Saving..." : "Save Basic Info"}
                     </button>
@@ -754,7 +776,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                 {activeEditTab === "username" && (
                   <form
                     onSubmit={handleSubmitUsername(onSubmitUsername)}
-                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
+                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-100 p-5 dark:border-white/10 dark:bg-neutral-900"
                   >
                     <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
                       <AtSign size={18} />
@@ -770,7 +792,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     />
                     <button
                       disabled={isUsernamePending}
-                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                     >
                       {isUsernamePending ? "Updating..." : "Update Username"}
                     </button>
@@ -780,22 +802,26 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                 {activeEditTab === "password" && (
                   <form
                     onSubmit={handleSubmitPassword(onSubmitPassword)}
-                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-50 p-5 dark:border-white/10 dark:bg-neutral-950"
+                    className="mx-auto max-w-2xl rounded-3xl border border-black/10 bg-slate-100 p-5 dark:border-white/10 dark:bg-neutral-900"
                   >
                     <div className="flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
                       <KeyRound size={18} />
                       Password
                     </div>
                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                      Update your password with your current credentials.
+                      {user?.hasPassword
+                        ? "Update your password with your current credentials."
+                        : "Add a password so you can log in with email later."}
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <input
-                        type="password"
-                        {...registerPassword("oldPassword")}
-                        placeholder="Old password"
-                        className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
-                      />
+                      {user?.hasPassword ? (
+                        <input
+                          type="password"
+                          {...registerPassword("oldPassword")}
+                          placeholder="Old password"
+                          className="h-11 rounded-2xl border border-gray-300 bg-white px-3 dark:border-neutral-700 dark:bg-neutral-900"
+                        />
+                      ) : null}
                       <input
                         type="password"
                         {...registerPassword("newPassword")}
@@ -811,9 +837,15 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     </div>
                     <button
                       disabled={isPasswordPending}
-                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
+                      className="mt-4 inline-flex h-11 items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                     >
-                      {isPasswordPending ? "Changing..." : "Change Password"}
+                      {isPasswordPending
+                        ? user?.hasPassword
+                          ? "Changing..."
+                          : "Adding..."
+                        : user?.hasPassword
+                          ? "Change Password"
+                          : "Add Password"}
                     </button>
                   </form>
                 )}

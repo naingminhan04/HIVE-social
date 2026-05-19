@@ -4,6 +4,16 @@ Live Preview - [stareducationacademy.netlify.app](https://stareducationacademy.n
 
 ## Getting Started
 
+Create a `.env.local` file in the project root and add your Google OAuth web
+client ID:
+
+```bash
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
+```
+
+In Google Cloud Console, add `http://localhost:3000` to the OAuth client&apos;s
+authorized JavaScript origins for local development.
+
 First, run the development server:
 
 ```bash

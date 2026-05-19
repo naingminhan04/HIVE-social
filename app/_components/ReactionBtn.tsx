@@ -38,6 +38,8 @@ const reactionImageMap: Record<ReactionType, string> = {
   LOVE: "/love.png",
 };
 
+let hasPreloadedReactionAssets = false;
+
 export default function ReactionBtn({ post }: ReactionBtnProps) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -48,6 +50,17 @@ export default function ReactionBtn({ post }: ReactionBtnProps) {
   const reactionState = post.reaction
     ? post.reaction.reactionType
     : null;
+
+  useEffect(() => {
+    if (hasPreloadedReactionAssets || typeof window === "undefined") return;
+
+    Object.values(reactionImageMap).forEach((src) => {
+      const image = new window.Image();
+      image.src = src;
+    });
+
+    hasPreloadedReactionAssets = true;
+  }, []);
 
   /* ================= CLOSE ON OUTSIDE CLICK ================= */
   useEffect(() => {

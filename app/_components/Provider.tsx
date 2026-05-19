@@ -7,24 +7,28 @@ import NextTopLoader from "nextjs-toploader";
 import BackendActivator from "./BackendActivator";
 import UserRefresher from "./Refresher";
 import { ThemeProvider } from "next-themes";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 export function Provider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange={true}
-      >
-        <NextTopLoader color="white" height={2} showSpinner={false} />
-        <UserRefresher />
-        <BackendActivator />
-        {children}
-        <Toaster position="top-center" reverseOrder={false} />
-      </ThemeProvider>
+      <GoogleOAuthProvider clientId={googleClientId ?? ""}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange={true}
+        >
+          <NextTopLoader color="white" height={2} showSpinner={false} />
+          <UserRefresher />
+          <BackendActivator />
+          {children}
+          <Toaster position="top-center" reverseOrder={false} />
+        </ThemeProvider>
+      </GoogleOAuthProvider>
     </QueryClientProvider>
   );
 }

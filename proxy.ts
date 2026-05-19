@@ -12,15 +12,10 @@ export default async function proxy(req: NextRequest) {
   const isGuestRoute = guestRoutes.includes(path);
   const isVerifyRoute = verifyRoute.includes(path);
   const token = (await cookies()).get("refresh_token")?.value;
-  const verifyState = (await cookies()).get("verify_state");
 
   if (isProtectedRoute) {
-    if (!token && !verifyState) {
+    if (!token) {
       return NextResponse.redirect(new URL("/", req.nextUrl));
-    }
-    console.log(token, verifyState);
-    if (!token && verifyState) {
-      return NextResponse.redirect(new URL("/verify", req.nextUrl));
     }
 
     return NextResponse.next();
@@ -29,18 +24,12 @@ export default async function proxy(req: NextRequest) {
     if (token) {
       return NextResponse.redirect(new URL("/home", req.nextUrl));
     }
-    if (verifyState) {
-      return NextResponse.redirect(new URL("/verify", req.nextUrl));
-    }
 
     return NextResponse.next();
   }
   if (isVerifyRoute) {
-    if (!verifyState) {
+    if (!token) {
       return NextResponse.redirect(new URL("/", req.nextUrl));
-    }
-    if (token) {
-      return NextResponse.redirect(new URL("/home", req.nextUrl));
     }
 
     return NextResponse.next();

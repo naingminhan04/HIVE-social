@@ -1,9 +1,9 @@
 import { Star } from "lucide-react";
 import MenuBtn from "./MenuBtn";
 import SideBar from "./SideBar";
-import Link from "next/link";
 import AddPostBtn from "./AddPostForm";
 import SearchBtn from "./SearchBtn";
+import HomeRefreshLink from "./HomeRefreshLink";
 
 const NavBar = () => {
   return (
@@ -15,13 +15,10 @@ const NavBar = () => {
             <AddPostBtn state={"nav"} />
             <SearchBtn />
           </div>
-          <Link
-            href="/home"
-            className="flex gap-1 hover:opacity-90"
-          >
+          <HomeRefreshLink className="flex gap-1 hover:opacity-90">
             <Star fill="white" />
             <h1 className="text-white">SEA</h1>
-          </Link>
+          </HomeRefreshLink>
         </div>
 
         <SideBar />

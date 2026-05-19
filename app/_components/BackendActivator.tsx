@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
-import api from "@/libs/axios";
 
 const BackendActivator = () => {
   useEffect(() => {
     const ping = async () => {
-        await api.get("/");
+      try {
+        await fetch("https://seaapi.mine.bz/v1/api/", {
+          method: "GET",
+          cache: "no-store",
+        });
+      } catch {
+        // Keep the activator silent; it is only a warm-up call.
+      }
     };
 
     ping();

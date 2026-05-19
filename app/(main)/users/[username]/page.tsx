@@ -10,6 +10,8 @@ const UserProfilePage = () => {
   const router = useRouter();
   const params = useParams<{ username: string | string[] }>();
   const viewer = useAuthStore((state) => state.user);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const isSessionChecking = useAuthStore((state) => state.isSessionChecking);
   const isPortalBarVisible = usePortalBarVisible();
   const hasHandledOwnProfile = useRef(false);
   const routeUsername = Array.isArray(params.username)
@@ -17,9 +19,15 @@ const UserProfilePage = () => {
     : params.username;
   const username = routeUsername?.trim() ?? "";
   const isOwnProfile = viewer?.username === username;
+  const isAuthResolved = hasHydrated && !isSessionChecking;
 
   useEffect(() => {
-    if (!isPortalBarVisible || !isOwnProfile || hasHandledOwnProfile.current) {
+    if (
+      !isAuthResolved ||
+      !isPortalBarVisible ||
+      !isOwnProfile ||
+      hasHandledOwnProfile.current
+    ) {
       return;
     }
 
@@ -36,7 +44,11 @@ const UserProfilePage = () => {
 
     router.replace("/home");
     return () => window.clearTimeout(fallbackTimeout);
-  }, [isOwnProfile, isPortalBarVisible, router]);
+  }, [isAuthResolved, isOwnProfile, isPortalBarVisible, router]);
+
+  if (isPortalBarVisible && !isAuthResolved) {
+    return null;
+  }
 
   if (isPortalBarVisible && isOwnProfile) {
     return null;

@@ -13,6 +13,7 @@ import { formatDate } from "@/utils/formatDate";
 import CommentBtn from "./Comment";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import RecoverableImage from "./RecoverableImage";
 
 const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
   const images = post.images || [];
@@ -21,10 +22,6 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [isDel, setIsDel] = useState(false);
-  const [imageState, setImageState] = useState<
-    Record<number, "loading" | "loaded" | "broken">
-  >(() => images.reduce((acc, _, i) => ({ ...acc, [i]: "loading" }), {}));
-
   const timestamp = post.createdAt;
   const relativeTime = formatDate(timestamp);
 
@@ -94,30 +91,16 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
                     images.length === 3 && index === 2 ? "col-span-2" : ""
                   }`}
                 >
-                  <Image
-                    src={imageState[index] === "broken" ? "/alt.png" : img.url}
+                  <RecoverableImage
+                    src={img.url}
                     fill
                     alt="Post Image"
-                    className={`object-cover transition-opacity duration-300 ${
-                      imageState[index] === "broken" &&
-                      "bg-gray-400 dark:bg-neutral-500"
-                    } ${
-                      imageState[index] === "loading"
-                        ? " bg-gray-300 dark:bg-neutral-400 animate-pulse"
-                        : "opacity-100"
-                    }`}
-                    onLoad={() =>
-                      setImageState((prev) => ({
-                        ...prev,
-                        [index]: "loaded",
-                      }))
-                    }
-                    onError={() =>
-                      setImageState((prev) => ({
-                        ...prev,
-                        [index]: "broken",
-                      }))
-                    }
+                    className="object-cover"
+                    wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"
+                    showRetryButton
+                    showLoadingOverlay
+                    retryButtonClassName="h-12 w-12"
+                    brokenOverlayClassName="bg-black/35"
                   />
 
                   {index === 3 && moreCount > 0 && (

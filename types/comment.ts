@@ -1,4 +1,4 @@
-import { Metadata, ImageType, PostImageType } from "./post"
+import { Metadata, ImageType, PostImageType, PostType } from "./post"
 import { UserType } from "./user"
 
 export interface CommentResponseType {
@@ -28,15 +28,19 @@ export interface CommentType {
 export interface AddCommentType {
   content: string
   replyId?: string | null
-  images: Array<{
-    key: string
-    fileName: string
-    mimeType: string
-    fileSize: number
-  }>
+  images: ImageType[]
 }
 
 export type CommentFormMode = "create" | "reply" | "edit";
+
+export interface CommentButtonProps {
+  post: PostType;
+  view: boolean;
+}
+
+export interface CommentPageProps {
+  postId: string;
+}
 
 export interface CommentCardProps {
   comment: CommentType;

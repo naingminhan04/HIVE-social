@@ -7,6 +7,7 @@ import { useRouter } from "nextjs-toploader/app";
 import loginAction from "../_actions/login";
 import { useState } from "react";
 import { PiWarningCircle } from "react-icons/pi";
+import GoogleAuthButton from "./GoogleAuthButton";
 
 type Inputs = {
   email: string;
@@ -15,7 +16,6 @@ type Inputs = {
 
 const LoginForm = () => {
   const setUser = useAuthStore((state) => state.setUser);
-  const setCode = useAuthStore((state) => state.setTmpVerificationCode);
   const router = useRouter();
   const [error, setError] = useState("");
 
@@ -39,12 +39,10 @@ const LoginForm = () => {
       setError("");
 
       if (data.user.isVerified) {
-        setCode(null);
         setUser(data.user);
         router.replace("/home");
       } else {
         setUser(data.user);
-        setCode(data.verificationCodeForTesting || null);
         router.push("/verify");
       }
     },
@@ -68,7 +66,16 @@ const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3 w-120">
+    <div className="flex w-full max-w-[400px] flex-col gap-4">
+      <GoogleAuthButton />
+
+      <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-neutral-400">
+        <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
+        OR
+        <span className="h-px flex-1 bg-neutral-300 dark:bg-neutral-700" />
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
 
       <div className="relative">
         <input
@@ -140,7 +147,8 @@ const LoginForm = () => {
           {error}
         </div>
       )}
-    </form>
+      </form>
+    </div>
   );
 };
 

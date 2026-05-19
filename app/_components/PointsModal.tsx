@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Coins, History, Search, Send, X } from "lucide-react";
+import { Coins, History, Loader2, Search, Send, X } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   dailyLoginAction,
@@ -44,6 +44,24 @@ const tabs: {
   { id: "transfer", label: "Transfer", icon: Send },
   { id: "lookup", label: "Lookup", icon: Search },
 ];
+
+const TabLoadingState = ({ label }: { label: string }) => (
+  <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-black/5 bg-neutral-50/80 dark:border-white/10 dark:bg-neutral-950/80">
+    <div className="flex flex-col items-center gap-3 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-neutral-700 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200">
+        <Loader2 size={20} className="animate-spin" />
+      </span>
+      <div>
+        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+          Loading {label}
+        </p>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          Please wait a moment.
+        </p>
+      </div>
+    </div>
+  </div>
+);
 
 const PointsModal = ({
   isOpen,
@@ -116,6 +134,7 @@ const PointsModal = ({
       return response.data;
     },
     enabled: isOpen,
+    placeholderData: (previousData) => previousData,
     staleTime: 1000 * 60,
     retry: false,
   });
@@ -298,29 +317,32 @@ const PointsModal = ({
     return null;
   }
 
+  const isOverviewTabLoading = isInfoLoading || isSummaryLoading;
+  const isInitialHistoryLoading = isTransactionsLoading && !transactions;
+
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
-          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-black/5 bg-white/95 px-5 py-4 dark:border-white/10 dark:bg-neutral-900/95">
+      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-md">
+        <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/95 shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-neutral-900/95">
+          <div className="sticky top-0 z-10 shrink-0 flex items-center justify-between gap-4 border-b border-black/5 bg-white/90 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-neutral-900/90">
             <div>
-              <h2 className="text-xl font-semibold text-black dark:text-white">
+              <h2 className="text-xl font-semibold text-neutral-950 dark:text-neutral-50">
                 Points Center
               </h2>
-              <p className="text-sm hidden md:block text-gray-600 dark:text-gray-400">
+              <p className="hidden text-sm text-neutral-500 dark:text-neutral-400 md:block">
                 Claim rewards, review history, transfer points, and lookup
                 transactions.
               </p>
             </div>
             <button
               onClick={onClose}
-              className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-neutral-800"
+              className="rounded-full border border-black/5 bg-white/80 p-2 text-neutral-600 transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
             >
               <X size={18} />
             </button>
           </div>
 
-          <div className="border-b border-black/5 px-5 py-4 dark:border-white/10">
+          <div className="shrink-0 border-b border-black/5 px-5 py-4 dark:border-white/10">
             <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -332,11 +354,17 @@ const PointsModal = ({
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
                       activeTab === tab.id
-                        ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/10 dark:text-blue-200"
-                        : "border-black/5 bg-slate-50 text-gray-700 hover:border-blue-200 hover:bg-blue-50/60 dark:border-white/10 dark:bg-neutral-950 dark:text-gray-300 dark:hover:border-blue-500/50 dark:hover:bg-neutral-800"
+                        ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
+                        : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                     }`}
                   >
-                    <span className="rounded-xl bg-white p-2 shadow-sm dark:bg-neutral-900">
+                    <span
+                      className={`rounded-xl p-2 shadow-sm ${
+                        activeTab === tab.id
+                          ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
+                          : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+                      }`}
+                    >
                       <Icon size={16} />
                     </span>
                     <span className="hidden sm:inline">{tab.label}</span>
@@ -346,31 +374,37 @@ const PointsModal = ({
             </div>
           </div>
 
-          <div className="max-h-[calc(90vh-154px)] overflow-y-auto p-5 scrollbar-none">
-            {activeTab === "overview" && (
-              <OverviewTab
-                currentPoints={currentPoints}
-                dailyInfo={dailyInfo}
-                summary={summary}
-                formattedLastClaim={formattedLastClaim}
-                isClaiming={isClaiming}
-                isInfoLoading={isInfoLoading}
-                isSummaryLoading={isSummaryLoading}
-                onClaimDaily={handleClaimDaily}
-                onOpenHistory={() => setActiveTab("history")}
-              />
-            )}
+          <div className="min-h-0 flex-1 overflow-y-auto p-5 scrollbar-none overscroll-contain">
+            {activeTab === "overview" &&
+              (isOverviewTabLoading ? (
+                <TabLoadingState label="overview" />
+              ) : (
+                <OverviewTab
+                  currentPoints={currentPoints}
+                  dailyInfo={dailyInfo}
+                  summary={summary}
+                  formattedLastClaim={formattedLastClaim}
+                  isClaiming={isClaiming}
+                  isInfoLoading={isInfoLoading}
+                  isSummaryLoading={isSummaryLoading}
+                  onClaimDaily={handleClaimDaily}
+                  onOpenHistory={() => setActiveTab("history")}
+                />
+              ))}
 
-            {activeTab === "history" && (
-              <HistoryTab
-                page={page}
-                transactions={transactions}
-                isLoading={isTransactionsLoading}
-                isFetching={isTransactionsFetching}
-                onNextPage={() => setPage((prev) => prev + 1)}
-                onPrevPage={() => setPage((prev) => Math.max(prev - 1, 1))}
-              />
-            )}
+            {activeTab === "history" &&
+              (isInitialHistoryLoading ? (
+                <TabLoadingState label="history" />
+              ) : (
+                <HistoryTab
+                  page={page}
+                  transactions={transactions}
+                  isLoading={isTransactionsLoading}
+                  isFetching={isTransactionsFetching}
+                  onNextPage={() => setPage((prev) => prev + 1)}
+                  onPrevPage={() => setPage((prev) => Math.max(prev - 1, 1))}
+                />
+              ))}
 
             {activeTab === "transfer" && (
               <TransferTab
