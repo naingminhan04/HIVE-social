@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import AuthApprovalGate from "../_components/AuthApprovalGate";
 import NavBar from "../_components/NavBar";
 import PortalBar from "../_components/PortalBar";
 
@@ -14,7 +13,6 @@ export default function MainLayout({
 }) {
   return (
     <div className="max-w-7xl lg:flex mx-auto relative shadow justify-center">
-      <AuthApprovalGate />
       <NavBar />
       <div className="md:flex w-full">
         <div className="md:w-3/5">{children}</div>

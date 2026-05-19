@@ -144,6 +144,20 @@ const PointsModal = ({
   }, [currentUserPoints]);
 
   useEffect(() => {
+    if (typeof summary?.currentBalance !== "number") return;
+
+    setCurrentPoints((previousPoints) =>
+      previousPoints === summary.currentBalance
+        ? previousPoints
+        : summary.currentBalance,
+    );
+
+    if (currentUserPoints !== summary.currentBalance) {
+      onPointsUpdated(summary.currentBalance);
+    }
+  }, [currentUserPoints, onPointsUpdated, summary?.currentBalance]);
+
+  useEffect(() => {
     if (!isOpen) {
       setActiveTab("overview");
       setPage(1);

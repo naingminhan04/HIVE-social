@@ -1,73 +1,57 @@
 "use server";
 
-import {
-  setAccessCookies,
-  setRefreshCookie,
-  setUserApprovalCookie,
-  setVerifyCookies,
-  setPendingVerifyEmail,
-} from "./cookies";
-import api from "@/libs/axios";
+import axios from "axios";
 import { GoogleLoginInput } from "@/types/auth";
 import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
-import { normalizeUserPayload } from "@/utils/normalizeUser";
+import { API_BASE_URL } from "@/libs/apiBase";
 import { getApiErrorMessage } from "@/utils/apiError";
+import {
+  applyAuthSessionFromPayload,
+  toLoginSuccessResponse,
+} from "./authSession";
+import { setPendingGoogleIdToken } from "./cookies";
 
 export default async function googleLoginAction(
   input: GoogleLoginInput,
 ): Promise<ActionResponse<LoginSuccessResponse>> {
   try {
-    const { data } = await api.post("/auth/google-login", input);
-    const payload = data?.data ?? data;
+    const { data } = await axios.post(`${API_BASE_URL}/auth/google-login`, input);
 
-    const accessToken = payload?.accessToken ?? payload?.access_token;
-    const refreshToken = payload?.refreshToken ?? payload?.refresh_token;
-    const user = normalizeUserPayload(payload?.user ?? payload);
+    const session = await applyAuthSessionFromPayload(data, {
+      authMethod: "google",
+    });
+    const response = toLoginSuccessResponse(session);
 
-    if (!user) {
+    if (!response) {
       return {
         success: false,
         error: "Google login failed: No user received",
       };
     }
 
-    if (!accessToken && !user.isVerified) {
-      await setVerifyCookies();
-      await setPendingVerifyEmail(user.email);
-      await setUserApprovalCookie(false);
+    if (!response.user.isVerified) {
+      await setPendingGoogleIdToken(input.idToken);
 
       return {
         success: true,
         data: {
-          message: data.message ?? "Your email is not verified",
-          user,
-          configs: payload?.configs,
+          ...response,
           needsVerification: true,
         },
       };
     }
 
-    if (!accessToken) {
+    if (!response.accessToken) {
       return {
         success: false,
         error: "Google login failed: No access token received",
       };
     }
 
-    await setAccessCookies(accessToken);
-    if (refreshToken) await setRefreshCookie(refreshToken);
-    await setUserApprovalCookie(user.isVerified);
-
     return {
       success: true,
-      data: {
-        message: data.message,
-        accessToken,
-        refreshToken,
-        user,
-        configs: payload?.configs,
-      },
+      data: response,
     };
   } catch (err) {
     return {

@@ -2,16 +2,14 @@
 
 import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
-import {
-  getRefreshToken,
-  setAccessCookies,
-  setRefreshCookie,
-  setUserApprovalCookie,
-} from "./cookies";
+import { getRefreshToken } from "./cookies";
 import axios from "axios";
 import { API_BASE_URL } from "@/libs/apiBase";
 import { getApiErrorMessage } from "@/utils/apiError";
-import { normalizeUserPayload } from "@/utils/normalizeUser";
+import {
+  applyAuthSessionFromPayload,
+  toLoginSuccessResponse,
+} from "./authSession";
 
 export async function refreshAction(): Promise<ActionResponse<LoginSuccessResponse>> {
   try {
@@ -27,35 +25,30 @@ export async function refreshAction(): Promise<ActionResponse<LoginSuccessRespon
     const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
       refreshToken,
     });
-    const payload = data?.data ?? data;
 
-    const accessToken = payload?.accessToken ?? payload?.access_token;
-    const nextRefreshToken = payload?.refreshToken ?? payload?.refresh_token;
+    const session = await applyAuthSessionFromPayload(data);
+    let response = toLoginSuccessResponse(session);
 
-    if (accessToken) {
-      await setAccessCookies(accessToken);
-      if (nextRefreshToken) await setRefreshCookie(nextRefreshToken);
+    if (!response && session.accessToken) {
+      const meResponse = await axios.get(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      const meSession = await applyAuthSessionFromPayload(meResponse.data);
+      response = toLoginSuccessResponse({
+        ...meSession,
+        accessToken: meSession.accessToken ?? session.accessToken,
+        refreshToken: meSession.refreshToken ?? session.refreshToken,
+      });
     }
 
-    const user = normalizeUserPayload(payload?.user ?? payload);
-
-    if (!user) {
+    if (!response) {
       return {
         success: false,
         error: "Session refresh failed: No user received.",
       };
     }
 
-    await setUserApprovalCookie(user.isVerified);
-
-    return {
-      success: true,
-      data: {
-        accessToken,
-        refreshToken: nextRefreshToken,
-        user,
-      },
-    };
+    return { success: true, data: response };
   } catch (error) {
     return {
       success: false,

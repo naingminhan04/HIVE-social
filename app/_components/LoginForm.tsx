@@ -42,6 +42,7 @@ const LoginForm = () => {
       setError("");
 
       if (result.needsVerification) {
+        setUser(null);
         router.replace("/verify");
         return;
       }

@@ -9,7 +9,6 @@ import PostCard from "@/app/_components/PostCard";
 import DummyPostCard from "@/app/_components/DummyPostCard";
 import { searchAction } from "@/app/_actions/search";
 import { PostType } from "@/types/post";
-import { SearchResponseType } from "@/types/search";
 
 const INITIAL_LIMIT = 5;
 const LIMIT_STEP = 5;
@@ -24,7 +23,13 @@ const SearchPage = () => {
   const routeKeyword = Array.isArray(params.keyword)
     ? params.keyword[0]
     : params.keyword;
-  const keyword = useMemo(() => routeKeyword?.trim() ?? "", [routeKeyword]);
+  const keyword = useMemo(() => {
+    try {
+      return decodeURIComponent(routeKeyword ?? "").trim();
+    } catch {
+      return routeKeyword?.trim() ?? "";
+    }
+  }, [routeKeyword]);
 
   if (!keyword) {
     return (
@@ -40,7 +45,6 @@ const SearchPage = () => {
 const SearchResults = ({ keyword }: { keyword: string }) => {
   const [activeTab, setActiveTab] = useState<SearchTab>("posts");
   const [limit, setLimit] = useState(INITIAL_LIMIT);
-  const [cachedData, setCachedData] = useState<SearchResponseType | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const queryLimit = Math.min(limit, MAX_LIMIT);
 
@@ -54,17 +58,12 @@ const SearchResults = ({ keyword }: { keyword: string }) => {
       return result.data;
     },
     enabled: !!keyword,
+    placeholderData: (previousData) => previousData,
     staleTime: 1000 * 60 * 3,
     refetchOnWindowFocus: false,
   });
 
-  useEffect(() => {
-    if (data) {
-      setCachedData(data);
-    }
-  }, [data]);
-
-  const visibleData = data ?? cachedData;
+  const visibleData = data;
 
   const hasMorePosts = useMemo(() => {
     if (!visibleData) return false;

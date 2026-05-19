@@ -593,7 +593,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         onClose={() => setIsPointsOpen(false)}
         currentUserPoints={user?.points ?? viewer?.points ?? 0}
         onPointsUpdated={(points) => {
-          if (viewer) {
+          if (viewer && viewer.points !== points) {
             setViewer({ ...viewer, points });
           }
         }}

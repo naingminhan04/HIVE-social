@@ -19,13 +19,22 @@ export const useAuthStore = create<AuthState>()(
       hasHydrated: false,
       isSessionChecking: true,
 
-      setUser: (user) => set({ user }),
+      setUser: (user) =>
+        set((state) => (state.user === user ? state : { user })),
 
-      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
+      setHasHydrated: (hasHydrated) =>
+        set((state) =>
+          state.hasHydrated === hasHydrated ? state : { hasHydrated },
+        ),
 
-      setIsSessionChecking: (isSessionChecking) => set({ isSessionChecking }),
+      setIsSessionChecking: (isSessionChecking) =>
+        set((state) =>
+          state.isSessionChecking === isSessionChecking
+            ? state
+            : { isSessionChecking },
+        ),
 
-      logOut: () => set({ user: null }),
+      logOut: () => set((state) => (state.user === null ? state : { user: null })),
     }),
     {
       name: "auth-store",

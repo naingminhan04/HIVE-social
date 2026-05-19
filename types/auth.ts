@@ -9,6 +9,8 @@ export type GoogleLoginInput = {
   idToken: string;
 };
 
+export type PendingAuthMethod = "google" | "email";
+
 export type ConfigsType = {
   id: string;
   freeNameChangePerMonth: number;

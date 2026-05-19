@@ -23,12 +23,16 @@ export default async function verifyAction(
       verificationCode,
     });
 
-    if (data.accessToken) {
-      await setAccessCookies(data.accessToken);
-      if (data.refreshToken) await setRefreshCookie(data.refreshToken);
+    const payload = data?.data ?? data;
+    const accessToken = payload?.accessToken ?? payload?.access_token;
+    const refreshToken = payload?.refreshToken ?? payload?.refresh_token;
+
+    if (accessToken) {
+      await setAccessCookies(accessToken);
+      if (refreshToken) await setRefreshCookie(refreshToken);
     }
 
-    const user = normalizeUserPayload(data.user ?? data);
+    const user = normalizeUserPayload(payload.user ?? payload);
 
     if (!user) {
       return {
@@ -37,7 +41,9 @@ export default async function verifyAction(
       };
     }
 
-    await setUserApprovalCookie(user.isVerified);
+    const verifiedUser = accessToken ? { ...user, isVerified: true } : user;
+
+    await setUserApprovalCookie(verifiedUser.isVerified ?? true);
     await clearVerifyCookies();
     await clearPendingVerifyEmail();
 
@@ -45,9 +51,9 @@ export default async function verifyAction(
       success: true,
       data: {
         message: data.message,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        user,
+        accessToken,
+        refreshToken,
+        user: verifiedUser,
       },
     };
   } catch (err) {

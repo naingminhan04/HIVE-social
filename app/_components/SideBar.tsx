@@ -6,7 +6,6 @@ import { useRouter } from "nextjs-toploader/app";
 import LogOutBtn from "./LogOutBtn";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth";
-import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
 import HomeRefreshLink from "./HomeRefreshLink";
 import RecoverableImage from "./RecoverableImage";
 import { UserType } from "@/types/user";
@@ -40,11 +39,8 @@ const SideBar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const isPortalBarVisible = usePortalBarVisible();
   const profileSlug = getProfileSlug(user);
-  const MenuArr = getMenuArr(profileSlug).filter(
-    (item) => !isPortalBarVisible || item.name !== "Profile",
-  );
+  const MenuArr = getMenuArr(profileSlug).filter((item) => item.name !== "Profile");
 
   return (
     <div className="hidden lg:flex w-9/10 h-full flex-col">
@@ -85,13 +81,9 @@ const SideBar = () => {
         {user && (
           <div
             onClick={() => {
-              if (!isPortalBarVisible) {
-                router.push(`/users/${getProfileSlug(user)}`);
-              }
+              router.push(`/users/${getProfileSlug(user)}`);
             }}
-            className={`rounded-xl overflow-hidden border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 ${
-              isPortalBarVisible ? "" : "cursor-pointer"
-            }`}
+            className="cursor-pointer rounded-xl overflow-hidden border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
           >
             <div className="relative h-20 bg-gray-200 dark:bg-neutral-800">
               {user.coverPic && (

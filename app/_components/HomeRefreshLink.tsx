@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { MouseEvent, ReactNode } from "react";
+import toast from "react-hot-toast";
 
 type HomeRefreshLinkProps = {
   children: ReactNode;
@@ -9,16 +13,10 @@ type HomeRefreshLinkProps = {
   onNavigate?: () => void;
 };
 
-const scrollAllToTop = () => {
+const scrollHomeFeedToTop = () => {
   if (typeof window === "undefined") return;
 
-  window.scrollTo({ top: 0, behavior: "auto" });
-
-  document
-    .querySelectorAll<HTMLElement>("[data-home-scroll-target='true']")
-    .forEach((element) => {
-      element.scrollTo({ top: 0, behavior: "auto" });
-    });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const HomeRefreshLink = ({
@@ -26,11 +24,34 @@ const HomeRefreshLink = ({
   className,
   onNavigate,
 }: HomeRefreshLinkProps) => {
+  const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     onNavigate?.();
-    scrollAllToTop();
-    window.location.assign("/home");
+    scrollHomeFeedToTop();
+
+    if (pathname !== "/home") {
+      router.push("/home");
+      return;
+    }
+
+    void toast.promise(
+      queryClient.refetchQueries({
+        queryKey: ["posts", "all"],
+        exact: true,
+      }),
+      {
+        loading: "Refreshing the feed",
+        success: "Feed updated!",
+        error: "Error refreshing feed",
+      },
+      {
+        id: "feed-refresh",
+      },
+    );
   };
 
   return (

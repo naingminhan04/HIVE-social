@@ -9,7 +9,6 @@ import LogOutBtn from "./LogOutBtn";
 import { getMenuArr, getProfileSlug } from "./SideBar";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth";
-import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
 import HomeRefreshLink from "./HomeRefreshLink";
 import RecoverableImage from "./RecoverableImage";
 
@@ -18,11 +17,8 @@ const MenuBtn = () => {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const isPortalBarVisible = usePortalBarVisible();
   const profileSlug = getProfileSlug(user);
-  const MenuArr = getMenuArr(profileSlug).filter(
-    (item) => !isPortalBarVisible || item.name !== "Profile",
-  );
+  const MenuArr = getMenuArr(profileSlug);
   
   return (
     <div className="flex lg:hidden">
@@ -45,12 +41,14 @@ const MenuBtn = () => {
             <ul className="cursor-pointer overflow-scroll scrollbar-none overscroll-contain flex flex-1 flex-col">
               {MenuArr.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                const profileVisibilityClass =
+                  item.name === "Profile" ? "md:hidden" : "";
                 return (
                   item.href === "/home" ? (
                     <HomeRefreshLink
                       key={item.name}
                       onNavigate={() => setMenu(false)}
-                      className={`block p-4 transition-all active:bg-gray-200 ${
+                      className={`block p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${
                         isActive
                           ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"
                           : "hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-800"
@@ -62,7 +60,7 @@ const MenuBtn = () => {
                     <Link
                       key={item.name}
                       onClick={() => setMenu(false)}
-                      className={`p-4 transition-all active:bg-gray-200 ${
+                      className={`p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${
                         isActive
                           ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"
                           : "hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-800"
@@ -80,14 +78,10 @@ const MenuBtn = () => {
               {user && (
                 <div
                   onClick={() => {
-                    if (!isPortalBarVisible) {
-                      router.push(`/users/${getProfileSlug(user)}`);
-                    }
+                    router.push(`/users/${getProfileSlug(user)}`);
                     setMenu(false);
                   }}
-                  className={`rounded-xl overflow-hidden border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 ${
-                    isPortalBarVisible ? "" : "cursor-pointer"
-                  }`}
+                  className="cursor-pointer rounded-xl overflow-hidden border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
                 >
                   <div className="relative h-20 bg-gray-200 dark:bg-neutral-800">
                     {user.coverPic && (

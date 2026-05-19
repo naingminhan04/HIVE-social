@@ -1,15 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
-import { UserType } from "@/types/user";
+import { refreshAction } from "@/app/_actions/refresh";
 
 const UserRefresher = () => {
   const pathname = usePathname();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
-  const user = useAuthStore((state) => state.user);
   const setIsSessionChecking = useAuthStore((state) => state.setIsSessionChecking);
   const setUser = useAuthStore((state) => state.setUser);
   const logOut = useAuthStore((state) => state.logOut);
+  const hasCheckedSessionRef = useRef(false);
 
   useEffect(() => {
     const markHydrated = () => useAuthStore.setState({ hasHydrated: true });
@@ -30,53 +30,47 @@ const UserRefresher = () => {
 
   useEffect(() => {
     if (!hasHydrated) return;
-    if (pathname === "/" || pathname === "/signup") {
-      setIsSessionChecking(false);
-      return;
-    }
-    if (pathname === "/verify" && user && !user.isVerified) {
+    if (pathname === "/" || pathname === "/signup" || pathname === "/verify") {
       setIsSessionChecking(false);
       return;
     }
 
-    const controller = new AbortController();
-    setIsSessionChecking(true);
+    if (hasCheckedSessionRef.current) {
+      setIsSessionChecking(false);
+      return;
+    }
+
+    let cancelled = false;
+    const currentUser = useAuthStore.getState().user;
+    hasCheckedSessionRef.current = true;
+    setIsSessionChecking(!currentUser);
 
     (async () => {
       try {
-        const response = await fetch("/api/session", {
-          method: "GET",
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        const result = (await response.json()) as {
-          success: boolean;
-          data?: { user?: UserType | null };
-        };
+        const result = await refreshAction();
 
-        if (controller.signal.aborted) return;
+        if (cancelled) return;
 
-        if (response.ok && result.success && result.data?.user) {
+        if (result.success && result.data?.user) {
           setUser(result.data.user);
         } else {
           logOut();
         }
       } catch {
-        if (!controller.signal.aborted) {
+        if (!cancelled) {
           logOut();
         }
       } finally {
-        if (!controller.signal.aborted) {
+        if (!cancelled) {
           setIsSessionChecking(false);
         }
       }
     })();
 
     return () => {
-      controller.abort();
-      setIsSessionChecking(false);
+      cancelled = true;
     };
-  }, [hasHydrated, logOut, pathname, setIsSessionChecking, setUser, user]);
+  }, [hasHydrated, logOut, pathname, setIsSessionChecking, setUser]);
 
   return null;
 };
