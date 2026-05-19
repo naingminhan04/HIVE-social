@@ -18,7 +18,7 @@ const UserProfilePage = () => {
     ? params.username[0]
     : params.username;
   const username = routeUsername?.trim() ?? "";
-  const isOwnProfile = viewer?.username === username;
+  const isOwnProfile = viewer?.username === username || viewer?.id === username;
   const isAuthResolved = hasHydrated && !isSessionChecking;
 
   useEffect(() => {

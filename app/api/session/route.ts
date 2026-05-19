@@ -5,56 +5,11 @@ import {
   getRefreshToken,
   setAccessCookies,
   setRefreshCookie,
+  setUserApprovalCookie,
 } from "@/app/_actions/cookies";
-import { APIError } from "@/types/error";
-import { UserType } from "@/types/user";
-
-const normalizeUserPayload = (payload: unknown): UserType | null => {
-  const visited = new WeakSet<object>();
-
-  const findUser = (value: unknown, depth: number): UserType | null => {
-    if (depth > 5 || !value || typeof value !== "object") {
-      return null;
-    }
-
-    if (visited.has(value as object)) {
-      return null;
-    }
-
-    visited.add(value as object);
-
-    const candidate = value as Partial<UserType>;
-    if (
-      typeof candidate.id === "string" &&
-      typeof candidate.username === "string" &&
-      typeof candidate.name === "string"
-    ) {
-      return candidate as UserType;
-    }
-
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        const nested = findUser(item, depth + 1);
-        if (nested) {
-          return nested;
-        }
-      }
-
-      return null;
-    }
-
-    for (const nestedValue of Object.values(value as Record<string, unknown>)) {
-      const nested = findUser(nestedValue, depth + 1);
-      if (nested) {
-        return nested;
-      }
-    }
-
-    return null;
-  };
-
-  return findUser(payload, 0);
-};
+import { API_BASE_URL } from "@/libs/apiBase";
+import { normalizeUserPayload } from "@/utils/normalizeUser";
+import { getApiErrorMessage } from "@/utils/apiError";
 
 const getTokenSubject = (token?: string | null) => {
   if (!token) return null;
@@ -74,54 +29,91 @@ const getTokenSubject = (token?: string | null) => {
   }
 };
 
+const fetchProfileUser = async (userId: string, accessToken: string) => {
+  const profileResponse = await axios.get(
+    `${API_BASE_URL}/users/profile/${encodeURIComponent(userId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  return normalizeUserPayload(profileResponse.data.user ?? profileResponse.data);
+};
+
+const mergeSessionUser = (
+  authUser: ReturnType<typeof normalizeUserPayload>,
+  profileUser: ReturnType<typeof normalizeUserPayload>,
+) => {
+  if (!authUser) return profileUser;
+  if (!profileUser) return authUser;
+
+  return {
+    ...authUser,
+    ...profileUser,
+    isVerified: authUser.isVerified || profileUser.isVerified,
+  };
+};
+
 export async function GET() {
   try {
     const refreshToken = await getRefreshToken();
 
     if (!refreshToken) {
-      await clearAuthCookies();
       return NextResponse.json(
         { success: false, error: "No active session." },
         { status: 401 },
       );
     }
 
-    const { data } = await axios.post(
-      "https://seaapi.mine.bz/v1/api/auth/refresh-token",
-      {
-        refreshToken,
-      },
-    );
+    const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+      refreshToken,
+    });
+    const payload = data?.data ?? data;
 
-    const accessToken = data.accessToken as string | undefined;
-    const nextRefreshToken = (data.refreshToken as string | undefined) ?? refreshToken;
+    const accessToken = (payload.accessToken ?? payload.access_token) as
+      | string
+      | undefined;
+    const nextRefreshToken =
+      ((payload.refreshToken ?? payload.refresh_token) as string | undefined) ??
+      refreshToken;
 
     if (accessToken) {
       await setAccessCookies(accessToken);
     }
 
-    if (data.refreshToken) {
-      await setRefreshCookie(data.refreshToken);
+    if (payload.refreshToken ?? payload.refresh_token) {
+      await setRefreshCookie(nextRefreshToken);
     }
 
-    let user = normalizeUserPayload(data.user);
+    const userId =
+      normalizeUserPayload(payload.user)?.id ??
+      getTokenSubject(accessToken) ??
+      getTokenSubject(nextRefreshToken);
 
-    if (!user) {
-      const userId = getTokenSubject(accessToken) ?? getTokenSubject(nextRefreshToken);
+    const authUser = normalizeUserPayload(payload.user ?? payload);
+    let user = authUser;
 
-      if (userId && accessToken) {
-        const profileResponse = await axios.get(
-          `https://seaapi.mine.bz/v1/api/users/profile/${encodeURIComponent(userId)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-
-        user = normalizeUserPayload(profileResponse.data);
+    if (userId && accessToken) {
+      try {
+        const profileUser = await fetchProfileUser(userId, accessToken);
+        if (profileUser) {
+          user = mergeSessionUser(authUser, profileUser);
+        }
+      } catch {
+        // Keep the refreshed auth user if the profile endpoint is temporarily unavailable.
       }
     }
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Could not load user profile." },
+        { status: 401 },
+      );
+    }
+
+    await setUserApprovalCookie(user.isVerified);
 
     return NextResponse.json({
       success: true,
@@ -132,12 +124,10 @@ export async function GET() {
   } catch (error) {
     await clearAuthCookies();
 
-    let message = "Session refresh failed. Please sign in again.";
-
-    if (axios.isAxiosError(error)) {
-      const payload = error.response?.data as APIError | undefined;
-      message = payload?.message || payload?.error || message;
-    }
+    const message = getApiErrorMessage(
+      error,
+      "Session refresh failed. Please sign in again.",
+    );
 
     return NextResponse.json({ success: false, error: message }, { status: 401 });
   }

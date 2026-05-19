@@ -40,6 +40,7 @@ import type {
   CommentFormMode,
 } from "@/types/comment";
 import Image from "next/image";
+import { isVideoMedia } from "@/utils/media";
 import { formatDate } from "@/utils/formatDate";
 import { useForm, SubmitHandler } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -379,17 +380,26 @@ const CommentCard = ({
             {/* Comment Image */}
             {comment.images.length > 0 && (
               <div className="mt-2 overflow-hidden rounded-lg">
-                <Image
-                  src={comment.images[0].url || "/alt.png"}
-                  alt="comment image"
-                  width={200}
-                  height={200}
-                  className="rounded-lg max-w-xs cursor-pointer duration-300 ease-out hover:brightness-90 hover:contrast-105 transition-all"
-                  onClick={(e) => {
-                    e.stopPropagation(); // prevent triggering reply
-                    onViewImage?.(comment.images[0].url);
-                  }}
-                />
+                {isVideoMedia(comment.images[0]) ? (
+                  <video
+                    src={comment.images[0].url}
+                    controls
+                    className="max-w-xs rounded-lg bg-black"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <Image
+                    src={comment.images[0].url || "/alt.png"}
+                    alt="comment image"
+                    width={200}
+                    height={200}
+                    className="rounded-lg max-w-xs cursor-pointer duration-300 ease-out hover:brightness-90 hover:contrast-105 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation(); // prevent triggering reply
+                      onViewImage?.(comment.images[0].url);
+                    }}
+                  />
+                )}
               </div>
             )}
 

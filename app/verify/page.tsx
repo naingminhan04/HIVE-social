@@ -1,48 +1,85 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "nextjs-toploader/app";
-import { CheckCircle2, Clock3, LogOut, RefreshCw } from "lucide-react";
+import { Clock3, LogOut } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
-import { UserType } from "@/types/user";
 import { logoutAction } from "../_actions/logout";
+import { getPendingEmailAction } from "../_actions/getPendingEmail";
+import { useAuthLoading, useAuthResolved } from "@/hooks/useAuthResolved";
+import VerifyCodeForm from "../_components/VerifyCodeForm";
+import { UserType } from "@/types/user";
 
 const Verify = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const hasHydrated = useAuthStore((state) => state.hasHydrated);
-  const isSessionChecking = useAuthStore((state) => state.isSessionChecking);
   const setUser = useAuthStore((state) => state.setUser);
   const logOut = useAuthStore((state) => state.logOut);
-  const isAuthResolved = hasHydrated && !isSessionChecking;
+  const isAuthResolved = useAuthResolved();
+  const isAuthLoading = useAuthLoading();
+  const [email, setEmail] = useState<string | null>(null);
+  const [hasCheckedVerificationState, setHasCheckedVerificationState] =
+    useState(false);
 
-  const refreshMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch("/api/session", {
-        method: "GET",
-        cache: "no-store",
-      });
-      const result = (await response.json()) as {
-        success: boolean;
-        data?: { user?: UserType | null };
-        error?: string;
-      };
+  useEffect(() => {
+    if (!isAuthResolved) return;
 
-      if (!response.ok || !result.success || !result.data?.user) {
-        throw new Error(result.error || "Could not refresh your approval status.");
+    let cancelled = false;
+
+    const resolveVerificationState = async () => {
+      setHasCheckedVerificationState(false);
+
+      try {
+        let currentUser = useAuthStore.getState().user;
+
+        if (!currentUser) {
+          const response = await fetch("/api/session", {
+            method: "GET",
+            cache: "no-store",
+          });
+          const result = (await response.json()) as {
+            success: boolean;
+            data?: { user?: UserType | null };
+          };
+
+          if (response.ok && result.success && result.data?.user) {
+            currentUser = result.data.user;
+            setUser(currentUser);
+          }
+        }
+
+        if (cancelled) return;
+
+        if (currentUser?.isVerified) {
+          router.replace("/home");
+          return;
+        }
+
+        const pendingEmail = await getPendingEmailAction();
+
+        if (cancelled) return;
+
+        setEmail(currentUser?.email ?? pendingEmail);
+      } catch {
+        if (!cancelled) {
+          setEmail(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setHasCheckedVerificationState(true);
+        }
       }
+    };
 
-      return result.data.user;
-    },
-    onSuccess: (nextUser) => {
-      setUser(nextUser);
-      if (nextUser.isVerified) {
-        router.replace("/home");
-      }
-    },
-  });
+    void resolveVerificationState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthResolved, router, setUser, user?.email, user?.id, user?.isVerified]);
 
   const logoutMutation = useMutation({
     mutationFn: logoutAction,
@@ -52,20 +89,7 @@ const Verify = () => {
     },
   });
 
-  useEffect(() => {
-    if (!isAuthResolved) return;
-
-    if (!user) {
-      router.replace("/signup");
-      return;
-    }
-
-    if (user.isVerified) {
-      router.replace("/home");
-    }
-  }, [isAuthResolved, router, user]);
-
-  if (!isAuthResolved) {
+  if (isAuthLoading || !hasCheckedVerificationState) {
     return (
       <main className="flex min-h-dvh w-dvw items-center justify-center p-5">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -78,12 +102,26 @@ const Verify = () => {
     );
   }
 
-  if (!user) {
+  if (user?.isVerified) {
     return null;
   }
 
-  if (user.isVerified) {
-    return null;
+  if (!email) {
+    return (
+      <main className="flex min-h-dvh w-dvw items-center justify-center p-5">
+        <div className="flex max-w-md flex-col items-center gap-4 text-center">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            No pending verification found. Sign in to continue.
+          </p>
+          <Link
+            href="/"
+            className="rounded-md bg-neutral-900 px-4 py-3 text-sm font-semibold text-white dark:bg-white dark:text-neutral-950"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -103,52 +141,40 @@ const Verify = () => {
           </span>
           <div>
             <h1 className="text-2xl font-bold text-neutral-950 dark:text-neutral-50">
-              Waiting for admin approval
+              Verify your account
             </h1>
             <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-              Your Google account is signed in as{" "}
-              <b className="text-neutral-900 dark:text-neutral-100">{user.email}</b>.
-              An admin needs to approve it before you can access SEA Social.
+              {user?.name ? (
+                <>
+                  Hi <b className="text-neutral-900 dark:text-neutral-100">{user.name}</b>,{" "}
+                </>
+              ) : null}
+              enter the verification code for{" "}
+              <b className="text-neutral-900 dark:text-neutral-100">{email}</b>. Ask an admin
+              for the code if you do not have one yet.
             </p>
           </div>
         </div>
 
-        {refreshMutation.data?.isVerified ? (
-          <div className="flex items-center gap-2 rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
-            <CheckCircle2 size={16} />
-            Approved. Taking you home...
-          </div>
-        ) : null}
+        <VerifyCodeForm email={email} />
 
-        {refreshMutation.isError ? (
-          <p className="text-sm text-red-600 dark:text-red-500">
-            {refreshMutation.error.message}
-          </p>
-        ) : null}
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          Already approved by an admin?{" "}
+          <Link href="/" className="font-medium underline underline-offset-2">
+            Sign in again
+          </Link>{" "}
+          to access your account.
+        </p>
 
-        <div className="flex w-full flex-col gap-3">
-          <button
-            type="button"
-            onClick={() => refreshMutation.mutate()}
-            disabled={refreshMutation.isPending}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-3 font-semibold text-white transition hover:bg-neutral-700 disabled:opacity-60 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-          >
-            <RefreshCw
-              size={18}
-              className={refreshMutation.isPending ? "animate-spin" : ""}
-            />
-            {refreshMutation.isPending ? "Checking..." : "Check approval status"}
-          </button>
-          <button
-            type="button"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-black/10 px-4 py-3 font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-60 dark:border-white/10 dark:text-neutral-300 dark:hover:bg-neutral-900"
-          >
-            <LogOut size={18} />
-            {logoutMutation.isPending ? "Signing out..." : "Sign out"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+          className="inline-flex items-center justify-center gap-2 text-sm font-medium text-neutral-500 transition hover:text-neutral-800 disabled:opacity-60 dark:text-neutral-400 dark:hover:text-neutral-200"
+        >
+          <LogOut size={16} />
+          {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+        </button>
       </div>
     </main>
   );

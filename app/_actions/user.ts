@@ -7,53 +7,7 @@ import { APIError } from "@/types/error";
 import { ActionResponse } from "@/types/action";
 import { ImageType } from "@/types/post";
 import { SearchResponseType } from "@/types/search";
-
-const normalizeUserPayload = (payload: unknown): UserType | null => {
-    const visited = new WeakSet<object>();
-
-    const findUser = (value: unknown, depth: number): UserType | null => {
-        if (depth > 5 || !value || typeof value !== "object") {
-            return null;
-        }
-
-        if (visited.has(value as object)) {
-            return null;
-        }
-
-        visited.add(value as object);
-
-        const candidate = value as Partial<UserType>;
-        if (
-            typeof candidate.id === "string" &&
-            typeof candidate.username === "string" &&
-            typeof candidate.name === "string"
-        ) {
-            return candidate as UserType;
-        }
-
-        if (Array.isArray(value)) {
-            for (const item of value) {
-                const nested = findUser(item, depth + 1);
-                if (nested) {
-                    return nested;
-                }
-            }
-
-            return null;
-        }
-
-        for (const nestedValue of Object.values(value as Record<string, unknown>)) {
-            const nested = findUser(nestedValue, depth + 1);
-            if (nested) {
-                return nested;
-            }
-        }
-
-        return null;
-    };
-
-    return findUser(payload, 0);
-};
+import { normalizeUserPayload } from "@/utils/normalizeUser";
 
 export async function getAllUserAction(nextPage: number = 1, limit: number = 10, keyword: string | null): Promise<ActionResponse<UserResponseType>> {
     try {

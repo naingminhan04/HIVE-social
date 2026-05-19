@@ -28,60 +28,72 @@ const GoogleAuthButton = () => {
       return result.data;
     },
     onSuccess: (data) => {
+      if (data.user.isVerified) {
+        setUser(data.user);
+        router.replace("/home");
+        return;
+      }
+
+      if (data.needsVerification) {
+        setUser(data.user);
+        router.replace("/verify");
+        return;
+      }
+
       setUser(data.user);
-      router.replace(data.user.isVerified ? "/home" : "/verify");
+      router.replace("/home");
     },
   });
   const errorMessage = configError || mutation.error?.message;
 
   return (
     <div className="flex w-full flex-col gap-3">
-      {clientId ? (
-        <div
-          className={`relative h-12 w-full overflow-hidden rounded-md ${
-            mutation.isPending ? "pointer-events-none opacity-60" : ""
-          }`}
-        >
-          <button
-            type="button"
-            disabled={mutation.isPending}
-            className="flex h-full w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white p-3 font-bold text-neutral-900 transition hover:bg-neutral-100 active:bg-neutral-200 disabled:opacity-60 dark:border-neutral-600 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-50 dark:active:bg-neutral-300"
+        {clientId ? (
+          <div
+            className={`relative h-12 w-full overflow-hidden rounded-md ${
+              mutation.isPending ? "pointer-events-none opacity-60" : ""
+            }`}
           >
-            <FcGoogle className="h-5 w-5" />
-            Continue with Google
-          </button>
-          <div className="absolute inset-0 opacity-0">
-            <GoogleLogin
-              theme="filled_black"
-              size="large"
-              shape="rectangular"
-              text="continue_with"
-              logo_alignment="center"
-              width={GOOGLE_BUTTON_WIDTH}
-              onSuccess={(credentialResponse) => {
-                if (!credentialResponse.credential) return;
-                mutation.mutate(credentialResponse.credential);
-              }}
-              onError={() => {
-                mutation.reset();
-              }}
-            />
+            <button
+              type="button"
+              disabled={mutation.isPending}
+              className="flex h-full w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white p-3 font-bold text-neutral-900 transition hover:bg-neutral-100 active:bg-neutral-200 disabled:opacity-60 dark:border-neutral-600 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-50 dark:active:bg-neutral-300"
+            >
+              <FcGoogle className="h-5 w-5" />
+              Continue with Google
+            </button>
+            <div className="absolute inset-0 opacity-0">
+              <GoogleLogin
+                theme="filled_black"
+                size="large"
+                shape="rectangular"
+                text="continue_with"
+                logo_alignment="center"
+                width={GOOGLE_BUTTON_WIDTH}
+                onSuccess={(credentialResponse) => {
+                  if (!credentialResponse.credential) return;
+                  mutation.mutate(credentialResponse.credential);
+                }}
+                onError={() => {
+                  mutation.reset();
+                }}
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {mutation.isPending && (
-        <p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
-          Signing in with Google...
-        </p>
-      )}
+        {mutation.isPending && (
+          <p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
+            Signing in with Google...
+          </p>
+        )}
 
-      {errorMessage && (
-        <div className="flex items-center gap-2 rounded-md bg-red-100 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-500">
-          <PiWarningCircle className="h-4 w-4 shrink-0" />
-          {errorMessage}
-        </div>
-      )}
+        {errorMessage && (
+          <div className="flex items-center gap-2 rounded-md bg-red-100 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-500">
+            <PiWarningCircle className="h-4 w-4 shrink-0" />
+            {errorMessage}
+          </div>
+        )}
     </div>
   );
 };

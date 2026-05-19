@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 import OverlayPortal from "./OverlayPortal";
+import { isVideoMedia } from "@/utils/media";
 
 type ImageType = {
   id: string;
   url: string;
+  fileName?: string | null;
+  mimeType?: string | null;
 };
 
 type Props = {
@@ -16,6 +19,30 @@ type Props = {
   index?: number;
   onClose: () => void;
   onChange?: (index: number) => void;
+};
+
+type ViewerState = {
+  mediaKey: string;
+  isImageLoading: boolean;
+  isImageBroken: boolean;
+  retryKey: number;
+};
+
+const getInitialViewerState = (mediaKey: string): ViewerState => ({
+  mediaKey,
+  isImageLoading: true,
+  isImageBroken: false,
+  retryKey: 0,
+});
+
+const isLocalSrc = (src: string) => src.startsWith("/") && !src.startsWith("//");
+
+const appendRetryParam = (src: string, retryKey: number) => {
+  if (retryKey === 0 || isLocalSrc(src)) {
+    return src;
+  }
+
+  return `${src}${src.includes("?") ? "&" : "?"}img_retry=${retryKey}`;
 };
 
 const ImageViewer = ({ images, index, onClose, onChange }: Props) => {
@@ -29,23 +56,23 @@ const ImageViewer = ({ images, index, onClose, onChange }: Props) => {
     Math.min(index ?? 0, normalizedImages.length - 1),
   );
   const image = normalizedImages[safeIndex];
-  const [isImageLoading, setIsImageLoading] = useState(true);
-  const [isImageBroken, setIsImageBroken] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
+  const mediaKey = `${safeIndex}-${image?.url ?? ""}`;
+  const [storedViewerState, setStoredViewerState] = useState(() =>
+    getInitialViewerState(mediaKey),
+  );
+  const viewerState =
+    storedViewerState.mediaKey === mediaKey
+      ? storedViewerState
+      : getInitialViewerState(mediaKey);
 
   useLockBodyScroll(true);
-
-  useEffect(() => {
-    setIsImageLoading(true);
-    setIsImageBroken(false);
-    setRetryKey(0);
-  }, [safeIndex, image?.url]);
 
   if (!image) {
     return null;
   }
 
-  const resolvedImageUrl = `${image.url}${image.url.includes("?") ? "&" : "?"}img_retry=${retryKey}`;
+  const resolvedImageUrl = appendRetryParam(image.url, viewerState.retryKey);
+  const isVideo = isVideoMedia(image);
 
   return (
     <OverlayPortal>
@@ -70,22 +97,25 @@ const ImageViewer = ({ images, index, onClose, onChange }: Props) => {
         )}
 
         <div className="relative h-dvh w-dvw">
-          {isImageLoading && !isImageBroken && (
+          {viewerState.isImageLoading && !viewerState.isImageBroken && !isVideo && (
             <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/70">
               <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur">
                 <Loader2 size={20} className="animate-spin" />
               </span>
             </div>
           )}
-          {isImageBroken && (
+          {viewerState.isImageBroken && (
             <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center gap-4 bg-black/75 text-white">
               <p className="text-sm text-white/80">This image could not be loaded.</p>
               <button
                 type="button"
                 onClick={() => {
-                  setRetryKey((previous) => previous + 1);
-                  setIsImageBroken(false);
-                  setIsImageLoading(true);
+                  setStoredViewerState({
+                    mediaKey,
+                    retryKey: viewerState.retryKey + 1,
+                    isImageBroken: false,
+                    isImageLoading: true,
+                  });
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-3 text-sm font-medium backdrop-blur transition hover:bg-white/20 active:scale-95"
               >
@@ -94,24 +124,43 @@ const ImageViewer = ({ images, index, onClose, onChange }: Props) => {
               </button>
             </div>
           )}
-          <Image
-            key={`${image.id}-${safeIndex}-${retryKey}`}
-            src={resolvedImageUrl}
-            alt="viewer"
-            fill
-            className={`object-contain transition-opacity duration-200 ${
-              isImageLoading || isImageBroken ? "opacity-0" : "opacity-100"
-            }`}
-            priority
-            onLoad={() => {
-              setIsImageLoading(false);
-              setIsImageBroken(false);
-            }}
-            onError={() => {
-              setIsImageLoading(false);
-              setIsImageBroken(true);
-            }}
-          />
+          {isVideo ? (
+            <video
+              key={`${image.id}-${safeIndex}`}
+              src={image.url}
+              className="h-full w-full object-contain"
+              controls
+              autoPlay
+              playsInline
+            />
+          ) : (
+            <Image
+              key={`${image.id}-${safeIndex}-${viewerState.retryKey}`}
+              src={resolvedImageUrl}
+              alt="viewer"
+              fill
+              className={`object-contain transition-opacity duration-200 ${
+                viewerState.isImageLoading || viewerState.isImageBroken ? "opacity-0" : "opacity-100"
+              }`}
+              priority
+              onLoad={() => {
+                setStoredViewerState({
+                  ...viewerState,
+                  mediaKey,
+                  isImageLoading: false,
+                  isImageBroken: false,
+                });
+              }}
+              onError={() => {
+                setStoredViewerState({
+                  ...viewerState,
+                  mediaKey,
+                  isImageLoading: false,
+                  isImageBroken: true,
+                });
+              }}
+            />
+          )}
         </div>
 
         {normalizedImages.length > 1 &&

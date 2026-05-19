@@ -1,8 +1,9 @@
 import { getToken } from "@/app/_actions/cookies";
+import { API_BASE_URL } from "@/libs/apiBase";
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://seaapi.mine.bz/v1/api",
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -35,8 +36,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    const requestUrl = String(originalRequest?.url ?? "");
+    const isAuthRefreshRequest = requestUrl.includes("/auth/refresh-token");
+
     // If error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthRefreshRequest
+    ) {
       originalRequest._retry = true;
 
       try {

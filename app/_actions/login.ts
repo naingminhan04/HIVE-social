@@ -1,53 +1,68 @@
 "use server";
 
-import { setAccessCookies, setVerifyCookies, setRefreshCookie } from "./cookies";
+import {
+  setAccessCookies,
+  setRefreshCookie,
+  setUserApprovalCookie,
+  setVerifyCookies,
+  setPendingVerifyEmail,
+} from "./cookies";
 import api from "@/libs/axios";
-import axios from "axios";
 import { LoginInput } from "@/types/auth";
 import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
+import { normalizeUserPayload } from "@/utils/normalizeUser";
+import { getApiErrorMessage, isNotVerifiedError } from "@/utils/apiError";
 
 export default async function loginAction(
   input: LoginInput,
 ): Promise<ActionResponse<LoginSuccessResponse>> {
   try {
     const { data } = await api.post("/auth/login", input);
+    const payload = data?.data ?? data;
 
-    const accessToken = data?.accessToken;
-    const refreshToken = data?.refreshToken;
+    const accessToken = payload?.accessToken ?? payload?.access_token;
+    const refreshToken = payload?.refreshToken ?? payload?.refresh_token;
+    const user = normalizeUserPayload(payload?.user ?? payload);
 
-    if (accessToken) {
-      await setAccessCookies(accessToken);
-      if (refreshToken) await setRefreshCookie(refreshToken);
-
+    if (!accessToken || !user) {
       return {
-        success: true,
-        data: {
-          message: data.message,
-          accessToken,
-          refreshToken,
-          user: data.user,
-          configs: data.configs,
-          verificationCodeForTesting: data.verificationCodeForTesting,
-        },
+        success: false,
+        error: "Login failed: No access token received",
       };
     }
 
-    await setVerifyCookies();
+    await setAccessCookies(accessToken);
+    if (refreshToken) await setRefreshCookie(refreshToken);
+    await setUserApprovalCookie(user.isVerified);
+
     return {
       success: true,
       data: {
-        user: data.user,
-        verificationCodeForTesting: data.verificationCodeForTesting
+        message: data.message,
+        accessToken,
+        refreshToken,
+        user,
+        configs: payload?.configs,
       },
     };
   } catch (err) {
-    let message = "Unexpected server error";
+    if (isNotVerifiedError(err)) {
+      await setVerifyCookies();
+      await setPendingVerifyEmail(input.email);
+      await setUserApprovalCookie(false);
 
-    if (axios.isAxiosError(err)) {
-      message = err.response?.data?.message || "Login Failed";
+      return {
+        success: false,
+        error: getApiErrorMessage(err, "Your email is not verified"),
+        notVerified: true,
+        email: input.email,
+      };
     }
 
-    return { success: false, error: message };
+    return {
+      success: false,
+      error: getApiErrorMessage(err, "Login failed"),
+    };
   }
 }

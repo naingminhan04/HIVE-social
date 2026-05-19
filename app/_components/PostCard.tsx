@@ -14,6 +14,7 @@ import CommentBtn from "./Comment";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import RecoverableImage from "./RecoverableImage";
+import { isVideoMedia } from "@/utils/media";
 
 const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
   const images = post.images || [];
@@ -91,17 +92,27 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
                     images.length === 3 && index === 2 ? "col-span-2" : ""
                   }`}
                 >
-                  <RecoverableImage
-                    src={img.url}
-                    fill
-                    alt="Post Image"
-                    className="object-cover"
-                    wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"
-                    showRetryButton
-                    showLoadingOverlay
-                    retryButtonClassName="h-12 w-12"
-                    brokenOverlayClassName="bg-black/35"
-                  />
+                  {isVideoMedia(img) ? (
+                    <video
+                      src={img.url}
+                      className="h-full w-full bg-black object-cover"
+                      preload="metadata"
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <RecoverableImage
+                      src={img.url}
+                      fill
+                      alt="Post Image"
+                      className="object-cover"
+                      wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"
+                      showRetryButton
+                      showLoadingOverlay
+                      retryButtonClassName="h-12 w-12"
+                      brokenOverlayClassName="bg-black/35"
+                    />
+                  )}
 
                   {index === 3 && moreCount > 0 && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-2xl font-bold">

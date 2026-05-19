@@ -1,6 +1,14 @@
-import axios, { AxiosError } from "axios";
+"use server";
+
 import api from "@/libs/axios";
 import { ActionResponse } from "@/types/action";
+import { RegisterSuccessResponse } from "@/types/auth";
+import {
+  setPendingVerifyEmail,
+  setUserApprovalCookie,
+  setVerifyCookies,
+} from "./cookies";
+import { getApiErrorMessage } from "@/utils/apiError";
 
 export type RegisterPayload = {
   name: string;
@@ -8,26 +16,26 @@ export type RegisterPayload = {
   password: string;
 };
 
-export type RegisterResponse = {
-  message: string;
-  verificationCodeForTesting: number;
-};
-
-export async function registerUser(payload: RegisterPayload): Promise<ActionResponse<RegisterResponse>> {
+export default async function registerAction(
+  payload: RegisterPayload,
+): Promise<ActionResponse<RegisterSuccessResponse>> {
   try {
-    const res = await api.post('/auth/register', payload);
-    return { success: true, data: res.data };
-  } catch (err) {
-    let message = "An unexpected error occurred";
+    const { data } = await api.post("/auth/register", payload);
 
-    if (axios.isAxiosError(err)) {
-      if (err.response && err.response.data && (err.response.data as AxiosError).message) {
-        message = (err.response.data as AxiosError).message;
-      } else {
-        message = "Registration failed. Please try again.";
-      }
-    }
-    
-    return { success: false, error: message };
+    await setVerifyCookies();
+    await setPendingVerifyEmail(payload.email.trim());
+    await setUserApprovalCookie(false);
+
+    return {
+      success: true,
+      data: {
+        message: data.message ?? "Get verification code from admin",
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: getApiErrorMessage(err, "Registration failed. Please try again."),
+    };
   }
 }

@@ -4,16 +4,17 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
 import { useAuthStore } from "@/store/auth";
+import { useAuthLoading, useAuthResolved } from "@/hooks/useAuthResolved";
 
 const AuthApprovalGate = () => {
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
-  const hasHydrated = useAuthStore((state) => state.hasHydrated);
-  const isSessionChecking = useAuthStore((state) => state.isSessionChecking);
+  const isAuthResolved = useAuthResolved();
+  const isAuthLoading = useAuthLoading();
 
   useEffect(() => {
-    if (!hasHydrated || isSessionChecking) return;
+    if (!isAuthResolved) return;
 
     if (!user) {
       router.replace("/");
@@ -23,9 +24,9 @@ const AuthApprovalGate = () => {
     if (!user.isVerified && pathname !== "/verify") {
       router.replace("/verify");
     }
-  }, [hasHydrated, isSessionChecking, pathname, router, user]);
+  }, [isAuthResolved, pathname, router, user]);
 
-  if (!hasHydrated || isSessionChecking || !user || !user.isVerified) {
+  if (isAuthLoading) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-100 p-5 dark:bg-neutral-950">
         <div className="flex flex-col items-center gap-3 text-center">

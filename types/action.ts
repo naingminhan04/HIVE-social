@@ -1,3 +1,10 @@
-export type ActionResponse<T> = 
-    | { success: true; data: T } 
-    | { success: false; error: string };
+export type ActionFailure = {
+  success: false;
+  error: string;
+  notVerified?: boolean;
+  email?: string;
+};
+
+export type ActionResponse<T> =
+  | { success: true; data: T }
+  | ActionFailure;

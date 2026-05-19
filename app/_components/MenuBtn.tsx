@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
 import LogOutBtn from "./LogOutBtn";
-import { getMenuArr } from "./SideBar";
+import { getMenuArr, getProfileSlug } from "./SideBar";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth";
 import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
@@ -19,8 +19,8 @@ const MenuBtn = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const isPortalBarVisible = usePortalBarVisible();
-  const username = user?.username;
-  const MenuArr = getMenuArr(username as string).filter(
+  const profileSlug = getProfileSlug(user);
+  const MenuArr = getMenuArr(profileSlug).filter(
     (item) => !isPortalBarVisible || item.name !== "Profile",
   );
   
@@ -81,7 +81,7 @@ const MenuBtn = () => {
                 <div
                   onClick={() => {
                     if (!isPortalBarVisible) {
-                      router.push(`/users/${user.username}`);
+                      router.push(`/users/${getProfileSlug(user)}`);
                     }
                     setMenu(false);
                   }}
@@ -118,7 +118,7 @@ const MenuBtn = () => {
                       <div className="min-w-0">
                         <p className="font-semibold truncate">{user.name}</p>
                         <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                          @{user.username}
+                          @{user.username || user.email || user.id}
                         </p>
                       </div>
                     </div>

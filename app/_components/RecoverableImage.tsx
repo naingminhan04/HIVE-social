@@ -2,7 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import Image, { ImageProps } from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type RecoverableImageProps = Omit<ImageProps, "src"> & {
   src?: string | null;
@@ -15,8 +15,31 @@ type RecoverableImageProps = Omit<ImageProps, "src"> & {
   brokenOverlayClassName?: string;
 };
 
-const appendRetryParam = (src: string, retryKey: number) =>
-  `${src}${src.includes("?") ? "&" : "?"}img_retry=${retryKey}`;
+type ImageState = {
+  src?: string | null;
+  retryKey: number;
+  isLoading: boolean;
+  useFallback: boolean;
+  hasError: boolean;
+};
+
+const getInitialImageState = (src?: string | null): ImageState => ({
+  src,
+  retryKey: 0,
+  isLoading: Boolean(src),
+  useFallback: false,
+  hasError: false,
+});
+
+const isLocalSrc = (src: string) => src.startsWith("/") && !src.startsWith("//");
+
+const appendRetryParam = (src: string, retryKey: number) => {
+  if (retryKey === 0 || isLocalSrc(src)) {
+    return src;
+  }
+
+  return `${src}${src.includes("?") ? "&" : "?"}img_retry=${retryKey}`;
+};
 
 const RecoverableImage = ({
   src,
@@ -30,41 +53,46 @@ const RecoverableImage = ({
   brokenOverlayClassName = "",
   ...imageProps
 }: RecoverableImageProps) => {
-  const [retryKey, setRetryKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(Boolean(src));
-  const [useFallback, setUseFallback] = useState(false);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    setRetryKey(0);
-    setIsLoading(Boolean(src));
-    setUseFallback(false);
-    setHasError(false);
-  }, [src]);
+  const [storedImageState, setStoredImageState] = useState(() =>
+    getInitialImageState(src),
+  );
+  const imageState =
+    storedImageState.src === src ? storedImageState : getInitialImageState(src);
 
   const primarySrc = useMemo(
-    () => (src ? appendRetryParam(src, retryKey) : null),
-    [retryKey, src],
+    () => (src ? appendRetryParam(src, imageState.retryKey) : null),
+    [imageState.retryKey, src],
   );
 
-  const activeSrc = useFallback ? fallbackSrc ?? null : primarySrc;
+  const activeSrc = imageState.useFallback ? fallbackSrc ?? null : primarySrc;
 
   const handleRetry = () => {
-    setRetryKey((previous) => previous + 1);
-    setIsLoading(Boolean(src));
-    setUseFallback(false);
-    setHasError(false);
+    setStoredImageState({
+      src,
+      retryKey: imageState.retryKey + 1,
+      isLoading: Boolean(src),
+      useFallback: false,
+      hasError: false,
+    });
   };
 
   const handleError = () => {
-    if (!useFallback && fallbackSrc) {
-      setUseFallback(true);
-      setIsLoading(true);
+    if (!imageState.useFallback && fallbackSrc) {
+      setStoredImageState({
+        ...imageState,
+        src,
+        useFallback: true,
+        isLoading: true,
+      });
       return;
     }
 
-    setHasError(true);
-    setIsLoading(false);
+    setStoredImageState({
+      ...imageState,
+      src,
+      hasError: true,
+      isLoading: false,
+    });
   };
 
   return (
@@ -75,20 +103,24 @@ const RecoverableImage = ({
           src={activeSrc}
           alt={alt}
           onLoad={() => {
-            setIsLoading(false);
-            setHasError(false);
+            setStoredImageState({
+              ...imageState,
+              src,
+              isLoading: false,
+              hasError: false,
+            });
           }}
           onError={handleError}
         />
       ) : null}
 
-      {showLoadingOverlay && isLoading && activeSrc && (
+      {showLoadingOverlay && imageState.isLoading && activeSrc && (
         <div
           className={`absolute inset-0 z-10 animate-pulse bg-gray-300 dark:bg-neutral-700 ${loadingOverlayClassName}`}
         />
       )}
 
-      {(hasError || useFallback) && showRetryButton && src && (
+      {(imageState.hasError || imageState.useFallback) && showRetryButton && src && (
         <div
           className={`absolute inset-0 z-20 flex items-center justify-center bg-black/45 backdrop-blur-sm ${brokenOverlayClassName}`}
         >

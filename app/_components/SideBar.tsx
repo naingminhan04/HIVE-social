@@ -9,8 +9,12 @@ import { useAuthStore } from "@/store/auth";
 import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
 import HomeRefreshLink from "./HomeRefreshLink";
 import RecoverableImage from "./RecoverableImage";
+import { UserType } from "@/types/user";
 
-export const getMenuArr = (username: string) => [
+export const getProfileSlug = (user?: Pick<UserType, "id" | "username"> | null) =>
+  user?.username?.trim() || user?.id || "";
+
+export const getMenuArr = (profileSlug: string) => [
   {
     name: "Home",
     href: "/home",
@@ -25,7 +29,7 @@ export const getMenuArr = (username: string) => [
   },
   {
     name: "Profile",
-    href: `/users/${username}`,
+    href: profileSlug ? `/users/${profileSlug}` : "/home",
   },
   {
     name: "Leaderboard",
@@ -37,8 +41,8 @@ const SideBar = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const isPortalBarVisible = usePortalBarVisible();
-  const username = user?.username;
-  const MenuArr = getMenuArr(username as string).filter(
+  const profileSlug = getProfileSlug(user);
+  const MenuArr = getMenuArr(profileSlug).filter(
     (item) => !isPortalBarVisible || item.name !== "Profile",
   );
 
@@ -82,7 +86,7 @@ const SideBar = () => {
           <div
             onClick={() => {
               if (!isPortalBarVisible) {
-                router.push(`/users/${user.username}`);
+                router.push(`/users/${getProfileSlug(user)}`);
               }
             }}
             className={`rounded-xl overflow-hidden border border-blue-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 ${
@@ -118,7 +122,7 @@ const SideBar = () => {
                 <div className="min-w-0">
                   <p className="font-semibold truncate">{user.name}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                    @{user.username}
+                    @{user.username || user.email || user.id}
                   </p>
                 </div>
               </div>

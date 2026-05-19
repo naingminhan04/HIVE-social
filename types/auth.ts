@@ -41,6 +41,16 @@ export type LoginSuccessResponse = {
   user: UserType;
   configs?: ConfigsType;
   verificationCodeForTesting?: number;
+  needsVerification?: boolean;
+};
+
+export type RegisterSuccessResponse = {
+  message: string;
+};
+
+export type ResendCodeSuccessResponse = {
+  message: string;
+  verificationCodeExpiresAt: string;
 };
 
 export type VerifySuccessResponse = {

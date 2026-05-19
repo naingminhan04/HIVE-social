@@ -1,15 +1,18 @@
 "use server";
 
 import api from "@/libs/axios";
-import { clearAuthCookies } from "./cookies";
+import { clearAuthCookies, getRefreshToken } from "./cookies";
 import { ActionResponse } from "@/types/action";
 
 export async function logoutAction(): Promise<ActionResponse<{ message: string }>> {
   try {
-    await api.post("/auth/logout");
+    const refreshToken = await getRefreshToken();
+
+    if (refreshToken) {
+      await api.post("/auth/logout", { refreshToken });
+    }
   } catch (error) {
     console.error("Logout API error:", error);
-    // Continue with logout even if API call fails
   }
 
   try {

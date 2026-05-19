@@ -3,11 +3,9 @@ import { persist } from "zustand/middleware";
 import { UserType } from "@/types/user";
 
 interface AuthState {
-  tmpVerificationCode: number | null;
   user: UserType | null;
   hasHydrated: boolean;
   isSessionChecking: boolean;
-  setTmpVerificationCode: (code: number | null) => void;
   setUser: (user: UserType | null) => void;
   setHasHydrated: (value: boolean) => void;
   setIsSessionChecking: (value: boolean) => void;
@@ -17,13 +15,9 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      tmpVerificationCode: null,
       user: null,
       hasHydrated: false,
       isSessionChecking: true,
-
-      setTmpVerificationCode: (tmpVerificationCode) =>
-        set({ tmpVerificationCode }),
 
       setUser: (user) => set({ user }),
 

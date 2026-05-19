@@ -2,9 +2,16 @@
 
 import api from "@/libs/axios";
 import { ActionResponse } from "@/types/action";
-import axios from "axios";
-import { setAccessCookies, setRefreshCookie, clearVerifyCookies } from "./cookies";
+import {
+  setAccessCookies,
+  setRefreshCookie,
+  clearVerifyCookies,
+  clearPendingVerifyEmail,
+  setUserApprovalCookie,
+} from "./cookies";
 import { VerifySuccessResponse } from "@/types/auth";
+import { normalizeUserPayload } from "@/utils/normalizeUser";
+import { getApiErrorMessage } from "@/utils/apiError";
 
 export default async function verifyAction(
   email: string,
@@ -21,7 +28,18 @@ export default async function verifyAction(
       if (data.refreshToken) await setRefreshCookie(data.refreshToken);
     }
 
+    const user = normalizeUserPayload(data.user ?? data);
+
+    if (!user) {
+      return {
+        success: false,
+        error: "Verification failed: No user received",
+      };
+    }
+
+    await setUserApprovalCookie(user.isVerified);
     await clearVerifyCookies();
+    await clearPendingVerifyEmail();
 
     return {
       success: true,
@@ -29,19 +47,13 @@ export default async function verifyAction(
         message: data.message,
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
-        user: data.user,
+        user,
       },
     };
   } catch (err) {
-    let message = "Verification failed";
-
-    if (axios.isAxiosError(err)) {
-      message = err.response?.data?.message || message;
-    }
-
     return {
       success: false,
-      error: message,
+      error: getApiErrorMessage(err, "Verification failed"),
     };
   }
 }
