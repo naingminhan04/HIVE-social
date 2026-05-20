@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { MouseEvent, useEffect, useRef, useState } from "react";
 import ImageViewer from "./ImageViewer";
-import { PostType } from "@/types/post";
-import Image from "next/image";
+import { PostImageType, PostType } from "@/types/post";
 import PostContent from "./PostContent";
 import PostMenu from "./PostMenu";
 import ReactionBtn from "./ReactionBtn";
-import { Share2, Download, FileIcon } from "lucide-react";
+import { Share2, FileIcon, Play } from "lucide-react";
 import ViewReaction from "./ViewReaction";
 import { formatDate } from "@/utils/formatDate";
 import CommentBtn from "./Comment";
@@ -22,9 +21,18 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
   const displayImages = images.slice(0, 4);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [videoPlayback, setVideoPlayback] = useState<
+    Record<string, { currentTime: number; isPlaying: boolean }>
+  >({});
   const [isDel, setIsDel] = useState(false);
   const timestamp = post.createdAt;
   const relativeTime = formatDate(timestamp);
+  const shouldBlockProfileNavigation = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (view && typeof window !== "undefined" && window.innerWidth >= 768) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
 
   return (
     <div
@@ -45,17 +53,28 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
         <div className="p-3 space-y-4">
           <div className="flex items-center gap-3 w-full">
             <div className="pointer-events-auto flex items-center gap-3">
-              <Link href={`/users/${post.author.username}`}>
-                <Image
+              <Link
+                href={`/users/${post.author.username}`}
+                onClick={shouldBlockProfileNavigation}
+              >
+                <RecoverableImage
                   src={post.author.profilePic || "/default-avatar.png"}
                   alt={post.author.name}
                   width={100}
                   height={100}
                   className="w-12 h-12 hover:brightness-85 active:brightness-85 transition-all bg-gray-300 rounded-full object-cover"
+                  wrapperClassName="h-12 w-12 rounded-full"
+                  fallbackSrc="/default-avatar.png"
+                  showRetryButton
+                  retryButtonClassName="h-8 w-8"
                 />
               </Link>
               <div>
-                <Link href={`/users/${post.author.username}`} className="font-semibold flex gap-1">
+                <Link
+                  href={`/users/${post.author.username}`}
+                  className="font-semibold flex gap-1"
+                  onClick={shouldBlockProfileNavigation}
+                >
                   <span className="hover:text-gray-500 dark:hover:text-gray-300 active:text-gray-500 dark:active:text-gray-300 transition-all">{post.author.name}</span>
                 </Link>
                 <p className="text-xs flex gap-1 text-gray-500 dark:text-gray-400 self-center">
@@ -81,45 +100,28 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
               )} min-h-90 sm:min-h-150 md:min-h-90 rounded-2xl overflow-hidden`}
             >
               {displayImages.map((img, index) => (
-                <div
+                <PostMediaTile
                   key={img.id}
-                  onClick={(e) => {
-                    e.preventDefault();
+                  media={img}
+                  className={`${
+                    images.length === 3 && index === 2 ? "col-span-2" : ""
+                  }`}
+                  onOpen={() => {
                     setViewerIndex(index);
                     setViewerOpen(true);
                   }}
-                  className={`relative cursor-pointer min-h-45 max-h-90 sm:min-h-45 sm:max-h-150 md:min-h-45 md:max-h-90 ${
-                    images.length === 3 && index === 2 ? "col-span-2" : ""
-                  }`}
-                >
-                  {isVideoMedia(img) ? (
-                    <video
-                      src={img.url}
-                      className="h-full w-full bg-black object-cover"
-                      preload="metadata"
-                      muted
-                      playsInline
-                    />
-                  ) : (
-                    <RecoverableImage
-                      src={img.url}
-                      fill
-                      alt="Post Image"
-                      className="object-cover"
-                      wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"
-                      showRetryButton
-                      showLoadingOverlay
-                      retryButtonClassName="h-12 w-12"
-                      brokenOverlayClassName="bg-black/35"
-                    />
-                  )}
-
-                  {index === 3 && moreCount > 0 && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-2xl font-bold">
-                      +{moreCount}
-                    </div>
-                  )}
-                </div>
+                  videoState={videoPlayback[img.id]}
+                  onVideoStateChange={(state) => {
+                    setVideoPlayback((prev) => ({
+                      ...prev,
+                      [state.mediaId]: {
+                        currentTime: state.currentTime,
+                        isPlaying: state.isPlaying,
+                      },
+                    }));
+                  }}
+                  moreCount={index === 3 ? moreCount : 0}
+                />
               ))}
             </div>
           )}
@@ -144,11 +146,12 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
                     </a>
                     <a
                       href={attachment.url}
-                      download={attachment.fileName}
-                      className="p-1 hover:bg-blue-200 dark:hover:bg-blue-900 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all opacity-0 group-hover:opacity-100"
-                      aria-label={`Download ${attachment.fileName}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 hover:bg-blue-200 dark:hover:bg-blue-900 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all opacity-0 group-hover:opacity-100 text-xs"
+                      aria-label={`Open ${attachment.fileName}`}
                     >
-                      <Download size={16} />
+                      Open
                     </a>
                   </div>
                 ))}
@@ -194,12 +197,183 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
             index={viewerIndex}
             onClose={() => setViewerOpen(false)}
             onChange={setViewerIndex}
+            showPaginationOnVideo
+            videoState={
+              images[viewerIndex] ? {
+                mediaId: images[viewerIndex].id,
+                currentTime: videoPlayback[images[viewerIndex].id]?.currentTime ?? 0,
+                isPlaying: videoPlayback[images[viewerIndex].id]?.isPlaying ?? false,
+              } : null
+            }
+            onVideoStateChange={(state) => {
+              setVideoPlayback((prev) => ({
+                ...prev,
+                [state.mediaId]: {
+                  currentTime: state.currentTime,
+                  isPlaying: state.isPlaying,
+                },
+              }));
+            }}
           />
         </div>
       )}
     </div>
   );
 };
+
+function PostMediaTile({
+  media,
+  className,
+  onOpen,
+  videoState,
+  onVideoStateChange,
+  moreCount,
+}: {
+  media: PostImageType;
+  className?: string;
+  onOpen: () => void;
+  videoState?: { currentTime: number; isPlaying: boolean };
+  onVideoStateChange: (state: {
+    mediaId: string;
+    currentTime: number;
+    isPlaying: boolean;
+  }) => void;
+  moreCount: number;
+}) {
+  const isVideo = isVideoMedia(media);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [showControls, setShowControls] = useState(false);
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current || !videoState) return;
+    const video = videoRef.current;
+    if (Math.abs(video.currentTime - videoState.currentTime) > 0.4) {
+      video.currentTime = Math.max(videoState.currentTime, 0);
+    }
+
+    if (videoState.isPlaying) {
+      void video.play().catch(() => {});    } else {
+      video.pause();
+    }
+  }, [isVideo, videoState]);
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+    const video = videoRef.current;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting && !video.paused) {
+          video.pause();
+          onVideoStateChange({
+            mediaId: media.id,
+            currentTime: video.currentTime,
+            isPlaying: false,
+          });
+        }
+      },
+      { threshold: 0.2 },
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [isVideo, media.id, onVideoStateChange]);
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+
+    const handleFullscreenChange = () => {
+      if (document.fullscreenElement === videoRef.current) {
+        void document.exitFullscreen().finally(() => {
+          onOpen();
+        });
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [isVideo, onOpen]);
+
+  return (
+    <div
+      onClick={() => onOpen()}
+      className={`relative min-h-45 max-h-90 cursor-pointer overflow-hidden bg-black sm:min-h-45 sm:max-h-150 md:min-h-45 md:max-h-90 ${className ?? ""}`}
+    >
+      {isVideo ? (
+        <>
+          <video
+            ref={videoRef}
+            src={media.url}
+            className="h-full w-full object-cover"
+            preload="metadata"
+            controls={showControls || !!videoState?.isPlaying || (videoState?.currentTime ?? 0) > 0}
+            playsInline
+            onClick={(event) => event.stopPropagation()}
+            onTimeUpdate={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: !event.currentTarget.paused,
+              });
+            }}
+            onPlay={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: true,
+              });
+            }}
+            onPause={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: false,
+              });
+            }}
+          />
+          {!showControls && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setShowControls(true);
+                const video = videoRef.current;
+                if (!video) return;
+                void video.play().catch(() => {});
+              }}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 text-white"
+              aria-label="Play video preview"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55">
+                <Play size={28} fill="currentColor" />
+              </span>
+            </button>
+          )}
+        </>
+      ) : (
+        <RecoverableImage
+          src={media.url}
+          fill
+          alt="Post Image"
+          className="object-cover"
+          wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"
+          showRetryButton
+          showLoadingOverlay
+          retryButtonClassName="h-12 w-12"
+          brokenOverlayClassName="bg-black/35"
+        />
+      )}
+
+      {moreCount > 0 && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-white">
+          +{moreCount}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function getGridClass(length: number) {
   switch (length) {
@@ -221,3 +395,4 @@ export function formatCount(num: number) {
 }
 
 export default PostCard;
+

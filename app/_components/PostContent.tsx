@@ -2,11 +2,14 @@
 
 import { PostType } from "@/types/post";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import RichTextContent from "./RichTextContent";
 
 const CONTENT_LIMIT = 200;
 
 const PostContent = ({ post,view }: { post: PostType, view:boolean }) => {
   const [seeMore, setSeeMore] = useState(false);
+  const router = useRouter();
   const content = post.content;
   const isLongContent = content.length > CONTENT_LIMIT;
   const showContent = seeMore && isLongContent;
@@ -20,11 +23,12 @@ const PostContent = ({ post,view }: { post: PostType, view:boolean }) => {
       onClick={(e)=>{if(isLongContent) {toggleSeeMore(); e.stopPropagation()}}}
       className={!view && isLongContent ? "cursor-pointer" : ""}
     >
-      {view
-        ? content
-        : showContent
-        ? content
-        : content.slice(0, CONTENT_LIMIT)}
+      <RichTextContent
+        text={view ? content : showContent ? content : content.slice(0, CONTENT_LIMIT)}
+        onHashtagClick={(tag) => {
+          router.push(`/search/${encodeURIComponent(tag)}`);
+        }}
+      />
 
       {isLongContent && !view && (
         <button

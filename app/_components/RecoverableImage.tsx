@@ -65,6 +65,7 @@ const RecoverableImage = ({
   );
 
   const activeSrc = imageState.useFallback ? fallbackSrc ?? null : primarySrc;
+  const shouldRenderImage = Boolean(activeSrc) && !imageState.hasError;
 
   const handleRetry = () => {
     setStoredImageState({
@@ -97,7 +98,7 @@ const RecoverableImage = ({
 
   return (
     <div className={`relative overflow-hidden ${wrapperClassName}`}>
-      {activeSrc ? (
+      {shouldRenderImage ? (
         <Image
           {...imageProps}
           src={activeSrc}

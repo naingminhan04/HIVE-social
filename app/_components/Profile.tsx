@@ -37,6 +37,7 @@ import DummyProfile from "./DummyProfile";
 import PointsModal from "./PointsModal";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import OverlayPortal from "./OverlayPortal";
+import RecoverableImage from "./RecoverableImage";
 
 type ProfileFormValues = {
   name: string;
@@ -393,7 +394,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
       }`}
     >
       <div
-        className={`z-10 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${
+        className={`z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${
           isPortal
             ? "sticky top-0 items-center border-b border-black/5 px-3 dark:border-white/10"
             : "sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
@@ -437,12 +438,15 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             />
           ) : (
             user?.coverPic && (
-              <Image
+              <RecoverableImage
                 src={user.coverPic}
                 onClick={() => setImageView("cover")}
                 fill
                 alt="Cover photo"
                 className="object-cover"
+                wrapperClassName="h-full w-full"
+                showRetryButton
+                retryButtonClassName="h-10 w-10"
               />
             )
           )}
@@ -498,8 +502,8 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             ))}
         </div>
 
-        <div className="absolute w-3/14 -bottom-2/9 left-1/10">
-          <Image
+        <div className="absolute z-30 w-3/14 -bottom-2/9 left-1/10">
+          <RecoverableImage
             src={
               profilePreviewUrl
                 ? profilePreviewUrl
@@ -509,6 +513,10 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             width={200}
             height={200}
             className="object-cover border-[1vw] md:border-[0.6vw] lg:border-[clamp(5px,1vw,7px)] border-white dark:border-neutral-900 bg-gray-300 w-full aspect-square relative rounded-full"
+            wrapperClassName="w-full aspect-square rounded-full"
+            fallbackSrc="/default-avatar.png"
+            showRetryButton
+            retryButtonClassName="h-9 w-9"
             onClick={() =>
               (user?.profilePic || profilePreviewUrl) && setImageView("profile")
             }

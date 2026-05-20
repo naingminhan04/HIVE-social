@@ -1,10 +1,20 @@
 "use client";
 
-import { Plus, X, LoaderIcon, PenBox, FileIcon } from "lucide-react";
+import {
+  FileIcon,
+  ImageIcon,
+  LoaderIcon,
+  Paperclip,
+  PenBox,
+  Play,
+  Plus,
+  Video,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { ReactNode, useCallback, useState } from "react";
 import { addPostAction } from "../_actions/postAction";
 import { AddPostType, ImageType } from "@/types/post";
 import { uploadFiles } from "@/utils/uploadUtils";
@@ -12,13 +22,19 @@ import toast from "react-hot-toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useAuthStore } from "@/store/auth";
 import OverlayPortal from "./OverlayPortal";
+import ImageViewer from "./ImageViewer";
+import RichTextContent from "./RichTextContent";
 
 type FormValues = {
   content: string;
 };
 
-const MAX_IMAGES = 20;
+const MAX_MEDIA = 20;
 const MAX_ATTACHMENTS = 10;
+const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+
+const isVideoFile = (file: File) => file.type.startsWith("video/");
+const isImageFile = (file: File) => file.type.startsWith("image/");
 
 export default function AddPostBtn({
   state,
@@ -29,6 +45,8 @@ export default function AddPostBtn({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, watch } = useForm<FormValues>();
   const user = useAuthStore((state) => state.user);
@@ -74,7 +92,7 @@ export default function AddPostBtn({
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (selectedFiles.length === 0 && selectedAttachments.length === 0 && !data.content.trim()) {
-      toast.error("Please add content, images, or attachments.");
+      toast.error("Please add content, photos, videos, or attachments.");
       return;
     }
 
@@ -85,7 +103,7 @@ export default function AddPostBtn({
       let imagesForPost: ImageType[] = [];
       let attachmentsForPost: ImageType[] = [];
       
-      // Upload images first
+      // Upload photos and videos first.
       if (selectedFiles.length > 0) {
         try {
           const uploadedImages = await uploadMutation.mutateAsync(selectedFiles);
@@ -96,7 +114,7 @@ export default function AddPostBtn({
             mimeType: img.mimeType,
           }));
         } catch (error) {
-          throw new Error(error instanceof Error ? error.message : "Failed to upload images");
+          throw new Error(error instanceof Error ? error.message : "Failed to upload media");
         }
       }
 
@@ -128,12 +146,21 @@ export default function AddPostBtn({
     }
   };
 
-  const handleFileChange = useCallback(
+  const handleMediaChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const filesArray = Array.from(e.target.files || []);
       const totalFiles = selectedFiles.length + filesArray.length;
-      if (totalFiles > MAX_IMAGES) {
-        toast.error(`You can upload up to ${MAX_IMAGES} images.`);
+      if (totalFiles > MAX_MEDIA) {
+        toast.error(`You can upload up to ${MAX_MEDIA} photos and videos.`);
+        e.target.value = "";
+        return;
+      }
+      const oversizedVideo = filesArray.find(
+        (file) => isVideoFile(file) && file.size > MAX_VIDEO_SIZE_BYTES,
+      );
+      if (oversizedVideo) {
+        toast.error("Maximum video size is 50MB per video.");
+        e.target.value = "";
         return;
       }
 
@@ -142,6 +169,7 @@ export default function AddPostBtn({
         URL.createObjectURL(file)
       );
       setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+      e.target.value = "";
     },
     [selectedFiles.length]
   );
@@ -152,10 +180,12 @@ export default function AddPostBtn({
       const totalAttachments = selectedAttachments.length + filesArray.length;
       if (totalAttachments > MAX_ATTACHMENTS) {
         toast.error(`You can upload up to ${MAX_ATTACHMENTS} attachments.`);
+        e.target.value = "";
         return;
       }
 
       setSelectedAttachments((prev) => [...prev, ...filesArray]);
+      e.target.value = "";
     },
     [selectedAttachments.length]
   );
@@ -182,6 +212,18 @@ export default function AddPostBtn({
   const contentValue = watch("content") || "";
   const isPostDisabled =
     isLoading || (selectedFiles.length === 0 && selectedAttachments.length === 0 && contentValue.trim() === "");
+  const photoItems = selectedFiles
+    .map((file, index) => ({ file, index }))
+    .filter(({ file }) => isImageFile(file));
+  const videoItems = selectedFiles
+    .map((file, index) => ({ file, index }))
+    .filter(({ file }) => isVideoFile(file));
+  const mediaForViewer = selectedFiles.map((file, index) => ({
+    id: `new-${index}-${file.name}`,
+    url: previewUrls[index],
+    mimeType: file.type,
+    fileName: file.name,
+  }));
 
   return (
     <>
@@ -267,71 +309,95 @@ export default function AddPostBtn({
                   {contentValue.length}/500
                 </div>
               </div>
-
-              {selectedFiles.length > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                  {selectedFiles.map((file, index) => (
-                    <div
-                      key={`${file.name}-${index}`}
-                      className="relative group w-full"
-                    >
-                      <div className="relative w-full aspect-square">
-                        <Image
-                          src={previewUrls[index]}
-                          alt={`Preview ${index + 1}`}
-                          fill
-                          className="object-cover rounded-lg"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 active:scale-85 rounded-full text-white w-6 h-6 flex items-center justify-center opacity-100 transition-all disabled:opacity-50"
-                        disabled={isLoading}
-                        aria-label={`Remove image ${index + 1}`}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-
-                  {selectedFiles.length < MAX_IMAGES && (
-                    <label
-                      className={`w-full aspect-square border-2 border-dashed border-neutral-400 hover:border-neutral-800 active:border-neutral-400 dark:border-neutral-600 dark:hover:border-neutral-400 dark:active:border-neutral-600 flex justify-center items-center cursor-pointer rounded-lg transition-colors ${
-                        isLoading ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                    >
-                      <Plus size={24} className="text-neutral-400" />
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        disabled={isLoading}
-                      />
-                    </label>
-                  )}
+              {contentValue.trim().length > 0 && (
+                <div className="rounded-md border border-gray-300 bg-white p-3 text-sm text-black dark:border-neutral-700 dark:bg-black dark:text-white">
+                  <p className="mb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    Preview
+                  </p>
+                  <RichTextContent text={contentValue} />
                 </div>
-              ) : (
-                <label
-                  className={`w-full border-2 border-dashed border-neutral-400 hover:border-neutral-800 active:border-neutral-400 dark:border-neutral-600 dark:hover:border-neutral-400 dark:active:border-neutral-600 rounded-lg p-8 flex flex-col justify-center items-center cursor-pointer transition-colors ${
-                    isLoading ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  <Plus size={32} className="text-neutral-400 mb-2" />
-                  <span className="text-neutral-400 text-sm">
-                    Add images ({MAX_IMAGES} max)
-                  </span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    disabled={isLoading}
-                  />
-                </label>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <MediaDropzone
+                  icon={<ImageIcon size={22} />}
+                  title="Photos"
+                  count={photoItems.length}
+                  max={MAX_MEDIA}
+                  accept="image/*"
+                  disabled={isLoading || selectedFiles.length >= MAX_MEDIA}
+                  onChange={handleMediaChange}
+                />
+                <MediaDropzone
+                  icon={<Video size={22} />}
+                  title="Videos"
+                  count={videoItems.length}
+                  max={MAX_MEDIA}
+                  accept="video/*"
+                  disabled={isLoading || selectedFiles.length >= MAX_MEDIA}
+                  onChange={handleMediaChange}
+                />
+                <MediaDropzone
+                  icon={<Paperclip size={22} />}
+                  title="Attachments"
+                  count={selectedAttachments.length}
+                  max={MAX_ATTACHMENTS}
+                  disabled={isLoading || selectedAttachments.length >= MAX_ATTACHMENTS}
+                  onChange={handleAttachmentChange}
+                />
+              </div>
+
+              {selectedFiles.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Media ({selectedFiles.length}/{MAX_MEDIA})
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+                    {selectedFiles.map((file, index) => (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="relative w-full cursor-pointer overflow-hidden rounded-lg bg-neutral-200 dark:bg-neutral-800"
+                        onClick={() => {
+                          setViewerIndex(index);
+                          setViewerOpen(true);
+                        }}
+                      >
+                        <div className="relative aspect-square w-full">
+                          {isVideoFile(file) ? (
+                            <>
+                              <video
+                                src={previewUrls[index]}
+                                className="h-full w-full object-cover"
+                                preload="metadata"
+                                muted
+                                playsInline
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
+                                <Play size={24} fill="currentColor" />
+                              </span>
+                            </>
+                          ) : (
+                            <Image
+                              src={previewUrls[index]}
+                              alt={`Preview ${index + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-red-600 active:scale-95 disabled:opacity-50"
+                          disabled={isLoading}
+                          aria-label={`Remove media ${index + 1}`}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {selectedAttachments.length > 0 && (
@@ -363,24 +429,6 @@ export default function AddPostBtn({
                 </div>
               )}
 
-              {selectedAttachments.length < MAX_ATTACHMENTS && (
-                <label className={`w-full border-2 border-dashed border-neutral-400 hover:border-neutral-800 active:border-neutral-400 dark:border-neutral-600 dark:hover:border-neutral-400 dark:active:border-neutral-600 rounded-lg p-4 flex flex-col justify-center items-center cursor-pointer transition-colors ${
-                  isLoading ? "opacity-50 cursor-not-allowed" : ""
-                }`}>
-                  <div className="flex items-center gap-2 text-neutral-400">
-                    <FileIcon size={20} />
-                    <span className="text-sm">Add attachments ({selectedAttachments.length}/{MAX_ATTACHMENTS} max)</span>
-                  </div>
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleAttachmentChange}
-                    disabled={isLoading}
-                  />
-                </label>
-              )}
-
               {isLoading && (
                 <div className="text-center text-neutral-400 text-sm">
                   {uploadMutation.isPending
@@ -391,8 +439,61 @@ export default function AddPostBtn({
               </form>
             </div>
           </div>
+          {viewerOpen && mediaForViewer.length > 0 && (
+            <ImageViewer
+              images={mediaForViewer}
+              index={viewerIndex}
+              onClose={() => setViewerOpen(false)}
+              onChange={setViewerIndex}
+              showPaginationOnVideo
+            />
+          )}
         </OverlayPortal>
       )}
     </>
+  );
+}
+
+function MediaDropzone({
+  icon,
+  title,
+  count,
+  max,
+  accept,
+  disabled,
+  onChange,
+}: {
+  icon: ReactNode;
+  title: string;
+  count: number;
+  max: number;
+  accept?: string;
+  disabled: boolean;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label
+      className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center transition hover:border-neutral-900 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-400 dark:hover:bg-neutral-800 ${
+        disabled ? "pointer-events-none opacity-50" : ""
+      }`}
+    >
+      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100">
+        {icon}
+      </span>
+      <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+        {title}
+      </span>
+      <span className="text-xs text-neutral-500 dark:text-neutral-400">
+        {count}/{max}
+      </span>
+      <input
+        type="file"
+        multiple
+        accept={accept}
+        className="hidden"
+        onChange={onChange}
+        disabled={disabled}
+      />
+    </label>
   );
 }
