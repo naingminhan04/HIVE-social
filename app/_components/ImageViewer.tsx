@@ -113,20 +113,38 @@ const ImageViewer = ({
   const [videoIsMuted, setVideoIsMuted] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoIsPlayingRef = useRef(false);
 
-  const resetHideTimer = useCallback(() => {
-    setControlsVisible(true);
+  const scheduleHideIfPlaying = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    if (videoIsPlayingRef.current) {
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    }
   }, []);
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    scheduleHideIfPlaying();
+  }, [scheduleHideIfPlaying]);
+
+  const toggleControlsVisibility = useCallback(() => {
+    setControlsVisible((prev) => {
+      if (!prev) {
+        scheduleHideIfPlaying();
+        return true;
+      }
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      return false;
+    });
+  }, [scheduleHideIfPlaying]);
 
   useEffect(() => {
     if (!isVideo) return;
-    resetHideTimer();
+    showControls();
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
-  }, [isVideo, resetHideTimer]);
+  }, [isVideo, showControls]);
 
   useEffect(() => {
     if (!isVideo || !videoRef.current || !image) return;
@@ -183,7 +201,6 @@ const ImageViewer = ({
     } else {
       video.pause();
     }
-    resetHideTimer();
   };
 
   const handleFullscreen = () => {
@@ -197,15 +214,14 @@ const ImageViewer = ({
     if (!video) return;
     video.muted = !video.muted;
     setVideoIsMuted(video.muted);
-    resetHideTimer();
+    showControls();
   };
 
   return (
     <OverlayPortal>
       <div
         className="fixed inset-0 z-[120] flex items-center justify-center bg-[#080808] text-white"
-        onPointerMove={isVideo ? resetHideTimer : undefined}
-        onPointerDown={isVideo ? resetHideTimer : undefined}
+        onPointerMove={isVideo ? showControls : undefined}
       >
         <button
           onClick={onClose}
@@ -267,7 +283,7 @@ const ImageViewer = ({
                   autoPlay
                   playsInline
                   preload="metadata"
-                  onClick={togglePlayPause}
+                  onClick={toggleControlsVisibility}
                   onTimeUpdate={(event) => {
                     setVideoCurrentTime(event.currentTarget.currentTime);
                     onVideoStateChange?.({
@@ -281,6 +297,8 @@ const ImageViewer = ({
                   }}
                   onPlay={(event) => {
                     setVideoIsPlaying(true);
+                    videoIsPlayingRef.current = true;
+                    scheduleHideIfPlaying();
                     onVideoStateChange?.({
                       mediaId: image.id,
                       currentTime: event.currentTarget.currentTime,
@@ -289,6 +307,9 @@ const ImageViewer = ({
                   }}
                   onPause={(event) => {
                     setVideoIsPlaying(false);
+                    videoIsPlayingRef.current = false;
+                    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+                    setControlsVisible(true);
                     onVideoStateChange?.({
                       mediaId: image.id,
                       currentTime: event.currentTarget.currentTime,
@@ -331,7 +352,7 @@ const ImageViewer = ({
                       const t = Number(e.target.value);
                       video.currentTime = t;
                       setVideoCurrentTime(t);
-                      resetHideTimer();
+                      showControls();
                     }}
                     className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-white/30 accent-white"
                     aria-label="Seek"
