@@ -11,6 +11,8 @@ import {
   Maximize2,
   Play,
   Pause,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 import OverlayPortal from "./OverlayPortal";
@@ -101,6 +103,7 @@ const ImageViewer = ({
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoIsPlaying, setVideoIsPlaying] = useState(false);
+  const [videoIsMuted, setVideoIsMuted] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -180,6 +183,14 @@ const ImageViewer = ({
     const video = videoRef.current;
     if (!video) return;
     void video.requestFullscreen().catch(() => {});
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setVideoIsMuted(video.muted);
+    resetHideTimer();
   };
 
   return (
@@ -317,6 +328,15 @@ const ImageViewer = ({
                     className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-white/30 accent-white"
                     aria-label="Seek"
                   />
+
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="shrink-0 text-white transition active:scale-90"
+                    aria-label={videoIsMuted ? "Unmute" : "Mute"}
+                  >
+                    {videoIsMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                  </button>
 
                   <button
                     type="button"

@@ -6,7 +6,7 @@ import { PostImageType, PostType } from "@/types/post";
 import PostContent from "./PostContent";
 import PostMenu from "./PostMenu";
 import ReactionBtn from "./ReactionBtn";
-import { Share2, FileIcon, Play } from "lucide-react";
+import { Share2, FileIcon, Play, Expand } from "lucide-react";
 import ViewReaction from "./ViewReaction";
 import { formatDate } from "@/utils/formatDate";
 import CommentBtn from "./Comment";
@@ -333,6 +333,19 @@ function PostMediaTile({
                 <Play size={28} fill="currentColor" />
               </span>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpen();
+            }}
+            className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur transition hover:bg-black/70 active:scale-90"
+            aria-label="Open in viewer"
+          >
+            <Expand size={15} />
           </button>
         </>
       ) : (
