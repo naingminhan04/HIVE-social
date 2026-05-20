@@ -57,6 +57,13 @@ const getInitialViewerState = (mediaKey: string): ViewerState => ({
   retryKey: 0,
 });
 
+const formatTime = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
 const isLocalSrc = (src: string) => src.startsWith("/") && !src.startsWith("//");
 
 const appendRetryParam = (src: string, retryKey: number) => {
@@ -328,6 +335,10 @@ const ImageViewer = ({
                     className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-white/30 accent-white"
                     aria-label="Seek"
                   />
+
+                  <span className="shrink-0 tabular-nums text-xs text-white/80">
+                    {formatTime(videoCurrentTime)}&nbsp;/&nbsp;{formatTime(videoDuration)}
+                  </span>
 
                   <button
                     type="button"
