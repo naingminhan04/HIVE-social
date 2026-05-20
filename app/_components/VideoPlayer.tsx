@@ -23,6 +23,9 @@ const formatTime = (seconds: number): string => {
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
+const SEEK_SECONDS = 5;
+const VOLUME_STEP = 0.1;
+
 const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
   (
     {
@@ -43,6 +46,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const progressBarRef = useRef<HTMLDivElement>(null);
     const volBarRef = useRef<HTMLDivElement>(null);
     const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [isPlaying, setIsPlaying] = useState(autoPlay);
     const [volume, setVolume] = useState(1);
@@ -51,6 +55,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const [duration, setDuration] = useState(0);
     const [showControls, setShowControls] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [hint, setHint] = useState<string | null>(null);
 
     const getVideo = (): HTMLVideoElement | null => {
       if (!ref || typeof ref === "function") return null;
@@ -67,6 +72,12 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       scheduleHide();
     }, [scheduleHide]);
 
+    const showHint = useCallback((text: string) => {
+      setHint(text);
+      if (hintTimerRef.current !== null) clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = setTimeout(() => setHint(null), 800);
+    }, []);
+
     useEffect(() => {
       if (!isPlaying) {
         if (hideTimerRef.current !== null) {
@@ -81,6 +92,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
     useEffect(() => () => {
       if (hideTimerRef.current !== null) clearTimeout(hideTimerRef.current);
+      if (hintTimerRef.current !== null) clearTimeout(hintTimerRef.current);
     }, []);
 
     useEffect(() => {
@@ -89,29 +101,40 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       return () => document.removeEventListener("fullscreenchange", handleFsChange);
     }, []);
 
-    const togglePlay = () => {
+    const togglePlay = useCallback(() => {
       const video = getVideo();
       if (!video) return;
       if (video.paused) void video.play().catch(() => {});
       else video.pause();
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ref]);
 
-    const toggleMute = () => {
+    const toggleMute = useCallback(() => {
       const video = getVideo();
       if (!video) return;
       const next = !video.muted;
       video.muted = next;
       setIsMuted(next);
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ref]);
 
-    const setVideoVolume = (val: number) => {
+    const setVideoVolume = useCallback((val: number) => {
       const video = getVideo();
       if (!video) return;
-      video.volume = val;
-      video.muted = val === 0;
-      setVolume(val);
-      setIsMuted(val === 0);
-    };
+      const clamped = Math.max(0, Math.min(1, val));
+      video.volume = clamped;
+      video.muted = clamped === 0;
+      setVolume(clamped);
+      setIsMuted(clamped === 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ref]);
+
+    const seekBy = useCallback((seconds: number) => {
+      const video = getVideo();
+      if (!video || !Number.isFinite(video.duration)) return;
+      video.currentTime = Math.max(0, Math.min(video.currentTime + seconds, video.duration));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ref]);
 
     const toggleFullscreen = async () => {
       const container = containerRef.current;
@@ -119,6 +142,61 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
       else await container.requestFullscreen().catch(() => {});
     };
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+      const video = getVideo();
+      if (!video) return;
+
+      switch (e.key) {
+        case " ":
+        case "k":
+          e.preventDefault();
+          e.nativeEvent.stopImmediatePropagation();
+          togglePlay();
+          showAndScheduleHide();
+          showHint(video.paused ? "▶" : "⏸");
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          e.nativeEvent.stopImmediatePropagation();
+          seekBy(-SEEK_SECONDS);
+          showAndScheduleHide();
+          showHint(`-${SEEK_SECONDS}s`);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          e.nativeEvent.stopImmediatePropagation();
+          seekBy(SEEK_SECONDS);
+          showAndScheduleHide();
+          showHint(`+${SEEK_SECONDS}s`);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          e.nativeEvent.stopImmediatePropagation();
+          setVideoVolume(video.volume + VOLUME_STEP);
+          showAndScheduleHide();
+          showHint(`🔊 ${Math.round(Math.min(video.volume + VOLUME_STEP, 1) * 100)}%`);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          e.nativeEvent.stopImmediatePropagation();
+          setVideoVolume(video.volume - VOLUME_STEP);
+          showAndScheduleHide();
+          showHint(`🔊 ${Math.round(Math.max(video.volume - VOLUME_STEP, 0) * 100)}%`);
+          break;
+        case "m":
+        case "M":
+          e.preventDefault();
+          e.nativeEvent.stopImmediatePropagation();
+          toggleMute();
+          showAndScheduleHide();
+          showHint(video.muted ? "🔊" : "🔇");
+          break;
+        default:
+          break;
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ref, togglePlay, seekBy, setVideoVolume, toggleMute, showAndScheduleHide, showHint]);
 
     const seekToFraction = (fraction: number) => {
       const video = getVideo();
@@ -193,16 +271,17 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
     const progress = duration > 0 ? currentTime / duration : 0;
     const displayVolume = isMuted ? 0 : volume;
-
     const VolumeIcon = displayVolume === 0 ? VolumeX : displayVolume < 0.5 ? Volume1 : Volume2;
 
     return (
       <div
         ref={containerRef}
-        className={`group relative bg-black ${className}`}
+        tabIndex={0}
+        className={`group relative bg-black outline-none ${className}`}
         onMouseMove={showAndScheduleHide}
         onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
         onTouchStart={showAndScheduleHide}
+        onKeyDown={handleKeyDown}
         style={{ cursor: showControls ? "default" : "none" }}
       >
         <video
@@ -220,6 +299,16 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           onEnded={() => setIsPlaying(false)}
         />
 
+        {/* Keyboard hint overlay */}
+        {hint !== null && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+            <span className="rounded-xl bg-black/60 px-4 py-2 text-lg font-semibold text-white backdrop-blur-sm">
+              {hint}
+            </span>
+          </div>
+        )}
+
+        {/* Controls */}
         <div
           className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-1 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-10 transition-opacity duration-200 ${
             showControls ? "opacity-100 pointer-events-auto" : "opacity-0"
@@ -241,7 +330,6 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
           {/* Button row */}
           <div className="flex items-center gap-1">
-            {/* Play/Pause */}
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); togglePlay(); }}
@@ -251,17 +339,13 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
               {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
             </button>
 
-            {/* Timestamp */}
             <span className="min-w-[80px] text-xs tabular-nums text-white/75 select-none">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
 
             <div className="ml-auto flex items-center gap-1">
               {/* Volume cluster */}
-              <div
-                className="group/vol flex items-center gap-1"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="group/vol flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); toggleMute(); }}
@@ -271,18 +355,14 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                   <VolumeIcon size={16} />
                 </button>
 
-                {/* Volume slider — expands on hover */}
                 <div className="flex w-0 items-center overflow-hidden transition-all duration-200 group-hover/vol:w-20">
                   <div
                     ref={volBarRef}
-                    className="group/vbar relative h-1 w-full cursor-pointer rounded-full bg-white/30 hover:h-2 transition-all"
+                    className="group/vbar relative h-1 w-full cursor-pointer rounded-full bg-white/30 transition-all hover:h-2"
                     onMouseDown={handleVolMouseDown}
                     onTouchStart={handleVolTouchStart}
                   >
-                    <div
-                      className="h-full rounded-full bg-white"
-                      style={{ width: `${displayVolume * 100}%` }}
-                    />
+                    <div className="h-full rounded-full bg-white" style={{ width: `${displayVolume * 100}%` }} />
                     <div
                       className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/vbar:opacity-100"
                       style={{ left: `calc(${displayVolume * 100}% - 6px)` }}
