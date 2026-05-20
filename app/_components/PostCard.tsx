@@ -6,8 +6,7 @@ import { PostImageType, PostType } from "@/types/post";
 import PostContent from "./PostContent";
 import PostMenu from "./PostMenu";
 import ReactionBtn from "./ReactionBtn";
-import { Share2, FileIcon } from "lucide-react";
-import VideoPlayer from "./VideoPlayer";
+import { Share2, FileIcon, Play } from "lucide-react";
 import ViewReaction from "./ViewReaction";
 import { formatDate } from "@/utils/formatDate";
 import CommentBtn from "./Comment";
@@ -243,6 +242,7 @@ function PostMediaTile({
 }) {
   const isVideo = isVideoMedia(media);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [showControls, setShowControls] = useState(false);
 
   useEffect(() => {
     if (!isVideo || !videoRef.current || !videoState) return;
@@ -250,9 +250,9 @@ function PostMediaTile({
     if (Math.abs(video.currentTime - videoState.currentTime) > 0.4) {
       video.currentTime = Math.max(videoState.currentTime, 0);
     }
+
     if (videoState.isPlaying) {
-      void video.play().catch(() => {});
-    } else {
+      void video.play().catch(() => {});    } else {
       video.pause();
     }
   }, [isVideo, videoState]);
@@ -273,45 +273,85 @@ function PostMediaTile({
       },
       { threshold: 0.2 },
     );
+
     observer.observe(video);
     return () => observer.disconnect();
   }, [isVideo, media.id, onVideoStateChange]);
 
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+
+    const handleFullscreenChange = () => {
+      if (document.fullscreenElement === videoRef.current) {
+        void document.exitFullscreen().finally(() => {
+          onOpen();
+        });
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [isVideo, onOpen]);
+
   return (
     <div
-      className={`relative min-h-45 max-h-90 overflow-hidden bg-black sm:min-h-45 sm:max-h-150 md:min-h-45 md:max-h-90 ${className ?? ""}`}
+      onClick={() => onOpen()}
+      className={`relative min-h-45 max-h-90 cursor-pointer overflow-hidden bg-black sm:min-h-45 sm:max-h-150 md:min-h-45 md:max-h-90 ${className ?? ""}`}
     >
       {isVideo ? (
-        <VideoPlayer
-          ref={videoRef}
-          src={media.url}
-          className="h-full w-full"
-          objectFit="cover"
-          playsInline
-          preload="metadata"
-          onExpand={onOpen}
-          onTimeUpdate={(event) => {
-            onVideoStateChange({
-              mediaId: media.id,
-              currentTime: event.currentTarget.currentTime,
-              isPlaying: !event.currentTarget.paused,
-            });
-          }}
-          onPlay={(event) => {
-            onVideoStateChange({
-              mediaId: media.id,
-              currentTime: event.currentTarget.currentTime,
-              isPlaying: true,
-            });
-          }}
-          onPause={(event) => {
-            onVideoStateChange({
-              mediaId: media.id,
-              currentTime: event.currentTarget.currentTime,
-              isPlaying: false,
-            });
-          }}
-        />
+        <>
+          <video
+            ref={videoRef}
+            src={media.url}
+            className="h-full w-full object-cover"
+            preload="metadata"
+            controls={showControls || !!videoState?.isPlaying || (videoState?.currentTime ?? 0) > 0}
+            playsInline
+            onClick={(event) => event.stopPropagation()}
+            onTimeUpdate={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: !event.currentTarget.paused,
+              });
+            }}
+            onPlay={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: true,
+              });
+            }}
+            onPause={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: false,
+              });
+            }}
+          />
+          {!showControls && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setShowControls(true);
+                const video = videoRef.current;
+                if (!video) return;
+                void video.play().catch(() => {});
+              }}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 text-white"
+              aria-label="Play video preview"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55">
+                <Play size={28} fill="currentColor" />
+              </span>
+            </button>
+          )}
+        </>
       ) : (
         <RecoverableImage
           src={media.url}
