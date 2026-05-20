@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   X,
@@ -8,11 +8,6 @@ import {
   ChevronRight,
   Loader2,
   RefreshCw,
-  Maximize2,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
 import OverlayPortal from "./OverlayPortal";
@@ -57,19 +52,13 @@ const getInitialViewerState = (mediaKey: string): ViewerState => ({
   retryKey: 0,
 });
 
-const formatTime = (seconds: number) => {
-  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-};
-
 const isLocalSrc = (src: string) => src.startsWith("/") && !src.startsWith("//");
 
 const appendRetryParam = (src: string, retryKey: number) => {
   if (retryKey === 0 || isLocalSrc(src)) {
     return src;
   }
+
   return `${src}${src.includes("?") ? "&" : "?"}img_retry=${retryKey}`;
 };
 
@@ -106,45 +95,6 @@ const ImageViewer = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const syncedPlaybackKeyRef = useRef<string | null>(null);
   const isVideo = image ? isVideoMedia(image) : false;
-
-  const [videoCurrentTime, setVideoCurrentTime] = useState(0);
-  const [videoDuration, setVideoDuration] = useState(0);
-  const [videoIsPlaying, setVideoIsPlaying] = useState(false);
-  const [videoIsMuted, setVideoIsMuted] = useState(false);
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const videoIsPlayingRef = useRef(false);
-
-  const scheduleHideIfPlaying = useCallback(() => {
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    if (videoIsPlayingRef.current) {
-      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
-    }
-  }, []);
-
-  const showControls = useCallback(() => {
-    setControlsVisible(true);
-    scheduleHideIfPlaying();
-  }, [scheduleHideIfPlaying]);
-
-  const toggleControlsVisibility = useCallback(() => {
-    setControlsVisible((prev) => {
-      if (!prev) {
-        scheduleHideIfPlaying();
-        return true;
-      }
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      return false;
-    });
-  }, [scheduleHideIfPlaying]);
-
-  useEffect(() => {
-    if (!isVideo) return;
-    showControls();
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
-  }, [isVideo, showControls]);
 
   useEffect(() => {
     if (!isVideo || !videoRef.current || !image) return;
@@ -193,36 +143,9 @@ const ImageViewer = ({
 
   const resolvedImageUrl = appendRetryParam(image.url, viewerState.retryKey);
 
-  const togglePlayPause = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      void video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  };
-
-  const handleFullscreen = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    void video.requestFullscreen().catch(() => {});
-  };
-
-  const toggleMute = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setVideoIsMuted(video.muted);
-    showControls();
-  };
-
   return (
     <OverlayPortal>
-      <div
-        className="fixed inset-0 z-[120] flex items-center justify-center bg-[#080808] text-white"
-        onPointerMove={isVideo ? showControls : undefined}
-      >
+      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#080808] text-white">
         <button
           onClick={onClose}
           className="absolute right-3 top-3 z-[140] flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 active:scale-95"
@@ -232,13 +155,15 @@ const ImageViewer = ({
         </button>
 
         {normalizedImages.length > 1 && safeIndex > 0 && (
-          <button
-            onClick={() => onChange?.(safeIndex - 1)}
-            className="absolute left-3 z-[131] flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/30 active:scale-95 md:left-5"
-            aria-label="Previous media"
-          >
-            <ChevronLeft size={30} />
-          </button>
+          <>
+            <button
+              onClick={() => onChange?.(safeIndex - 1)}
+              className="absolute left-3 z-[131] flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/30 active:scale-95 md:left-5"
+              aria-label="Previous media"
+            >
+              <ChevronLeft size={30} />
+            </button>
+          </>
         )}
 
         <div
@@ -271,34 +196,26 @@ const ImageViewer = ({
               </button>
             </div>
           )}
-
           <div className="relative h-full w-full">
             {isVideo ? (
-              <div className="relative h-full w-full">
+              <>
                 <video
                   key={`${image.id}-${safeIndex}`}
                   ref={videoRef}
                   src={image.url}
-                  className="h-full w-full cursor-pointer object-contain"
+                  className="h-full w-full object-contain"
+                  controls
                   autoPlay
                   playsInline
                   preload="metadata"
-                  onClick={toggleControlsVisibility}
                   onTimeUpdate={(event) => {
-                    setVideoCurrentTime(event.currentTarget.currentTime);
                     onVideoStateChange?.({
                       mediaId: image.id,
                       currentTime: event.currentTarget.currentTime,
                       isPlaying: !event.currentTarget.paused,
                     });
                   }}
-                  onDurationChange={(event) => {
-                    setVideoDuration(event.currentTarget.duration);
-                  }}
                   onPlay={(event) => {
-                    setVideoIsPlaying(true);
-                    videoIsPlayingRef.current = true;
-                    scheduleHideIfPlaying();
                     onVideoStateChange?.({
                       mediaId: image.id,
                       currentTime: event.currentTarget.currentTime,
@@ -306,10 +223,6 @@ const ImageViewer = ({
                     });
                   }}
                   onPause={(event) => {
-                    setVideoIsPlaying(false);
-                    videoIsPlayingRef.current = false;
-                    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-                    setControlsVisible(true);
                     onVideoStateChange?.({
                       mediaId: image.id,
                       currentTime: event.currentTarget.currentTime,
@@ -317,70 +230,7 @@ const ImageViewer = ({
                     });
                   }}
                 />
-
-                <div
-                  className={`absolute inset-x-0 bottom-0 z-[130] flex items-center gap-3 px-4 pb-5 pt-10 transition-opacity duration-300 ${
-                    controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-                  }`}
-                  style={{
-                    background:
-                      "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={togglePlayPause}
-                    className="shrink-0 text-white transition active:scale-90"
-                    aria-label={videoIsPlaying ? "Pause" : "Play"}
-                  >
-                    {videoIsPlaying ? (
-                      <Pause size={22} fill="currentColor" />
-                    ) : (
-                      <Play size={22} fill="currentColor" />
-                    )}
-                  </button>
-
-                  <input
-                    type="range"
-                    min={0}
-                    max={videoDuration || 1}
-                    step={0.01}
-                    value={videoCurrentTime}
-                    onChange={(e) => {
-                      const video = videoRef.current;
-                      if (!video) return;
-                      const t = Number(e.target.value);
-                      video.currentTime = t;
-                      setVideoCurrentTime(t);
-                      showControls();
-                    }}
-                    className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-white/30 accent-white"
-                    aria-label="Seek"
-                  />
-
-                  <span className="shrink-0 tabular-nums text-xs text-white/80">
-                    {formatTime(videoCurrentTime)}&nbsp;/&nbsp;{formatTime(videoDuration)}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={toggleMute}
-                    className="shrink-0 text-white transition active:scale-90"
-                    aria-label={videoIsMuted ? "Unmute" : "Mute"}
-                  >
-                    {videoIsMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleFullscreen}
-                    className="shrink-0 text-white transition active:scale-90"
-                    aria-label="Fullscreen"
-                  >
-                    <Maximize2 size={20} />
-                  </button>
-                </div>
-              </div>
+              </>
             ) : (
               <Image
                 key={`${image.id}-${safeIndex}-${viewerState.retryKey}`}
@@ -416,15 +266,16 @@ const ImageViewer = ({
 
         {normalizedImages.length > 1 &&
           safeIndex < normalizedImages.length - 1 && (
-            <button
-              onClick={() => onChange?.(safeIndex + 1)}
-              className="absolute right-3 z-[131] flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/30 active:scale-95 md:right-5"
-              aria-label="Next media"
-            >
-              <ChevronRight size={30} />
-            </button>
+            <>
+              <button
+                onClick={() => onChange?.(safeIndex + 1)}
+                className="absolute right-3 z-[131] flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/30 active:scale-95 md:right-5"
+                aria-label="Next media"
+              >
+                <ChevronRight size={30} />
+              </button>
+            </>
           )}
-
         {normalizedImages.length > 1 && (!isVideo || showPaginationOnVideo) && (
           <div className="pointer-events-none absolute inset-x-0 top-1 z-[130] flex h-10 items-center justify-center gap-1 bg-transparent px-3">
             {normalizedImages.map((media, mediaIndex) => (
