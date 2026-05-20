@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
-import { Expand, Maximize, Minimize, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Expand, Maximize, Minimize, Pause, Play, Volume1, Volume2, VolumeX } from "lucide-react";
 
 type VideoPlayerProps = {
   src: string;
@@ -41,9 +41,11 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const progressBarRef = useRef<HTMLDivElement>(null);
+    const volBarRef = useRef<HTMLDivElement>(null);
     const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [isPlaying, setIsPlaying] = useState(autoPlay);
+    const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -51,8 +53,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     const getVideo = (): HTMLVideoElement | null => {
-      if (!ref) return null;
-      if (typeof ref === "function") return null;
+      if (!ref || typeof ref === "function") return null;
       return ref.current;
     };
 
@@ -78,10 +79,8 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       }
     }, [isPlaying, scheduleHide]);
 
-    useEffect(() => {
-      return () => {
-        if (hideTimerRef.current !== null) clearTimeout(hideTimerRef.current);
-      };
+    useEffect(() => () => {
+      if (hideTimerRef.current !== null) clearTimeout(hideTimerRef.current);
     }, []);
 
     useEffect(() => {
@@ -100,18 +99,25 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const toggleMute = () => {
       const video = getVideo();
       if (!video) return;
-      video.muted = !video.muted;
-      setIsMuted(video.muted);
+      const next = !video.muted;
+      video.muted = next;
+      setIsMuted(next);
+    };
+
+    const setVideoVolume = (val: number) => {
+      const video = getVideo();
+      if (!video) return;
+      video.volume = val;
+      video.muted = val === 0;
+      setVolume(val);
+      setIsMuted(val === 0);
     };
 
     const toggleFullscreen = async () => {
       const container = containerRef.current;
       if (!container) return;
-      if (document.fullscreenElement) {
-        await document.exitFullscreen().catch(() => {});
-      } else {
-        await container.requestFullscreen().catch(() => {});
-      }
+      if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+      else await container.requestFullscreen().catch(() => {});
     };
 
     const seekToFraction = (fraction: number) => {
@@ -120,17 +126,17 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       video.currentTime = Math.max(0, Math.min(fraction * video.duration, video.duration));
     };
 
-    const fractionFromEvent = (clientX: number): number => {
-      const bar = progressBarRef.current;
-      if (!bar) return 0;
+    const fractionFromX = (clientX: number, bar: HTMLElement): number => {
       const rect = bar.getBoundingClientRect();
       return Math.max(0, Math.min((clientX - rect.left) / rect.width, 1));
     };
 
     const handleProgressMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
-      seekToFraction(fractionFromEvent(e.clientX));
-      const handleMouseMove = (ev: MouseEvent) => seekToFraction(fractionFromEvent(ev.clientX));
+      seekToFraction(fractionFromX(e.clientX, e.currentTarget));
+      const handleMouseMove = (ev: MouseEvent) => {
+        if (progressBarRef.current) seekToFraction(fractionFromX(ev.clientX, progressBarRef.current));
+      };
       const handleMouseUp = () => {
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
@@ -142,10 +148,40 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const handleProgressTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
       e.stopPropagation();
       const touch = e.touches[0];
-      if (touch) seekToFraction(fractionFromEvent(touch.clientX));
+      if (touch && progressBarRef.current) seekToFraction(fractionFromX(touch.clientX, progressBarRef.current));
       const handleTouchMove = (ev: TouchEvent) => {
         const t = ev.touches[0];
-        if (t) seekToFraction(fractionFromEvent(t.clientX));
+        if (t && progressBarRef.current) seekToFraction(fractionFromX(t.clientX, progressBarRef.current));
+      };
+      const handleTouchEnd = () => {
+        window.removeEventListener("touchmove", handleTouchMove);
+        window.removeEventListener("touchend", handleTouchEnd);
+      };
+      window.addEventListener("touchmove", handleTouchMove);
+      window.addEventListener("touchend", handleTouchEnd);
+    };
+
+    const handleVolMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      if (volBarRef.current) setVideoVolume(fractionFromX(e.clientX, volBarRef.current));
+      const handleMouseMove = (ev: MouseEvent) => {
+        if (volBarRef.current) setVideoVolume(fractionFromX(ev.clientX, volBarRef.current));
+      };
+      const handleMouseUp = () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    };
+
+    const handleVolTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      const touch = e.touches[0];
+      if (touch && volBarRef.current) setVideoVolume(fractionFromX(touch.clientX, volBarRef.current));
+      const handleTouchMove = (ev: TouchEvent) => {
+        const t = ev.touches[0];
+        if (t && volBarRef.current) setVideoVolume(fractionFromX(t.clientX, volBarRef.current));
       };
       const handleTouchEnd = () => {
         window.removeEventListener("touchmove", handleTouchMove);
@@ -156,6 +192,9 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     };
 
     const progress = duration > 0 ? currentTime / duration : 0;
+    const displayVolume = isMuted ? 0 : volume;
+
+    const VolumeIcon = displayVolume === 0 ? VolumeX : displayVolume < 0.5 ? Volume1 : Volume2;
 
     return (
       <div
@@ -173,23 +212,10 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           autoPlay={autoPlay}
           playsInline={playsInline}
           preload={preload}
-          onClick={(e) => {
-            e.stopPropagation();
-            togglePlay();
-            showAndScheduleHide();
-          }}
-          onPlay={(e) => {
-            setIsPlaying(true);
-            onPlay?.(e);
-          }}
-          onPause={(e) => {
-            setIsPlaying(false);
-            onPause?.(e);
-          }}
-          onTimeUpdate={(e) => {
-            setCurrentTime(e.currentTarget.currentTime);
-            onTimeUpdate?.(e);
-          }}
+          onClick={(e) => { e.stopPropagation(); togglePlay(); showAndScheduleHide(); }}
+          onPlay={(e) => { setIsPlaying(true); onPlay?.(e); }}
+          onPause={(e) => { setIsPlaying(false); onPause?.(e); }}
+          onTimeUpdate={(e) => { setCurrentTime(e.currentTarget.currentTime); onTimeUpdate?.(e); }}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
           onEnded={() => setIsPlaying(false)}
         />
@@ -199,48 +225,73 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             showControls ? "opacity-100 pointer-events-auto" : "opacity-0"
           }`}
         >
+          {/* Progress bar */}
           <div
             ref={progressBarRef}
             className="group/bar relative h-1 w-full cursor-pointer rounded-full bg-white/30 transition-all hover:h-2"
             onMouseDown={handleProgressMouseDown}
             onTouchStart={handleProgressTouchStart}
           >
-            <div
-              className="h-full rounded-full bg-white"
-              style={{ width: `${progress * 100}%` }}
-            />
+            <div className="h-full rounded-full bg-white" style={{ width: `${progress * 100}%` }} />
             <div
               className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/bar:opacity-100"
               style={{ left: `calc(${progress * 100}% - 6px)` }}
             />
           </div>
 
+          {/* Button row */}
           <div className="flex items-center gap-1">
+            {/* Play/Pause */}
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); togglePlay(); }}
               className="flex h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-white/15 active:scale-95"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
-              {isPlaying
-                ? <Pause size={16} fill="currentColor" />
-                : <Play size={16} fill="currentColor" />}
+              {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
             </button>
 
+            {/* Timestamp */}
             <span className="min-w-[80px] text-xs tabular-nums text-white/75 select-none">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
 
             <div className="ml-auto flex items-center gap-1">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-white/15 active:scale-95"
-                aria-label={isMuted ? "Unmute" : "Mute"}
+              {/* Volume cluster */}
+              <div
+                className="group/vol flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
               >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/15 active:scale-95"
+                  aria-label={isMuted ? "Unmute" : "Mute"}
+                >
+                  <VolumeIcon size={16} />
+                </button>
 
+                {/* Volume slider — expands on hover */}
+                <div className="flex w-0 items-center overflow-hidden transition-all duration-200 group-hover/vol:w-20">
+                  <div
+                    ref={volBarRef}
+                    className="group/vbar relative h-1 w-full cursor-pointer rounded-full bg-white/30 hover:h-2 transition-all"
+                    onMouseDown={handleVolMouseDown}
+                    onTouchStart={handleVolTouchStart}
+                  >
+                    <div
+                      className="h-full rounded-full bg-white"
+                      style={{ width: `${displayVolume * 100}%` }}
+                    />
+                    <div
+                      className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/vbar:opacity-100"
+                      style={{ left: `calc(${displayVolume * 100}% - 6px)` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Expand / Fullscreen */}
               {onExpand ? (
                 <button
                   type="button"
