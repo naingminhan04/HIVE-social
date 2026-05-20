@@ -101,7 +101,7 @@ const RecoverableImage = ({
       {shouldRenderImage ? (
         <Image
           {...imageProps}
-          src={activeSrc}
+          src={activeSrc!}
           alt={alt}
           onLoad={() => {
             setStoredImageState({
