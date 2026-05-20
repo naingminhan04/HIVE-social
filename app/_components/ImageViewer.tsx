@@ -205,6 +205,7 @@ const ImageViewer = ({
       <div
         className="fixed inset-0 z-[120] flex items-center justify-center bg-[#080808] text-white"
         onPointerMove={isVideo ? resetHideTimer : undefined}
+        onPointerDown={isVideo ? resetHideTimer : undefined}
       >
         <button
           onClick={onClose}
