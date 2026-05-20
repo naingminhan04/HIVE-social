@@ -22,7 +22,7 @@ function hasPendingApproval(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return approved === "pending" || Boolean(verifyState) || Boolean(pendingEmail);
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isProtectedRoute = protectedRoutes.some((route) => path.startsWith(route));
   const isGuestRoute = guestRoutes.includes(path);
