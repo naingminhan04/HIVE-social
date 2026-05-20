@@ -2,7 +2,10 @@
 
 import { RefreshCw } from "lucide-react";
 import Image, { ImageProps } from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+const MAX_AUTO_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 1000;
 
 type RecoverableImageProps = Omit<ImageProps, "src"> & {
   src?: string | null;
@@ -18,6 +21,7 @@ type RecoverableImageProps = Omit<ImageProps, "src"> & {
 type ImageState = {
   src?: string | null;
   retryKey: number;
+  autoRetryCount: number;
   isLoading: boolean;
   useFallback: boolean;
   hasError: boolean;
@@ -26,6 +30,7 @@ type ImageState = {
 const getInitialImageState = (src?: string | null): ImageState => ({
   src,
   retryKey: 0,
+  autoRetryCount: 0,
   isLoading: Boolean(src),
   useFallback: false,
   hasError: false,
@@ -59,6 +64,16 @@ const RecoverableImage = ({
   const imageState =
     storedImageState.src === src ? storedImageState : getInitialImageState(src);
 
+  const autoRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoRetryTimerRef.current !== null) {
+        clearTimeout(autoRetryTimerRef.current);
+      }
+    };
+  }, []);
+
   const primarySrc = useMemo(
     () => (src ? appendRetryParam(src, imageState.retryKey) : null),
     [imageState.retryKey, src],
@@ -68,9 +83,14 @@ const RecoverableImage = ({
   const shouldRenderImage = Boolean(activeSrc) && !imageState.hasError;
 
   const handleRetry = () => {
+    if (autoRetryTimerRef.current !== null) {
+      clearTimeout(autoRetryTimerRef.current);
+      autoRetryTimerRef.current = null;
+    }
     setStoredImageState({
       src,
       retryKey: imageState.retryKey + 1,
+      autoRetryCount: 0,
       isLoading: Boolean(src),
       useFallback: false,
       hasError: false,
@@ -85,6 +105,23 @@ const RecoverableImage = ({
         useFallback: true,
         isLoading: true,
       });
+      return;
+    }
+
+    if (imageState.autoRetryCount < MAX_AUTO_RETRIES) {
+      const delay = BASE_RETRY_DELAY_MS * Math.pow(2, imageState.autoRetryCount);
+      autoRetryTimerRef.current = setTimeout(() => {
+        autoRetryTimerRef.current = null;
+        setStoredImageState((prev) => ({
+          ...prev,
+          src,
+          retryKey: prev.retryKey + 1,
+          autoRetryCount: prev.autoRetryCount + 1,
+          isLoading: Boolean(src),
+          useFallback: false,
+          hasError: false,
+        }));
+      }, delay);
       return;
     }
 
@@ -104,6 +141,10 @@ const RecoverableImage = ({
           src={activeSrc!}
           alt={alt}
           onLoad={() => {
+            if (autoRetryTimerRef.current !== null) {
+              clearTimeout(autoRetryTimerRef.current);
+              autoRetryTimerRef.current = null;
+            }
             setStoredImageState({
               ...imageState,
               src,
