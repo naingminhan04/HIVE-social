@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, useState } from "react";
+import { MouseEvent, useEffect, useRef, useState } from "react";
 import ImageViewer from "./ImageViewer";
 import { PostImageType, PostType } from "@/types/post";
 import PostContent from "./PostContent";
@@ -14,6 +14,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import RecoverableImage from "./RecoverableImage";
 import { isVideoMedia } from "@/utils/media";
+import { useVideoThumbnail } from "@/hooks/useVideoThumbnail";
 
 const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
   const images = post.images || [];
@@ -109,6 +110,16 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
                   onOpen={() => {
                     setViewerIndex(index);
                     setViewerOpen(true);
+                  }}
+                  videoState={videoPlayback[img.id]}
+                  onVideoStateChange={(state) => {
+                    setVideoPlayback((prev) => ({
+                      ...prev,
+                      [state.mediaId]: {
+                        currentTime: state.currentTime,
+                        isPlaying: state.isPlaying,
+                      },
+                    }));
                   }}
                   moreCount={index === 3 ? moreCount : 0}
                 />
@@ -215,14 +226,75 @@ function PostMediaTile({
   media,
   className,
   onOpen,
+  videoState,
+  onVideoStateChange,
   moreCount,
 }: {
   media: PostImageType;
   className?: string;
   onOpen: () => void;
+  videoState?: { currentTime: number; isPlaying: boolean };
+  onVideoStateChange: (state: {
+    mediaId: string;
+    currentTime: number;
+    isPlaying: boolean;
+  }) => void;
   moreCount: number;
 }) {
   const isVideo = isVideoMedia(media);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [showControls, setShowControls] = useState(false);
+  const thumbnail = useVideoThumbnail(isVideo ? media.url : null);
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current || !videoState) return;
+    const video = videoRef.current;
+    if (Math.abs(video.currentTime - videoState.currentTime) > 0.4) {
+      video.currentTime = Math.max(videoState.currentTime, 0);
+    }
+    if (videoState.isPlaying) {
+      void video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isVideo, videoState]);
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+    const video = videoRef.current;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting && !video.paused) {
+          video.pause();
+          onVideoStateChange({
+            mediaId: media.id,
+            currentTime: video.currentTime,
+            isPlaying: false,
+          });
+        }
+      },
+      { threshold: 0.2 },
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [isVideo, media.id, onVideoStateChange]);
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+
+    const handleFullscreenChange = () => {
+      if (document.fullscreenElement === videoRef.current) {
+        void document.exitFullscreen().finally(() => {
+          onOpen();
+        });
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [isVideo, onOpen]);
 
   return (
     <div
@@ -232,18 +304,55 @@ function PostMediaTile({
       {isVideo ? (
         <>
           <video
+            ref={videoRef}
             src={media.url}
             className="h-full w-full object-cover"
             preload="metadata"
+            poster={thumbnail ?? undefined}
+            controls={showControls || !!videoState?.isPlaying || (videoState?.currentTime ?? 0) > 0}
             playsInline
-            muted
-            aria-hidden="true"
+            onClick={(event) => event.stopPropagation()}
+            onTimeUpdate={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: !event.currentTarget.paused,
+              });
+            }}
+            onPlay={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: true,
+              });
+            }}
+            onPause={(event) => {
+              onVideoStateChange({
+                mediaId: media.id,
+                currentTime: event.currentTarget.currentTime,
+                isPlaying: false,
+              });
+            }}
           />
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 text-white">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55">
-              <Play size={28} fill="currentColor" />
-            </span>
-          </div>
+          {!showControls && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setShowControls(true);
+                const video = videoRef.current;
+                if (!video) return;
+                void video.play().catch(() => {});
+              }}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 text-white"
+              aria-label="Play video preview"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55">
+                <Play size={28} fill="currentColor" />
+              </span>
+            </button>
+          )}
         </>
       ) : (
         <RecoverableImage
