@@ -337,13 +337,13 @@ const PointsModal = ({
   return (
     <OverlayPortal>
       <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-md">
-        <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/95 shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-neutral-900/95">
+        <div className="@container/points flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/95 shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-neutral-900/95">
           <div className="sticky top-0 z-10 shrink-0 flex items-center justify-between gap-4 border-b border-black/5 bg-white/90 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-neutral-900/90">
-            <div>
-              <h2 className="text-xl font-semibold text-neutral-950 dark:text-neutral-50">
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-semibold text-neutral-950 dark:text-neutral-50">
                 Points Center
               </h2>
-              <p className="hidden text-sm text-neutral-500 dark:text-neutral-400 md:block">
+              <p className="hidden truncate text-sm text-neutral-500 dark:text-neutral-400 md:block">
                 Claim rewards, review history, transfer points, and lookup
                 transactions.
               </p>
@@ -356,7 +356,7 @@ const PointsModal = ({
             </button>
           </div>
 
-          <div className="shrink-0 border-b border-black/5 px-5 py-4 dark:border-white/10">
+          <div className="shrink-0 border-b border-black/5 px-4 py-4 dark:border-white/10 sm:px-5">
             <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -366,14 +366,14 @@ const PointsModal = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
+                    className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
                       activeTab === tab.id
                         ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
                         : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                     }`}
                   >
                     <span
-                      className={`rounded-xl p-2 shadow-sm ${
+                      className={`shrink-0 rounded-xl p-2 shadow-sm ${
                         activeTab === tab.id
                           ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
                           : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
@@ -381,14 +381,16 @@ const PointsModal = ({
                     >
                       <Icon size={16} />
                     </span>
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="hidden min-w-0 truncate sm:inline">
+                      {tab.label}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-5 scrollbar-none overscroll-contain">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 scrollbar-none overscroll-contain sm:p-5">
             {activeTab === "overview" &&
               (isOverviewTabLoading ? (
                 <TabLoadingState label="overview" />

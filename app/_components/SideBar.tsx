@@ -19,20 +19,24 @@ export const getMenuArr = (profileSlug: string) => [
     href: "/home",
   },
   {
-    name: "Chatrooms",
-    href: "/chatroom",
-  },
-  {
     name: "Chat",
     href: "/chat",
   },
   {
-    name: "Profile",
-    href: profileSlug ? `/users/${profileSlug}` : "/home",
-  },
-  {
     name: "Leaderboard",
     href: "/leaderboard",
+  },
+  {
+    name: "Redeem",
+    href: "/redeem",
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+  },
+  {
+    name: "Profile",
+    href: profileSlug ? `/users/${profileSlug}` : "/home",
   },
 ];
 const SideBar = () => {

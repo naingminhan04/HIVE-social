@@ -1,14 +1,7 @@
-import { MessagesSquare } from "lucide-react";
-import WorkInProgressPlaceholder from "@/app/_components/WorkInProgressPlaceholder";
+import { redirect } from "next/navigation";
 
 const Chatrooms = () => {
-  return (
-    <WorkInProgressPlaceholder
-      title="Chatrooms Are In Progress"
-      description="Group conversations are not live yet. This space is being prepared for chatrooms and shared discussions."
-      icon={MessagesSquare}
-    />
-  );
+  redirect("/chat");
 };
 
 export default Chatrooms;
