@@ -31,7 +31,6 @@ export type ConfigsType = {
   profileViewRangeInMinutes: number;
   allowProfileViewsForAdmin: boolean;
   hotItemThreshold: number;
-  chatroomParticipantsSize: number;
   createdAt: string;
   updatedAt: string;
 };

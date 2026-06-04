@@ -23,6 +23,7 @@ import {
   KeyRound,
   AtSign,
   ImageUp,
+  MessageCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -390,6 +391,21 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const displayedCoverSrc = coverPreviewUrl || user?.coverPic || null;
   const displayedProfileSrc =
     profilePreviewUrl || user?.profilePic || "/default-avatar.png";
+  const openMessage = () => {
+    if (!user?.id) return;
+
+    const params = new URLSearchParams({
+      userId: user.id,
+      name: user.name ?? "New chat",
+      username: user.username ?? user.id,
+    });
+
+    if (user.profilePic) {
+      params.set("profilePic", user.profilePic);
+    }
+
+    router.push(`/chat?${params.toString()}`);
+  };
 
   return (
     <main
@@ -419,7 +435,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
           </span>
         </div>
 
-        {isOwner && (
+        {isOwner ? (
           <button
             onClick={() => setIsEditOpen(true)}
             className="ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-300 bg-blue-300 text-sm text-neutral-950 shadow-sm transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black sm:w-auto sm:gap-2 sm:px-4"
@@ -428,7 +444,16 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             <PencilLine size={16} />
             <span className="hidden text-sm font-medium sm:inline">Edit Profile</span>
           </button>
-        )}
+        ) : user?.id ? (
+          <button
+            onClick={openMessage}
+            className="ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-300 bg-blue-300 text-sm text-neutral-950 shadow-sm transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black sm:w-auto sm:gap-2 sm:px-4"
+            aria-label={`Message ${user.name}`}
+          >
+            <MessageCircle size={16} />
+            <span className="hidden text-sm font-medium sm:inline">Message</span>
+          </button>
+        ) : null}
       </div>
 
       <div className="relative mb-[10vw] md:mb-[6vw] lg:mb-[clamp(10px,5vw,60px)]">
