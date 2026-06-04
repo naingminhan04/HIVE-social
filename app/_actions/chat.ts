@@ -5,6 +5,7 @@ import api from "@/libs/axios";
 import { API_BASE_URL } from "@/libs/apiBase";
 import type { ActionResponse } from "@/types/action";
 import type {
+  Chat,
   ChatListResponse,
   ChatMessagesResponse,
   ChatReactionType,
