@@ -51,6 +51,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
   type UseMutationResult,
 } from "@tanstack/react-query";
 import {
@@ -453,6 +454,13 @@ export const ChatClient = ({
   const [editingAttachments, setEditingAttachments] = useState<ChatMedia[]>([]);
   const [openReactionMessageId, setOpenReactionMessageId] = useState<string | null>(null);
   const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
+  const [pendingSentMessages, setPendingSentMessages] = useState<{
+    id: string;
+    content: string;
+    hasAttachments: boolean;
+    createdAt: string;
+    chatId: string;
+  }[]>([]);
   const [reactionUsersMessage, setReactionUsersMessage] = useState<ChatMessage | null>(null);
   const [mediaViewer, setMediaViewer] = useState<{
     items: { id: string; url: string; fileName?: string | null; mimeType?: string | null }[];
@@ -661,25 +669,33 @@ export const ChatClient = ({
     enabled: composeMode === "group" && groupSearch.trim().length > 1,
   });
 
-  const sendMutation = useMutation({
-    mutationFn: async () => {
+  const sendMutation = useMutation<
+    ChatMessage,
+    Error,
+    {
+      content: string;
+      parentMessageId?: string | null;
+      draftFiles: DraftFile[];
+    },
+    { pendingId: string }
+  >({
+    mutationFn: async ({ content, parentMessageId, draftFiles: mutationDraftFiles }) => {
       if (!selectedChat) throw new Error("Select a chat first");
 
-      const content = messageText.trim();
-      if (!content && draftFiles.length === 0) {
+      if (!content && mutationDraftFiles.length === 0) {
         throw new Error("Message cannot be empty");
       }
 
       const input: SendMessageInput = {
         content,
-        ...(replyToMessage ? { parentMessageId: replyToMessage.id } : {}),
+        ...(parentMessageId ? { parentMessageId } : {}),
       };
 
-      if (draftFiles.length > 0) {
-        const uploadedFiles = await uploadFiles(draftFiles.map((draftFile) => draftFile.file));
+      if (mutationDraftFiles.length > 0) {
+        const uploadedFiles = await uploadFiles(mutationDraftFiles.map((draftFile) => draftFile.file));
         const uploadedWithKind = uploadedFiles.map((file, index) => ({
           file: toChatMedia(file),
-          kind: draftFiles[index]?.kind ?? getMediaKind(file),
+          kind: mutationDraftFiles[index]?.kind ?? getMediaKind(file),
         }));
 
         const media = uploadedWithKind
@@ -702,7 +718,68 @@ export const ChatClient = ({
       if (!result.success) throw new Error(result.error);
       return result.data.data;
     },
-    onSuccess: async (message) => {
+    onMutate: async ({ content, draftFiles: mutationDraftFiles }) => {
+      const pendingId = `pending-${crypto.randomUUID()}`;
+      setPendingSentMessages((current) => [
+        ...current,
+        {
+          id: pendingId,
+          content,
+          hasAttachments: mutationDraftFiles.length > 0,
+          createdAt: new Date().toISOString(),
+          chatId:
+            activeChat && !isDraftChat(activeChat)
+              ? activeChat.id
+              : selectedChat && !isDraftChat(selectedChat)
+              ? selectedChat.id
+              : "",
+        },
+      ]);
+      setMessageText("");
+      setReplyToMessage(null);
+      return { pendingId };
+    },
+    onSuccess: async (message, _variables, _context) => {
+      if (activeKey) {
+        queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
+          ["chatMessages", activeKey],
+          (current) => {
+            if (!current) return current;
+
+            const alreadyHasMessage = current.pages.some((page) =>
+              page.messages.some((item) => item.id === message.id),
+            );
+            if (alreadyHasMessage) return current;
+
+            if (current.pages.length === 0) {
+              return {
+                ...current,
+                pages: [
+                  {
+                    messages: [message],
+                    cursors: null,
+                    hasMore: false,
+                  },
+                ],
+              };
+            }
+
+            return {
+              ...current,
+              pages: current.pages.map((page, index) =>
+                index === current.pages.length - 1
+                  ? {
+                      ...page,
+                      messages: sortMessages([...page.messages, message]),
+                    }
+                  : page,
+              ),
+            };
+          },
+        );
+      }
+
+      setPendingSentMessages((current) => current.filter((item) => item.id !== _context?.pendingId));
       setMessageText("");
       setReplyToMessage(null);
       setDraftFiles((current) => {
@@ -717,8 +794,16 @@ export const ChatClient = ({
       }
       await queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      setPendingSentMessages((current) =>
+        current.filter((item) => item.id !== context?.pendingId),
+      );
       toast.error(error instanceof Error ? error.message : "Failed to send message");
+    },
+    onSettled: (_data, _error, _variables, context) => {
+      setPendingSentMessages((current) =>
+        current.filter((item) => item.id !== context?.pendingId),
+      );
     },
   });
 
@@ -778,7 +863,7 @@ export const ChatClient = ({
     },
   });
 
-  const deleteMutation = useMutation({
+  const deleteMutation = useMutation<string, Error, string>({
     mutationFn: async (messageId: string) => {
       const result = await deleteMessageAction(messageId);
       if (!result.success) throw new Error(result.error);
@@ -792,16 +877,25 @@ export const ChatClient = ({
         current === messageId ? null : current,
       );
     },
+    onError: (_error, messageId) => {
+      setDeletingMessageIds((current) => current.filter((id) => id !== messageId));
+      toast.error(_error instanceof Error ? _error.message : "Failed to delete message");
+    },
     onSettled: (_data, _error, messageId) => {
       if (!messageId) return;
       setDeletingMessageIds((current) => current.filter((id) => id !== messageId));
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({ queryKey: ["chatMessages"] });
+      if (activeKey) {
+        queryClient.invalidateQueries({ queryKey: ["chatMessages", activeKey] });
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
-      await queryClient.invalidateQueries({ queryKey: ["chatMessages", activeKey] });
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to delete message");
+      await queryClient.invalidateQueries({ queryKey: ["chatMessages"] });
+      if (activeKey) {
+        await queryClient.invalidateQueries({ queryKey: ["chatMessages", activeKey] });
+      }
     },
   });
 
@@ -884,6 +978,39 @@ export const ChatClient = ({
     return sortMessages(Array.from(unique.values()));
   }, [messagesQuery.data?.pages]);
 
+  const combinedMessages = useMemo(() => {
+    if (pendingSentMessages.length === 0 || !viewer) return messages;
+
+    const pendingChatMessages: ChatMessage[] = pendingSentMessages.map((pending) => ({
+      id: pending.id,
+      content: pending.content,
+      senderId: viewer.id,
+      sender: {
+        id: viewer.id,
+        name: viewer.name,
+        username: viewer.username,
+        profilePic: viewer.profilePic,
+      },
+      chatId: pending.chatId,
+      type: "CONTENT",
+      createdAt: pending.createdAt,
+      updatedAt: pending.createdAt,
+      isEdited: false,
+      isDeleted: false,
+      images: [],
+      attachments: [],
+      parentMessageId: null,
+      forwardedMessageId: null,
+      parentMessage: null,
+      forwardedMessage: null,
+      myReaction: null,
+      reactionStats: undefined,
+      mentions: [],
+    }));
+
+    return [...messages, ...pendingChatMessages];
+  }, [messages, pendingSentMessages, viewer]);
+
   const updateScrollToBottomVisibility = useCallback(() => {
     const viewport = messagesViewportRef.current;
     if (!viewport) return;
@@ -916,7 +1043,11 @@ export const ChatClient = ({
   useEffect(() => {
     if (!editingMessageId) return;
     requestAnimationFrame(() => {
-      composerTextareaRef.current?.focus({ preventScroll: true });
+      const textarea = composerTextareaRef.current;
+      if (!textarea) return;
+      textarea.focus({ preventScroll: true });
+      const length = textarea.value.length;
+      textarea.setSelectionRange(length, length);
     });
   }, [editingMessageId]);
 
@@ -1338,7 +1469,11 @@ export const ChatClient = ({
       return;
     }
 
-    sendMutation.mutate();
+    sendMutation.mutate({
+      content: messageText.trim(),
+      parentMessageId: replyToMessage?.id ?? null,
+      draftFiles,
+    });
   };
 
   const getCurrentReaction = (message: ChatMessage) =>
@@ -1452,7 +1587,7 @@ export const ChatClient = ({
     <>
       {composeMode && (
         <OverlayPortal>
-          <div className="fixed inset-0 z-[130] flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
+          <div className="fixed inset-0 z-130 flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
             <div className="max-h-[85dvh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-neutral-950">
               <div className="flex h-14 items-center justify-between border-b border-black/5 px-4 dark:border-white/10">
                 <h2 className="font-semibold">
@@ -1603,7 +1738,7 @@ export const ChatClient = ({
 
       {reactionUsersMessage && (
         <OverlayPortal>
-          <div className="fixed inset-0 z-[130] flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
+          <div className="fixed inset-0 z-130 flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
             <div className="max-h-[85dvh] w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-neutral-950">
               <div className="flex h-14 items-center justify-between border-b border-black/5 px-4 dark:border-white/10">
                 <h2 className="font-semibold text-slate-700 dark:text-neutral-100">
@@ -1701,7 +1836,7 @@ export const ChatClient = ({
     return (
       <>
         <OverlayPortal>
-          <div className="fixed bottom-5 right-5 z-30 md:absolute md:bottom-5 md:right-5 lg:bottom-5">
+          <div className="absolute bottom-5 right-5 z-30">
             <div className="relative">
               {isComposeMenuOpen && (
                 <div className="absolute bottom-full right-0 mb-3 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-xl dark:border-white/10 dark:bg-neutral-900">
@@ -1765,8 +1900,7 @@ export const ChatClient = ({
             onScroll={handleMessagesScroll}
             className="flex-1 space-y-3 overflow-y-auto bg-neutral-50 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
           >
-            {/* Infinite scroll sentinel disabled for testing. */}
-            {/* <div ref={loadOlderSentinelRef} className="h-px w-full shrink-0" aria-hidden /> */}
+            <div ref={loadOlderSentinelRef} className="h-px w-full shrink-0" aria-hidden />
             {messagesQuery.isFetchingNextPage && (
                   <div className="flex justify-center py-2">
                     <Loader2
@@ -1775,12 +1909,13 @@ export const ChatClient = ({
                     />
                   </div>
                 )}
-                {messages.map((message) => {
+                {combinedMessages.map((message) => {
                     const isMine = message.senderId === viewer?.id;
                     const currentReaction = getCurrentReaction(message);
                     const reactionTotal = getReactionTotal(message);
                     const visibleReactions = getVisibleReactions(message);
                     const isDeleting = deletingMessageIds.includes(message.id);
+                    const isPendingSend = message.id.startsWith("pending-");
                     return (
                       <div
                         key={message.id}
@@ -1797,7 +1932,7 @@ export const ChatClient = ({
                           }
                         }}
                       >
-                        {isMine && !message.isDeleted && !isDeleting && (
+                        {isMine && !message.isDeleted && !isDeleting && !isPendingSend && (
                           <MessageActions
                             isMine={isMine}
                             message={message}
@@ -1817,7 +1952,7 @@ export const ChatClient = ({
                               isMine
                                 ? "rounded-br-md bg-blue-400 text-white dark:bg-neutral-700"
                                 : "rounded-bl-md bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
-                            } ${isDeleting ? "opacity-70" : ""} ${
+                            } ${isDeleting || isPendingSend ? "opacity-70" : ""} ${
                               highlightedMessageId === message.id
                                 ? "ring-2 ring-blue-300/90 dark:ring-white/35"
                                 : ""
@@ -1845,7 +1980,7 @@ export const ChatClient = ({
                                     } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
                                     aria-label="Jump to replied message"
                                   >
-                                    <p className="line-clamp-2 break-words">
+                                    <p className="line-clamp-2 wrap-break-word">
                                       {getReplyPreview(message)}
                                     </p>
                                   </button>
@@ -1862,7 +1997,7 @@ export const ChatClient = ({
                                   </div>
                                 )}
                                 {(message.content || message.isDeleted) && (
-                                  <p className="whitespace-pre-wrap break-words">
+                                  <p className="whitespace-pre-wrap wrap-break-word">
                                     {message.isDeleted
                                       ? "Message deleted"
                                       : message.content}
@@ -1899,7 +2034,7 @@ export const ChatClient = ({
                             </p>
                           </div>
 
-                          {!message.isDeleted && !isDeleting && (
+                          {!message.isDeleted && !isDeleting && !isPendingSend && (
                             <div
                               className={`relative mt-1 flex max-w-full flex-wrap items-center gap-1.5 ${
                                 isMine ? "justify-end" : "justify-start"
@@ -1950,22 +2085,9 @@ export const ChatClient = ({
                     );
                   })}
                 {isMessagesLoading && <ChatMessagesLoadingSkeleton />}
-                {!isMessagesLoading && messages.length === 0 && (
+                {!isMessagesLoading && combinedMessages.length === 0 && (
                   <div className="flex min-h-40 items-center justify-center px-8 text-center text-sm text-neutral-400">
                     Send a message to start the conversation.
-                  </div>
-                )}
-                {sendMutation.isPending && (
-                  <div className="flex justify-end">
-                    <div className="max-w-[75%] rounded-2xl rounded-br-md bg-blue-400 px-3 py-2 text-sm text-white opacity-80 dark:bg-neutral-700">
-                      <p className="whitespace-pre-wrap break-words">
-                        {messageText.trim()}
-                      </p>
-                      <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-white/75">
-                        <Loader2 size={11} className="animate-spin" />
-                        Sending...
-                      </p>
-                    </div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -2283,15 +2405,10 @@ function ReactionPicker({
   onSelect,
 }: ReactionPickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(
-    null,
-  );
+  const positionRef = useRef<{ top: number; left: number } | null>(null);
 
   useLayoutEffect(() => {
-    if (!isOpen) {
-      setPosition(null);
-      return;
-    }
+    if (!isOpen) return;
 
     const anchor = anchorRef.current;
     const picker = pickerRef.current;
@@ -2325,7 +2442,11 @@ function ReactionPicker({
       ? anchorRect.bottom + edgePadding
       : anchorRect.top - pickerHeight - edgePadding;
 
-    setPosition({ top, left });
+    positionRef.current = { top, left };
+    picker.style.top = `${top}px`;
+    picker.style.left = `${left}px`;
+    picker.style.visibility = "visible";
+    picker.style.pointerEvents = "auto";
   }, [anchorRef, isMine, isOpen]);
 
   useEffect(() => {
@@ -2350,12 +2471,12 @@ function ReactionPicker({
       ref={pickerRef}
       data-chat-reaction-picker=""
       style={{
-        top: position?.top ?? 0,
-        left: position?.left ?? 0,
-        visibility: position ? "visible" : "hidden",
-        pointerEvents: position ? "auto" : "none",
+        top: 0,
+        left: 0,
+        visibility: "hidden",
+        pointerEvents: "none",
       }}
-      className="fixed z-[120] flex w-max max-w-[min(18rem,calc(100vw-1rem))] gap-0.5 overflow-x-auto rounded-full border border-black/10 bg-white p-1 shadow-xl scrollbar-none dark:border-white/10 dark:bg-neutral-900"
+      className="fixed z-120 flex w-max max-w-[min(18rem,calc(100vw-1rem))] gap-0.5 overflow-x-auto rounded-full border border-black/10 bg-white p-1 shadow-xl scrollbar-none dark:border-white/10 dark:bg-neutral-900"
       onMouseLeave={(event) => {
         const related = event.relatedTarget;
         if (related instanceof Element && pickerRef.current?.contains(related)) {

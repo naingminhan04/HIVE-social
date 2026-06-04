@@ -8,7 +8,8 @@ const OverlayPortal = ({ children }: { children: ReactNode }) => {
     return null;
   }
 
-  return createPortal(children, document.body);
+  const portalRoot = document.getElementById("chat-overlay-root") ?? document.body;
+  return createPortal(children, portalRoot);
 };
 
 export default OverlayPortal;

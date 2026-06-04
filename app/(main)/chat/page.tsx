@@ -35,7 +35,6 @@ const ChatPage = async ({ searchParams }: ChatPageProps) => {
         <ChatWorkspaceLayout
           list={
             <ChatListSection
-              chats={initialChats}
               activeChatId={initialChatId}
               unreadCount={initialUnreadCount}
             />

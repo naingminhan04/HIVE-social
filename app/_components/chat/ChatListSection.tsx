@@ -1,13 +1,16 @@
+"use client";
+
 import type { Chat } from "@/types/chat";
 import ChatListItem from "./ChatListItem";
+import { useChatNavigation } from "@/app/_components/chat/ChatNavigation";
 
 type ChatListSectionProps = {
-  chats: Chat[];
   activeChatId: string | null;
   unreadCount: number;
 };
 
-const ChatListSection = ({ chats, activeChatId, unreadCount }: ChatListSectionProps) => {
+const ChatListSection = ({ activeChatId, unreadCount }: ChatListSectionProps) => {
+  const { chats } = useChatNavigation();
   return (
     <section className="flex h-full min-h-0 w-full flex-col">
       <div className="shrink-0 border-b border-black/5 px-4 py-5 dark:border-white/10">
