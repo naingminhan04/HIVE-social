@@ -63,7 +63,6 @@ import {
   Loader2,
   MessageCircle,
   Mic,
-  MicOff,
   Paperclip,
   PenLine,
   Play,
@@ -102,32 +101,7 @@ type DraftFile = {
   kind: DraftFileKind;
 };
 
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-
-type SpeechRecognitionEventLike = {
-  results: ArrayLike<{
-    0: {
-      transcript: string;
-    };
-  }>;
-};
-
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
-declare global {
-  interface Window {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  }
-}
+ 
 
 const reactionOptions: { type: ChatReactionType; label: string; image: string }[] = [
   { type: "LIKE", label: "Like", image: "/like.png" },
@@ -209,9 +183,26 @@ const sortMessages = (messages: ChatMessage[]) =>
 const getOlderCursor = (cursors?: Record<string, unknown> | null) => {
   if (!cursors) return null;
 
-  for (const key of ["older", "before", "prev", "previous"] as const) {
+  for (const key of [
+    "older",
+    "before",
+    "prev",
+    "previous",
+    "next",
+    "after",
+    "cursor",
+    "nextCursor",
+    "nextPage",
+  ] as const) {
     const value = cursors[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+
+    if (typeof value === "number") {
+      return String(value);
+    }
   }
 
   return null;
@@ -370,7 +361,7 @@ function ChatMessagesLoadingSkeleton() {
 }
 
 const composerFieldClass =
-  "max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition scrollbar-none focus:border-2 focus:border-black dark:border-neutral-700 dark:bg-black dark:text-neutral-100 dark:focus:border-white";
+  "max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-gray-300 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition scrollbar-none focus:border-2 focus:border-black dark:border-neutral-700 dark:bg-black dark:text-neutral-100 dark:focus:border-white";
 
 const composerBannerClass =
   "mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-gray-300 border-l-4 border-l-blue-300 bg-blue-50 px-3 py-2 text-xs text-neutral-800 dark:border-neutral-700 dark:border-l-neutral-500 dark:bg-neutral-900 dark:text-neutral-100";
@@ -429,18 +420,12 @@ export const ChatClient = ({
   const [messageText, setMessageText] = useState("");
   const [draftFiles, setDraftFiles] = useState<DraftFile[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
-  const [isVoiceTypingSupported, setIsVoiceTypingSupported] = useState(false);
-  const [isVoiceTyping, setIsVoiceTyping] = useState(false);
+  
   const [hasMounted, setHasMounted] = useState(false);
   const [privateSearch, setPrivateSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setIsVoiceTypingSupported(
-      Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
-    );
-  }, []);
+  
 
   useEffect(() => {
     setHasMounted(true);
@@ -475,6 +460,7 @@ export const ChatClient = ({
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const lastPositionedChatRef = useRef<string | null>(null);
+  const activeKeyRef = useRef<string | null>(null);
   const pendingScrollPreserveRef = useRef<{
     scrollHeight: number;
     scrollTop: number;
@@ -485,7 +471,7 @@ export const ChatClient = ({
   const readMessageIdsRef = useRef<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  
   const draftFilesRef = useRef<DraftFile[]>([]);
 
   const chatsQuery = useQuery({
@@ -515,6 +501,10 @@ export const ChatClient = ({
   const activeKey = getSelectedKey(activeChat);
 
   useEffect(() => {
+    activeKeyRef.current = activeKey;
+  }, [activeKey]);
+
+  useEffect(() => {
     let isMounted = true;
 
     getChatSocketConfigAction().then((result) => {
@@ -533,7 +523,43 @@ export const ChatClient = ({
       const refreshChat = () => {
         queryClient.invalidateQueries({ queryKey: ["chats"] });
         queryClient.invalidateQueries({ queryKey: ["chatMessages"] });
+        // ensure the currently open chat messages query is invalidated
+        // so incoming messages show up immediately in the active panel
+        const ak = activeKeyRef.current;
+        if (ak) {
+          queryClient.invalidateQueries({ queryKey: ["chatMessages", ak] });
+        }
         queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
+      };
+
+      const handleIncomingMessage = (
+        payload: ChatMessage | { message: ChatMessage; chatId?: string },
+      ) => {
+        try {
+          const message = "message" in payload ? payload.message : payload;
+          const chatId = ("chatId" in payload && payload.chatId) ?? message?.chatId;
+          if (!chatId) return;
+
+          queryClient.setQueryData<Chat[] | undefined>(["chats"], (current) => {
+            if (!current) return current;
+            const existing = current.find((c) => c.id === chatId);
+            if (!existing) return current;
+
+            const updatedLastMessage = message
+              ? { ...(message as ChatMessage), isReadByMe: message.senderId === viewer?.id }
+              : existing.lastMessage;
+
+            const updated: Chat = {
+              ...existing,
+              lastMessage: updatedLastMessage,
+              updatedAt: message?.createdAt ?? new Date().toISOString(),
+            };
+
+            return [updated, ...current.filter((c) => c.id !== chatId)];
+          });
+        } catch {
+          // ignore
+        }
       };
 
       [
@@ -546,6 +572,11 @@ export const ChatClient = ({
         "chat-created",
         "chat-updated",
       ].forEach((event) => socket.on(event, refreshChat));
+
+      // specific handlers for incoming message payloads to update the chat list
+      ["message:new", "new-message", "message-sent"].forEach((ev) =>
+        socket.on(ev, handleIncomingMessage),
+      );
     });
 
     return () => {
@@ -554,7 +585,7 @@ export const ChatClient = ({
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [queryClient, setIsSocketConnected]);
+  }, [queryClient, setIsSocketConnected, viewer?.id]);
 
   useEffect(() => {
     draftFilesRef.current = draftFiles;
@@ -565,7 +596,6 @@ export const ChatClient = ({
       draftFilesRef.current.forEach((draftFile) =>
         URL.revokeObjectURL(draftFile.previewUrl),
       );
-      speechRecognitionRef.current?.stop();
     };
   }, []);
 
@@ -656,7 +686,7 @@ export const ChatClient = ({
       if (!result.success) throw new Error(result.error);
       return result.data.users.filter((user) => user.id !== viewer?.id);
     },
-    enabled: composeMode === "private" && privateSearch.trim().length > 1,
+    enabled: composeMode === "private" && privateSearch.trim().length > 0,
   });
 
   const groupSearchQuery = useQuery({
@@ -666,8 +696,11 @@ export const ChatClient = ({
       if (!result.success) throw new Error(result.error);
       return result.data.users.filter((user) => user.id !== viewer?.id);
     },
-    enabled: composeMode === "group" && groupSearch.trim().length > 1,
+    enabled: composeMode === "group" && groupSearch.trim().length > 0,
   });
+
+  const privateSearchResults = privateSearchQuery.data ?? [];
+  const groupSearchResults = groupSearchQuery.data ?? [];
 
   const sendMutation = useMutation<
     ChatMessage,
@@ -905,7 +938,37 @@ export const ChatClient = ({
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, _error, messageId) => {
+      if (activeKey) {
+        queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
+          ["chatMessages", activeKey],
+          (current) => {
+            if (!current) return current;
+            return {
+              ...current,
+              pages: current.pages.map((page) => ({
+                ...page,
+                messages: page.messages.map((message) =>
+                  message.id === messageId
+                    ? { ...message, isReadByMe: true, isRead: true }
+                    : message,
+                ),
+              })),
+            };
+          },
+        );
+      }
+
+      const readEventChatId = activeChat && !isDraftChat(activeChat) ? activeChat.id : undefined;
+      socketRef.current?.emit("message:read", {
+        messageId,
+        chatId: readEventChatId,
+      });
+      socketRef.current?.emit("message-read", {
+        messageId,
+        chatId: readEventChatId,
+      });
+
       await queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
     },
   });
@@ -1315,39 +1378,7 @@ export const ChatClient = ({
     });
   };
 
-  const toggleVoiceTyping = () => {
-    if (!isVoiceTypingSupported || typeof window === "undefined") return;
-
-    if (isVoiceTyping) {
-      speechRecognitionRef.current?.stop();
-      setIsVoiceTyping(false);
-      return;
-    }
-
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) return;
-
-    const recognition = new Recognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0].transcript)
-        .join(" ")
-        .trim();
-
-      if (transcript) {
-        setMessageText((current) =>
-          current.trim() ? `${current.trim()} ${transcript}` : transcript,
-        );
-      }
-    };
-    recognition.onend = () => setIsVoiceTyping(false);
-    speechRecognitionRef.current = recognition;
-    setIsVoiceTyping(true);
-    recognition.start();
-  };
+  
 
   useEffect(() => {
     const unreadMessages = messages.filter(
@@ -1612,7 +1643,8 @@ export const ChatClient = ({
                         value={privateSearch}
                         onChange={(event) => setPrivateSearch(event.target.value)}
                         placeholder="Search people"
-                        className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                        className="min-w-0 flex-1 bg-transparent text-base outline-none"
+                        style={{ fontSize: 16 }}
                       />
                     </div>
                     <div className="mt-3 divide-y divide-black/5 dark:divide-white/10">
@@ -1620,33 +1652,43 @@ export const ChatClient = ({
                         <p className="py-6 text-center text-sm text-neutral-400">
                           Searching...
                         </p>
+                      ) : privateSearch.trim().length === 0 ? (
+                        <p className="py-6 text-center text-sm text-neutral-400">
+                          Start typing to search people.
+                        </p>
+                      ) : privateSearchResults.length === 0 ? (
+                        <p className="py-6 text-center text-sm text-neutral-400">
+                          No users found.
+                        </p>
                       ) : (
-                        (privateSearchQuery.data ?? []).map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            onClick={() => openPrivateDraft(user)}
-                            className="flex w-full min-w-0 items-center gap-3 py-3 text-left"
-                          >
-                            <RecoverableImage
-                              src={user.profilePic || "/default-avatar.png"}
-                              alt={user.name}
-                              width={44}
-                              height={44}
-                              className="h-11 w-11 rounded-full object-cover"
-                              wrapperClassName="h-11 w-11 shrink-0 rounded-full"
-                              fallbackSrc="/default-avatar.png"
-                            />
-                            <span className="min-w-0">
-                              <span className="block truncate font-semibold">
-                                {user.name}
+                        <>
+                          {privateSearchResults.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => openPrivateDraft(user)}
+                              className="flex w-full min-w-0 items-center gap-3 py-3 text-left"
+                            >
+                              <RecoverableImage
+                                src={user.profilePic || "/default-avatar.png"}
+                                alt={user.name}
+                                width={44}
+                                height={44}
+                                className="h-11 w-11 rounded-full object-cover"
+                                wrapperClassName="h-11 w-11 shrink-0 rounded-full"
+                                fallbackSrc="/default-avatar.png"
+                              />
+                              <span className="min-w-0">
+                                <span className="block truncate font-semibold">
+                                  {user.name}
+                                </span>
+                                <span className="block truncate text-sm text-neutral-400">
+                                  @{user.username}
+                                </span>
                               </span>
-                              <span className="block truncate text-sm text-neutral-400">
-                                @{user.username}
-                              </span>
-                            </span>
-                          </button>
-                        ))
+                            </button>
+                          ))}
+                        </>
                       )}
                     </div>
                   </>
@@ -1656,7 +1698,8 @@ export const ChatClient = ({
                       value={groupName}
                       onChange={(event) => setGroupName(event.target.value)}
                       placeholder="Group name"
-                      className="h-11 w-full rounded-xl border border-black/10 bg-neutral-50 px-3 text-sm outline-none focus:border-blue-400 dark:border-white/10 dark:bg-neutral-900"
+                      className="h-11 w-full rounded-xl border border-black/10 bg-neutral-50 px-3 text-base outline-none focus:border-blue-400 dark:border-white/10 dark:bg-neutral-900"
+                      style={{ fontSize: 16 }}
                     />
                     {groupUsers.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -1679,41 +1722,58 @@ export const ChatClient = ({
                         value={groupSearch}
                         onChange={(event) => setGroupSearch(event.target.value)}
                         placeholder="Add people"
-                        className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                        className="min-w-0 flex-1 bg-transparent text-base outline-none"
+                        style={{ fontSize: 16 }}
                       />
                     </div>
                     <div className="mt-3 divide-y divide-black/5 dark:divide-white/10">
-                      {(groupSearchQuery.data ?? []).map((user) => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => toggleGroupUser(user)}
-                          className="flex w-full min-w-0 items-center gap-3 py-3 text-left"
-                        >
-                          <RecoverableImage
-                            src={user.profilePic || "/default-avatar.png"}
-                            alt={user.name}
-                            width={44}
-                            height={44}
-                            className="h-11 w-11 rounded-full object-cover"
-                            wrapperClassName="h-11 w-11 shrink-0 rounded-full"
-                            fallbackSrc="/default-avatar.png"
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate font-semibold">{user.name}</span>
-                            <span className="block truncate text-sm text-neutral-400">
-                              @{user.username}
-                            </span>
-                          </span>
-                          <span
-                            className={`h-5 w-5 rounded-full border ${
-                              selectedUserIds.has(user.id)
-                                ? "border-blue-400 bg-blue-400"
-                                : "border-neutral-300 dark:border-neutral-600"
-                            }`}
-                          />
-                        </button>
-                      ))}
+                      {groupSearch.trim().length === 0 ? (
+                        <p className="py-6 text-center text-sm text-neutral-400">
+                          Start typing to add people.
+                        </p>
+                      ) : groupSearchQuery.isLoading ? (
+                        <p className="py-6 text-center text-sm text-neutral-400">
+                          Searching...
+                        </p>
+                      ) : groupSearchResults.length === 0 ? (
+                        <p className="py-6 text-center text-sm text-neutral-400">
+                          No users found.
+                        </p>
+                      ) : (
+                        <>
+                          {groupSearchResults.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => toggleGroupUser(user)}
+                              className="flex w-full min-w-0 items-center gap-3 py-3 text-left"
+                            >
+                              <RecoverableImage
+                                src={user.profilePic || "/default-avatar.png"}
+                                alt={user.name}
+                                width={44}
+                                height={44}
+                                className="h-11 w-11 rounded-full object-cover"
+                                wrapperClassName="h-11 w-11 shrink-0 rounded-full"
+                                fallbackSrc="/default-avatar.png"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold">{user.name}</span>
+                                <span className="block truncate text-sm text-neutral-400">
+                                  @{user.username}
+                                </span>
+                              </span>
+                              <span
+                                className={`h-5 w-5 rounded-full border ${
+                                  selectedUserIds.has(user.id)
+                                    ? "border-blue-400 bg-blue-400"
+                                    : "border-neutral-300 dark:border-neutral-600"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -2283,21 +2343,7 @@ export const ChatClient = ({
                     rows={1}
                     className={composerFieldClass}
                   />
-                  {isVoiceTypingSupported && (
-                    <button
-                      type="button"
-                      onClick={toggleVoiceTyping}
-                      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition ${
-                        isVoiceTyping
-                          ? "border-red-300 bg-red-50 text-red-500 dark:border-red-500/40 dark:bg-red-500/10"
-                          : "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 active:bg-blue-200 dark:border-white dark:bg-white dark:text-black dark:hover:bg-neutral-200"
-                      }`}
-                      aria-label={isVoiceTyping ? "Stop voice typing" : "Start voice typing"}
-                      title={isVoiceTyping ? "Stop voice typing" : "Voice typing"}
-                    >
-                      {isVoiceTyping ? <MicOff size={18} /> : <Mic size={18} />}
-                    </button>
-                  )}
+                  
                   <button
                     type="submit"
                     disabled={
