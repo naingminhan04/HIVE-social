@@ -3,7 +3,7 @@
 import axios from "axios";
 import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
-import { API_BASE_URL } from "@/libs/apiBase";
+import api from "@/libs/axios";
 import { getApiErrorMessage } from "@/utils/apiError";
 import { getAuthToken, getRefreshToken } from "./cookies";
 import { applyAuthSessionFromPayload, toLoginSuccessResponse } from "./authSession";
@@ -11,7 +11,7 @@ import { refreshAction } from "./refresh";
 
 export async function getCurrentUserAction(): Promise<ActionResponse<LoginSuccessResponse>> {
   const fetchMe = async (accessToken: string) => {
-    const { data } = await axios.get(`${API_BASE_URL}/auth/me`, {
+    const { data } = await api.get(`/auth/me`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     return data;

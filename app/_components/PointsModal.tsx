@@ -23,7 +23,7 @@ import OverviewTab from "./points-modal/OverviewTab";
 import HistoryTab from "./points-modal/HistoryTab";
 import TransferTab from "./points-modal/TransferTab";
 import LookupTab from "./points-modal/LookupTab";
-import OverlayPortal from "./OverlayPortal";
+import OverlayPortal from "./layout/OverlayPortal";
 
 type PointsModalProps = {
   isOpen: boolean;
@@ -39,11 +39,11 @@ const tabs: {
   label: string;
   icon: typeof Coins;
 }[] = [
-  { id: "overview", label: "Overview", icon: Coins },
-  { id: "history", label: "History", icon: History },
-  { id: "transfer", label: "Transfer", icon: Send },
-  { id: "lookup", label: "Lookup", icon: Search },
-];
+    { id: "overview", label: "Overview", icon: Coins },
+    { id: "history", label: "History", icon: History },
+    { id: "transfer", label: "Transfer", icon: Send },
+    { id: "lookup", label: "Lookup", icon: Search },
+  ];
 
 const TabLoadingState = ({ label }: { label: string }) => (
   <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-black/5 bg-neutral-50/80 dark:border-white/10 dark:bg-neutral-950/80">
@@ -273,7 +273,7 @@ const PointsModal = ({
 
       toast.success(
         result.data.message ||
-          `Transferred ${amount} points to ${trimmedRecipient}.`,
+        `Transferred ${amount} points to ${trimmedRecipient}.`,
         { id: toastId },
       );
     } catch (error) {
@@ -366,18 +366,16 @@ const PointsModal = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
-                      activeTab === tab.id
+                    className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${activeTab === tab.id
                         ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
                         : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
-                    }`}
+                      }`}
                   >
                     <span
-                      className={`shrink-0 rounded-xl p-2 shadow-sm ${
-                        activeTab === tab.id
+                      className={`shrink-0 rounded-xl p-2 shadow-sm ${activeTab === tab.id
                           ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
                           : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
-                      }`}
+                        }`}
                     >
                       <Icon size={16} />
                     </span>

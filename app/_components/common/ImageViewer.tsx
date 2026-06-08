@@ -9,8 +9,8 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
-import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
-import OverlayPortal from "./OverlayPortal";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import OverlayPortal from "../layout/OverlayPortal";
 import { isVideoMedia } from "@/utils/media";
 
 type ImageType = {
@@ -112,7 +112,7 @@ const ImageViewer = ({
       video.currentTime = nextTime;
     }
 
-    void video.play().catch(() => {});
+    void video.play().catch(() => { });
     syncedPlaybackKeyRef.current = mediaKey;
   }, [image, isVideo, mediaKey, videoState]);
 
@@ -205,7 +205,7 @@ const ImageViewer = ({
                   playsInline
                   preload="metadata"
                   onLoadedMetadata={(event) => {
-                    void event.currentTarget.play().catch(() => {});
+                    void event.currentTarget.play().catch(() => { });
                   }}
                   onTimeUpdate={(event) => {
                     onVideoStateChange?.({
@@ -236,11 +236,10 @@ const ImageViewer = ({
                 src={resolvedImageUrl}
                 alt="viewer"
                 fill
-                className={`object-contain transition-opacity duration-200 ${
-                  viewerState.isImageLoading || viewerState.isImageBroken
+                className={`object-contain transition-opacity duration-200 ${viewerState.isImageLoading || viewerState.isImageBroken
                     ? "opacity-0"
                     : "opacity-100"
-                }`}
+                  }`}
                 priority
                 onLoad={() => {
                   setStoredViewerState({
@@ -282,9 +281,8 @@ const ImageViewer = ({
                 key={`${media.id}-${mediaIndex}`}
                 type="button"
                 onClick={() => onChange?.(mediaIndex)}
-                className={`pointer-events-auto h-1.5 rounded-full transition-all ${
-                  mediaIndex === safeIndex ? "w-8 bg-white" : "w-3 bg-white/35"
-                }`}
+                className={`pointer-events-auto h-1.5 rounded-full transition-all ${mediaIndex === safeIndex ? "w-8 bg-white" : "w-3 bg-white/35"
+                  }`}
                 aria-label={`Open media ${mediaIndex + 1}`}
               />
             ))}

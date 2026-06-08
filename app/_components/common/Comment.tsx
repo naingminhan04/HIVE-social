@@ -11,7 +11,7 @@ import {
   X,
   Camera,
 } from "lucide-react";
-import { formatCount } from "./PostCard";
+import { formatCount } from "../post/PostCard";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -21,7 +21,7 @@ import {
   deleteCommentAction,
   getReplyAction,
   patchCommentAction,
-} from "../_actions/comment";
+} from "@/app/_actions/comment";
 import {
   useInfiniteQuery,
   useQuery,
@@ -179,9 +179,9 @@ export const CommentPage = ({ postId }: { postId: string }) => {
 
   if (isLoading) {
     return (
-       <div className="mb-2"><DummyComment />
+      <div className="mb-2"><DummyComment />
         <DummyComment />
-       </div>
+      </div>
     );
   }
 
@@ -266,18 +266,18 @@ export const CommentPage = ({ postId }: { postId: string }) => {
 
         {hasNextPage && (
           <div>
-            {isFetchingNextPage ? <DummyComment /> :<footer className="p-4 w-full flex justify-center">
-            <button
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
-              className="text-blue-400 w-full flex justify-center items-center  dark:text-neutral-50 hover:underline disabled:opacity-50"
-            >
+            {isFetchingNextPage ? <DummyComment /> : <footer className="p-4 w-full flex justify-center">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="text-blue-400 w-full flex justify-center items-center  dark:text-neutral-50 hover:underline disabled:opacity-50"
+              >
                 Load More Comments
-            </button>
-          </footer>}
-            
+              </button>
+            </footer>}
+
           </div>
-          
+
         )}
       </div>
       <div className="pb-2 bg-gray-100 dark:bg-neutral-950 -mx-2 px-2 sticky bottom-0 z-10 pt-2 space-y-2">
@@ -334,9 +334,8 @@ const CommentCard = ({
 }: CommentCardProps) => {
   return (
     <div
-      className={`flex gap-3 px-3 py-2 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg transition ${
-        isDel.includes(comment.id) && "opacity-50 pointer-events-none"
-      }`}
+      className={`flex gap-3 px-3 py-2 hover:bg-gray-200 dark:hover:bg-neutral-800 rounded-lg transition ${isDel.includes(comment.id) && "opacity-50 pointer-events-none"
+        }`}
     >
       <div className="flex gap-3 flex-1">
         <Link target="_blank" href={`/users/${comment.user.username}`}>
@@ -485,8 +484,8 @@ const Replies = ({
 
   if (isLoading)
     return (
-      <div className="ml-10"><DummyComment/></div>
-      
+      <div className="ml-10"><DummyComment /></div>
+
     );
 
   const replies = (data?.replies ?? data?.comments ?? []) as CommentType[];
@@ -541,13 +540,13 @@ export const CommentForm = ({
       images:
         isEdit && commentToEdit && commentToEdit.images.length > 0
           ? [
-              {
-                key: commentToEdit.images[0].key,
-                fileName: commentToEdit.images[0].fileName,
-                mimeType: commentToEdit.images[0].mimeType,
-                fileSize: commentToEdit.images[0].fileSize,
-              },
-            ]
+            {
+              key: commentToEdit.images[0].key,
+              fileName: commentToEdit.images[0].fileName,
+              mimeType: commentToEdit.images[0].mimeType,
+              fileSize: commentToEdit.images[0].fileSize,
+            },
+          ]
           : [],
     },
   });
@@ -564,13 +563,13 @@ export const CommentForm = ({
       images:
         isEdit && commentToEdit && commentToEdit.images.length > 0
           ? [
-              {
-                key: commentToEdit.images[0].key,
-                fileName: commentToEdit.images[0].fileName,
-                mimeType: commentToEdit.images[0].mimeType,
-                fileSize: commentToEdit.images[0].fileSize,
-              },
-            ]
+            {
+              key: commentToEdit.images[0].key,
+              fileName: commentToEdit.images[0].fileName,
+              mimeType: commentToEdit.images[0].mimeType,
+              fileSize: commentToEdit.images[0].fileSize,
+            },
+          ]
           : [],
     });
   }, [mode, commentToEdit, targetComment, reset, isEdit, isReply]);
@@ -629,13 +628,13 @@ export const CommentForm = ({
       }> =
         isEdit && commentToEdit && commentToEdit.images.length > 0
           ? [
-              {
-                key: commentToEdit.images[0].key,
-                fileName: commentToEdit.images[0].fileName,
-                mimeType: commentToEdit.images[0].mimeType,
-                fileSize: commentToEdit.images[0].fileSize,
-              },
-            ]
+            {
+              key: commentToEdit.images[0].key,
+              fileName: commentToEdit.images[0].fileName,
+              mimeType: commentToEdit.images[0].mimeType,
+              fileSize: commentToEdit.images[0].fileSize,
+            },
+          ]
           : [];
 
       if (selectedFile) {
@@ -837,11 +836,10 @@ export const CommentForm = ({
           <button
             type="submit"
             disabled={isDisabled}
-            className={`px-3 py-2 h-10 rounded bg-blue-400 text-white dark:bg-white dark:text-black flex items-center justify-center ${
-              isDisabled
+            className={`px-3 py-2 h-10 rounded bg-blue-400 text-white dark:bg-white dark:text-black flex items-center justify-center ${isDisabled
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:bg-blue-500 dark:hover:bg-neutral-300 active:scale-90 transition-all"
-            }`}
+              }`}
           >
             <SendHorizonal size={18} />
           </button>

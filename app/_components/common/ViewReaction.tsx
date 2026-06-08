@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { viewReactionAction } from "../_actions/reaction";
+import { viewReactionAction } from "@/app/_actions/reaction";
 import {
   PostType,
   ReactionType,
@@ -11,7 +11,7 @@ import {
   PostReactionType,
 } from "@/types/post";
 import Link from "next/link";
-import OverlayPortal from "./OverlayPortal";
+import OverlayPortal from "../layout/OverlayPortal";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 type ReactionFilter = ReactionType | "ALL";
@@ -21,13 +21,13 @@ const REACTIONS: {
   type: ReactionType;
   src: string;
 }[] = [
-  { key: "like", type: ReactionType.like, src: "/like.png" },
-  { key: "love", type: ReactionType.love, src: "/love.png" },
-  { key: "wow", type: ReactionType.wow, src: "/wow.png" },
-  { key: "haha", type: ReactionType.haha, src: "/haha.png" },
-  { key: "angry", type: ReactionType.angry, src: "/angry.png" },
-  { key: "sad", type: ReactionType.sad, src: "/sad.png" },
-];
+    { key: "like", type: ReactionType.like, src: "/like.png" },
+    { key: "love", type: ReactionType.love, src: "/love.png" },
+    { key: "wow", type: ReactionType.wow, src: "/wow.png" },
+    { key: "haha", type: ReactionType.haha, src: "/haha.png" },
+    { key: "angry", type: ReactionType.angry, src: "/angry.png" },
+    { key: "sad", type: ReactionType.sad, src: "/sad.png" },
+  ];
 
 const ViewReaction = ({ post }: { post: PostType }) => {
   const [open, setOpen] = useState(false);
@@ -88,11 +88,10 @@ const ViewReaction = ({ post }: { post: PostType }) => {
               <div className="flex gap-2 overflow-x-scroll overflow-y-hidden scrollbar-none pt-4">
                 <button
                   onClick={() => setActive("ALL")}
-                  className={`mx-1 h-10 w-15 shrink-0 rounded-xl text-sm font-medium transition ${
-                    active === "ALL"
+                  className={`mx-1 h-10 w-15 shrink-0 rounded-xl text-sm font-medium transition ${active === "ALL"
                       ? "scale-110 bg-blue-300 dark:bg-black"
                       : "bg-gray-200 hover:bg-gray-300 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                  }`}
+                    }`}
                 >
                   All {stats.total}
                 </button>
@@ -101,11 +100,10 @@ const ViewReaction = ({ post }: { post: PostType }) => {
                   <button
                     key={r.key}
                     onClick={() => setActive(r.type)}
-                    className={`mx-1 flex h-10 w-15 shrink-0 items-center justify-center gap-1 rounded-xl text-sm transition ${
-                      active === r.type
+                    className={`mx-1 flex h-10 w-15 shrink-0 items-center justify-center gap-1 rounded-xl text-sm transition ${active === r.type
                         ? "scale-110 bg-blue-300 dark:bg-black"
                         : "bg-gray-200 hover:bg-gray-300 dark:bg-neutral-800 dark:hover:bg-neutral-700"
-                    }`}
+                      }`}
                   >
                     <Image src={r.src} alt={r.key} width={16} height={16} />
                     <span>{r.count}</span>

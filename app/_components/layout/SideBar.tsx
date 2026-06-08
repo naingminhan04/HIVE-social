@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
-import LogOutBtn from "./LogOutBtn";
+import LogOutBtn from "../auth/LogOutBtn";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth";
 import HomeRefreshLink from "./HomeRefreshLink";
-import RecoverableImage from "./RecoverableImage";
+import RecoverableImage from "../common/RecoverableImage";
 import { UserType } from "@/types/user";
 
 export const getProfileSlug = (user?: Pick<UserType, "id" | "username"> | null) =>
@@ -60,22 +60,20 @@ const SideBar = () => {
             item.href === "/home" ? (
               <HomeRefreshLink
                 key={item.name}
-                className={`block rounded-md p-4 transition-colors ${
-                  isActive
+                className={`block rounded-md p-4 transition-colors ${isActive
                     ? "bg-blue-400 dark:bg-black"
                     : "hover:bg-blue-300 dark:hover:bg-neutral-950 active:bg-blue-400 dark:active:bg-black"
-                }`}
+                  }`}
               >
                 {item.name}
               </HomeRefreshLink>
             ) : (
               <Link
                 key={item.name}
-                className={`p-4 rounded-md transition-colors ${
-                  isActive
+                className={`p-4 rounded-md transition-colors ${isActive
                     ? "bg-blue-400 dark:bg-black"
                     : "hover:bg-blue-300 dark:hover:bg-neutral-950 active:bg-blue-400 dark:active:bg-black"
-                }`}
+                  }`}
                 href={item.href}
               >
                 {item.name}

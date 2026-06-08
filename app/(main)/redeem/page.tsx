@@ -1,5 +1,5 @@
 import { Gift } from "lucide-react";
-import WorkInProgressPlaceholder from "@/app/_components/WorkInProgressPlaceholder";
+import WorkInProgressPlaceholder from "@/app/_components/common/WorkInProgressPlaceholder";
 
 const RedeemPage = () => {
   return (

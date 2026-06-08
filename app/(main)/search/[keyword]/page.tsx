@@ -5,8 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import PostCard from "@/app/_components/PostCard";
-import DummyPostCard from "@/app/_components/DummyPostCard";
+import PostCard from "@/app/_components/post/PostCard";
+import DummyPostCard from "@/app/_components/post/DummyPostCard";
 import { searchAction } from "@/app/_actions/search";
 import { PostType } from "@/types/post";
 

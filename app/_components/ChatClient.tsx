@@ -20,18 +20,20 @@ import {
 import { searchAction } from "@/app/_actions/search";
 import { getUserAction } from "@/app/_actions/user";
 import { useChatNavigation } from "@/app/_components/chat/ChatNavigation";
-import OverlayPortal from "@/app/_components/OverlayPortal";
-import ImageViewer from "@/app/_components/ImageViewer";
-import RecoverableImage from "@/app/_components/RecoverableImage";
+import OverlayPortal from "./layout/OverlayPortal";
+import ImageViewer from "./common/ImageViewer";
+import RecoverableImage from "./common/RecoverableImage";
 import { useAuthStore } from "@/store/auth";
 import type {
   Chat,
   ChatMedia,
   ChatMessage,
-  ChatMessagesResponse,
   ChatReactionType,
-  SendMessageInput,
   SelectedChat,
+  ComposeMode,
+  DraftFile,
+  MessageSendStatus,
+  ChatMessagesPage,
 } from "@/types/chat";
 import type { SearchUserType } from "@/types/search";
 import { formatDate } from "@/utils/formatDate";
@@ -45,36 +47,21 @@ import {
   isDraftChat,
   visibleChatHasMessage,
 } from "@/utils/chatDisplay";
-import { uploadFiles, type UploadedFile } from "@/utils/uploadUtils";
+import { uploadFiles } from "@/utils/uploadUtils";
 import {
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
   type InfiniteData,
-  type UseMutationResult,
 } from "@tanstack/react-query";
 import {
-  Check,
-  CheckCheck,
   ChevronDown,
-  Clock,
-  Edit3,
   FileText,
   Loader2,
   MessageCircle,
-  Mic,
-  Paperclip,
   PenLine,
-  Play,
-  Plus,
-  Reply,
-  Search,
-  Send,
-  SmilePlus,
-  Trash2,
   UsersRound,
-  X,
 } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -85,315 +72,39 @@ import {
   useMemo,
   useRef,
   useState,
-  type Dispatch,
-  type RefObject,
-  type SetStateAction,
 } from "react";
-import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { io, type Socket } from "socket.io-client";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// Import helpers and sub-components
+import {
+  SCROLL_NEAR_BOTTOM_THRESHOLD,
+  MESSAGES_PAGE_SIZE,
+  LOAD_OLDER_SCROLL_THRESHOLD,
+  getDraftFileKind,
+  getMediaKind,
+  formatFileSize,
+  toChatMedia,
+  toMessageInputMedia,
+  getSelectedKey,
+  makeDraftUser,
+  sortMessages,
+  getOlderCursor,
+  getOldestMessageId,
+  getParentMessageId,
+  getMessageSendStatus,
+  fetchChatMessagesPage,
+  scrollMessageIntoView,
+  toMessagesPage,
+} from "./chat/ChatHelpers";
 
-type ComposeMode = "private" | "group" | null;
-type DraftFileKind = "image" | "video" | "audio" | "file";
-type DraftFile = {
-  id: string;
-  file: File;
-  previewUrl: string;
-  kind: DraftFileKind;
-};
-
-// Granular send status for each message
-type MessageSendStatus = "sending" | "sent" | "read" | "failed";
-
-const reactionOptions: { type: ChatReactionType; label: string; image: string }[] = [
-  { type: "LIKE", label: "Like", image: "/like.png" },
-  { type: "LOVE", label: "Love", image: "/love.png" },
-  { type: "HAHA", label: "Haha", image: "/haha.png" },
-  { type: "WOW", label: "Wow", image: "/wow.png" },
-  { type: "SAD", label: "Sad", image: "/sad.png" },
-  { type: "ANGRY", label: "Angry", image: "/angry.png" },
-];
-
-const reactionStatKeys: Record<ChatReactionType, keyof NonNullable<ChatMessage["reactionStats"]>> = {
-  LIKE: "like",
-  LOVE: "love",
-  HAHA: "haha",
-  WOW: "wow",
-  SAD: "sad",
-  ANGRY: "angry",
-};
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const getDraftFileKind = (file: File): DraftFileKind => {
-  if (file.type.startsWith("image/")) return "image";
-  if (file.type.startsWith("video/")) return "video";
-  if (file.type.startsWith("audio/")) return "audio";
-  return "file";
-};
-
-const getMediaKind = (media: Pick<ChatMedia, "mimeType">): DraftFileKind => {
-  const mimeType = media.mimeType.toLowerCase();
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("video/")) return "video";
-  if (mimeType.startsWith("audio/")) return "audio";
-  return "file";
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const toChatMedia = (file: UploadedFile): ChatMedia => ({
-  key: file.key,
-  fileName: file.fileName,
-  fileSize: file.fileSize,
-  mimeType: file.mimeType,
-});
-
-const toMessageInputMedia = (media: ChatMedia): ChatMedia => ({
-  key: media.key,
-  fileName: media.fileName,
-  fileSize: media.fileSize,
-  mimeType: media.mimeType,
-  ...(media.thumbnailKey ? { thumbnailKey: media.thumbnailKey } : {}),
-});
-
-const getSelectedKey = (chat: SelectedChat | null) => {
-  if (!chat) return "none";
-  if (isDraftChat(chat)) return `draft-${chat.user.id || chat.user.username}`;
-  return chat.id;
-};
-
-const makeDraftUser = (params: URLSearchParams): SearchUserType | null => {
-  const id = params.get("userId")?.trim();
-  if (!id) return null;
-  return {
-    id,
-    name: params.get("name")?.trim() || params.get("username")?.trim() || "New chat",
-    username: params.get("username")?.trim() || id,
-    profilePic: params.get("profilePic")?.trim() || null,
-  };
-};
-
-const sortMessages = (messages: ChatMessage[]) =>
-  [...messages].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
-
-const getOlderCursor = (cursors?: Record<string, unknown> | null): string | null => {
-  if (!cursors) return null;
-  for (const key of ["older", "before", "prev", "previous", "next", "after", "cursor", "nextCursor", "nextPage"] as const) {
-    const value = cursors[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-    if (typeof value === "number") return String(value);
-  }
-  return null;
-};
-
-const getOldestMessageId = (messages: ChatMessage[]) =>
-  sortMessages(messages)[0]?.id ?? null;
-
-const inferHasMoreOlder = (page: ChatMessagesPage) => {
-  if (page.hasMore === true) return true;
-  if (page.hasMore === false) return false;
-  return page.messages.length >= MESSAGES_PAGE_SIZE;
-};
-
-const getParentMessageId = (message: ChatMessage) => {
-  if (message.parentMessageId) return message.parentMessageId;
-  if (message.parentMessage && typeof message.parentMessage === "object") {
-    return message.parentMessage.id;
-  }
-  return null;
-};
-
-/**
- * Determine the send status of a message I sent.
- * - "sending"  → optimistic pending bubble (not yet confirmed by server)
- * - "sent"     → server confirmed, but not read by recipient yet
- * - "read"     → recipient has read it (isRead true OR readCount > 0 for groups)
- * - "failed"   → (not used here but exported for future use)
- */
-const getMessageSendStatus = (
-  message: ChatMessage,
-  chat: Chat | SelectedChat | null,
-  isPending: boolean,
-): MessageSendStatus => {
-  if (isPending) return "sending";
-
-  // isRead comes from the server on fetch or via socket update
-  if (message.isRead === true) return "read";
-
-  // For group chats, readCount > 0 means at least one member has read it
-  if (!isDraftChat(chat) && chat && chat.type === "GROUP" && (message.readCount ?? 0) > 0) {
-    return "read";
-  }
-
-  return "sent";
-};
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const SCROLL_NEAR_BOTTOM_THRESHOLD = 120;
-const MESSAGES_PAGE_SIZE = 20;
-const LOAD_OLDER_SCROLL_THRESHOLD = 80;
-
-// ─── Page types ──────────────────────────────────────────────────────────────
-
-type ChatMessagesPage = {
-  messages: ChatMessage[];
-  cursors: Record<string, unknown> | null;
-  hasMore?: boolean;
-};
-
-type MessagesPagePayload = ChatMessagesResponse & { hasMore?: boolean };
-
-// ─── Fetch helpers ────────────────────────────────────────────────────────────
-
-const requestMessagesPage = async (
-  chat: SelectedChat,
-  options: { limit: number; direction: "older" | "newer"; cursor?: string },
-): Promise<MessagesPagePayload> => {
-  const primaryResult = isDraftChat(chat)
-    ? await getPrivateMessagesAction(chat.user.id, options)
-    : chat.type === "PRIVATE" && chat.otherUser
-      ? await getPrivateMessagesAction(chat.otherUser.userId, options)
-      : await getChatMessagesAction(chat.id, options);
-
-  if (primaryResult.success) return primaryResult.data as MessagesPagePayload;
-
-  if (!isDraftChat(chat) && chat.type === "PRIVATE") {
-    const fallbackResult = await getChatMessagesAction(chat.id, options);
-    if (fallbackResult.success) return fallbackResult.data as MessagesPagePayload;
-  }
-
-  throw new Error(primaryResult.error);
-};
-
-const toMessagesPage = (payload: MessagesPagePayload): ChatMessagesPage => {
-  const page: ChatMessagesPage = {
-    messages: sortMessages(payload.messages ?? []),
-    cursors: payload.cursors ?? null,
-    hasMore: payload.hasMore,
-  };
-  if (page.hasMore === undefined) page.hasMore = inferHasMoreOlder(page);
-  return page;
-};
-
-const fetchChatMessagesPage = async (
-  chat: SelectedChat,
-  pageParam?: string,
-): Promise<ChatMessagesPage> => {
-  const payload = await requestMessagesPage(chat, {
-    limit: MESSAGES_PAGE_SIZE,
-    direction: "older",
-    ...(pageParam ? { cursor: pageParam } : {}),
-  });
-  let page = toMessagesPage(payload);
-
-  const anchorMessage = !pageParam && !isDraftChat(chat) ? chat.lastMessage : null;
-
-  if (anchorMessage && !page.messages.some((m) => m.id === anchorMessage.id)) {
-    const anchoredPayload = await requestMessagesPage(chat, {
-      limit: MESSAGES_PAGE_SIZE,
-      direction: "older",
-      cursor: anchorMessage.id,
-    });
-    const merged = new Map<string, ChatMessage>();
-    [...sortMessages(anchoredPayload.messages), anchorMessage].forEach((m) => merged.set(m.id, m));
-    page = {
-      messages: sortMessages([...merged.values()]),
-      cursors: anchoredPayload.cursors ?? page.cursors,
-      hasMore: anchoredPayload.hasMore ?? page.hasMore,
-    };
-    if (page.hasMore === undefined) page.hasMore = inferHasMoreOlder(page);
-  }
-
-  return page;
-};
-
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
-function ChatMessageSkeleton({ isMine = false }: { isMine?: boolean }) {
-  return (
-    <div className={`flex animate-pulse gap-2 ${isMine ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[60%] space-y-2 rounded-2xl px-3 py-3 ${
-          isMine ? "rounded-br-md bg-neutral-200 dark:bg-neutral-800" : "rounded-bl-md bg-neutral-200 dark:bg-neutral-800"
-        }`}
-      >
-        <div className="h-3 w-28 rounded bg-neutral-300 dark:bg-neutral-700" />
-        <div className="h-3 w-40 rounded bg-neutral-300/80 dark:bg-neutral-700/80" />
-      </div>
-    </div>
-  );
-}
-
-function ChatMessagesLoadingSkeleton() {
-  return (
-    <div className="space-y-4 py-2">
-      <ChatMessageSkeleton />
-      <ChatMessageSkeleton isMine />
-      <ChatMessageSkeleton />
-      <ChatMessageSkeleton isMine />
-      <ChatMessageSkeleton />
-    </div>
-  );
-}
-
-/** Visual indicator for sent/read/sending status */
-function MessageStatusIcon({ status }: { status: MessageSendStatus }) {
-  if (status === "sending") {
-    return (
-      <span className="inline-flex items-center opacity-60" aria-label="Sending">
-        <Clock size={11} />
-      </span>
-    );
-  }
-  if (status === "read") {
-    return (
-      <span className="inline-flex items-center text-blue-200 dark:text-blue-300" aria-label="Read">
-        <CheckCheck size={12} />
-      </span>
-    );
-  }
-  // "sent"
-  return (
-    <span className="inline-flex items-center opacity-70" aria-label="Sent">
-      <Check size={12} />
-    </span>
-  );
-}
-
-const composerFieldClass =
-  "max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-gray-300 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition scrollbar-none focus:border-2 focus:border-black dark:border-neutral-700 dark:bg-black dark:text-neutral-100 dark:focus:border-white";
-
-const composerBannerClass =
-  "mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-gray-300 border-l-4 border-l-blue-300 bg-blue-50 px-3 py-2 text-xs text-neutral-800 dark:border-neutral-700 dark:border-l-neutral-500 dark:bg-neutral-900 dark:text-neutral-100";
-
-const composerBannerDismissClass =
-  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100 dark:active:bg-black";
-
-const scrollMessageIntoView = (
-  viewport: HTMLElement,
-  messageId: string,
-  behavior: ScrollBehavior = "smooth",
-) => {
-  const target = viewport.querySelector<HTMLElement>(`[data-chat-message-id="${messageId}"]`);
-  if (!target) return false;
-  const viewportRect = viewport.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  const nextTop = viewport.scrollTop + (targetRect.top - viewportRect.top) - 16;
-  viewport.scrollTo({ top: Math.max(nextTop, 0), behavior });
-  return true;
-};
-
-// ─── Main component ───────────────────────────────────────────────────────────
+import { ChatMessagesLoadingSkeleton } from "./chat/ChatMessagesLoadingSkeleton";
+import { MessageStatusIcon } from "./chat/MessageStatusIcon";
+import { ChatVideoTile } from "./chat/ChatVideoTile";
+import { MessageActions, reactionStatKeys } from "./chat/MessageActions";
+import { ComposeModal } from "./chat/ComposeModal";
+import { ReactionsModal } from "./chat/ReactionsModal";
+import { ChatComposer } from "./chat/ChatComposer";
 
 type ChatClientProps = {
   initialChats: Chat[];
@@ -518,7 +229,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       socket.on("connect", () => setIsSocketConnected(true));
       socket.on("disconnect", () => setIsSocketConnected(false));
 
-      // ── Incoming new message: insert into cache + update chat list ──
       const handleIncomingMessage = (
         payload: ChatMessage | { message: ChatMessage; chatId?: string },
       ) => {
@@ -529,13 +239,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
           const ak = activeKeyRef.current;
 
-          // Insert the message into the active chat's infinite cache
           if (ak && ak !== "none" && message.senderId !== viewer?.id) {
             queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
               ["chatMessages", ak],
               (current) => {
                 if (!current || current.pages.length === 0) return current;
-                // Deduplicate
                 const alreadyExists = current.pages.some((p) =>
                   p.messages.some((m) => m.id === message.id),
                 );
@@ -552,7 +260,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             );
           }
 
-          // Update chat list to show latest message + bubble to top
           queryClient.setQueryData<Chat[] | undefined>(["chats"], (current) => {
             if (!current) return current;
             const existing = current.find((c) => c.id === chatId);
@@ -575,7 +282,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         }
       };
 
-      // ── Message updated: patch in cache ──
       const handleMessageUpdated = (
         payload: ChatMessage | { message: ChatMessage; chatId?: string },
       ) => {
@@ -602,7 +308,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         }
       };
 
-      // ── Message deleted: mark as deleted in cache ──
       const handleMessageDeleted = (
         payload: { messageId: string } | { message: { id: string } },
       ) => {
@@ -634,7 +339,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         }
       };
 
-      // ── Message read: update isRead on sender's messages in cache ──
       const handleMessageRead = (
         payload: { messageId?: string; chatId?: string; readerId?: string } | null,
       ) => {
@@ -645,13 +349,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             chatId?: string;
             readerId?: string;
           };
-          // Don't process our own read events
           if (readerId && readerId === viewer?.id) return;
 
           const ak = activeKeyRef.current;
           if (!ak || ak === "none") return;
 
-          // Update specific message if we have its ID
           if (messageId) {
             setSocketReadMessageIds((prev) => new Set([...prev, messageId]));
             queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
@@ -672,7 +374,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
               },
             );
           } else if (chatId) {
-            // If only chatId is given, mark all *my* messages as read
             queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
               ["chatMessages", ak],
               (current) => {
@@ -720,8 +421,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-    // viewer?.id is stable after login
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, setIsSocketConnected, viewer?.id]);
 
   useEffect(() => { draftFilesRef.current = draftFiles; }, [draftFiles]);
@@ -732,7 +431,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     };
   }, []);
 
-  // Join/leave chat room via socket
   useEffect(() => {
     if (!activeChat || isDraftChat(activeChat)) return;
     socketRef.current?.emit("join-chat", { chatId: activeChat.id });
@@ -756,7 +454,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         });
         if (!bootstrap.success) throw new Error(bootstrap.error);
         if (bootstrap.data.chat?.id) setSelectedChat(bootstrap.data.chat);
-        return toMessagesPage(bootstrap.data as MessagesPagePayload);
+        return toMessagesPage(bootstrap.data);
       }
 
       return fetchChatMessagesPage(activeChat, pageParam as string | undefined);
@@ -764,7 +462,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => {
       if (lastPage.messages.length === 0) return undefined;
-      if (!inferHasMoreOlder(lastPage)) return undefined;
+      const hasMoreOlder = lastPage.hasMore ?? (lastPage.messages.length >= MESSAGES_PAGE_SIZE);
+      if (!hasMoreOlder) return undefined;
       const olderCursor = getOlderCursor(lastPage.cursors);
       if (olderCursor) return olderCursor;
       return getOldestMessageId(lastPage.messages) ?? undefined;
@@ -772,7 +471,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     enabled: Boolean(activeChat) && (!isDraftChat(activeChat) || Boolean(activeChat.user.id)),
   });
 
-  // Reset per-chat state when switching chats
   useEffect(() => {
     lastPositionedChatRef.current = null;
     pendingScrollPreserveRef.current = null;
@@ -786,7 +484,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setSocketReadMessageIds(new Set());
   }, [activeKey]);
 
-  // Restore scroll position after loading older messages
   useLayoutEffect(() => {
     const preserve = pendingScrollPreserveRef.current;
     if (!preserve) return;
@@ -842,7 +539,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       if (!selectedChat) throw new Error("Select a chat first");
       if (!content && mutationDraftFiles.length === 0) throw new Error("Message cannot be empty");
 
-      const input: SendMessageInput = {
+      const input: any = {
         content,
         ...(parentMessageId ? { parentMessageId } : {}),
       };
@@ -885,7 +582,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       return { pendingId };
     },
     onSuccess: async (message, _vars, context) => {
-      // Remove pending bubble
       setPendingSentMessages((prev) => prev.filter((m) => m.id !== context?.pendingId));
 
       if (activeKey) {
@@ -935,7 +631,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       if (!content && editingImages.length === 0 && editingAttachments.length === 0 && draftFiles.length === 0) {
         throw new Error("Message cannot be empty");
       }
-      const input: SendMessageInput = {
+      const input: any = {
         content,
         images: editingImages.map(toMessageInputMedia),
         attachments: editingAttachments.map(toMessageInputMedia),
@@ -1154,11 +850,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     });
   }, [editingMessageId]);
 
-  // Load older messages (scroll up pagination) — captures scroll position first
   const loadOlderMessages = useCallback(() => {
     const viewport = messagesViewportRef.current;
     if (!viewport || messagesQuery.isFetchingNextPage || !messagesQuery.hasNextPage) return;
-    // Capture current position BEFORE the fetch so we can restore it after
     pendingScrollPreserveRef.current = {
       scrollHeight: viewport.scrollHeight,
       scrollTop: viewport.scrollTop,
@@ -1175,7 +869,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     loadOlderMessages();
   }, [dismissMessageOverlays, loadOlderMessages, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage, updateScrollToBottomVisibility]);
 
-  // IntersectionObserver sentinel for scroll-up pagination
   useEffect(() => {
     const viewport = messagesViewportRef.current;
     const sentinel = loadOlderSentinelRef.current;
@@ -1249,7 +942,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setJumpToMessageId(replyMsgIdParam);
   }, [activeChat, activeKey, messagesQuery.isPending, replyMsgIdParam]);
 
-  // ── Auto-mark incoming messages as read ──
   useEffect(() => {
     const unread = messages.filter(
       (m) => m.senderId !== viewer?.id && !m.isReadByMe && !readMessageIdsRef.current.has(m.id),
@@ -1258,10 +950,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       readMessageIdsRef.current.add(m.id);
       markReadMutation.mutate(m.id);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, viewer?.id]);
 
-  // ── Jump-to-message effect ──
   useEffect(() => {
     if (!jumpToMessageId || messagesQuery.isPending) return;
     const viewport = messagesViewportRef.current;
@@ -1291,11 +981,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     updateScrollToBottomVisibility();
   }, [messages, messagesQuery.isPending, updateScrollToBottomVisibility]);
 
-  // ── Auto-scroll to bottom on new messages (if near bottom) ──
   useLayoutEffect(() => {
     const viewport = messagesViewportRef.current;
     if (!activeChat || !viewport || messagesQuery.isPending) return;
-    // Skip if we're restoring scroll position from older-messages load
     if (pendingScrollPreserveRef.current !== null) return;
 
     const isInitialPosition = lastPositionedChatRef.current !== activeKey;
@@ -1307,7 +995,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       return;
     }
 
-    // Scroll to bottom when sending a new message
     if (sendMutation.isPending) {
       viewport.scrollTo({ top: viewport.scrollHeight, behavior: "auto" });
       isNearBottomRef.current = true;
@@ -1315,7 +1002,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       return;
     }
 
-    // Only auto-scroll if the user is near the bottom
     if (isNearBottomRef.current) {
       viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
       setShowScrollToBottom(false);
@@ -1325,11 +1011,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   // ── Composer state ──
   const composerSubmitEnabled =
     Boolean(activeChat) && (!isDraftChat(activeChat) || Boolean(activeChat.user.id));
-
-  const selectedUserIds = useMemo(
-    () => new Set(groupUsers.map((u) => u.id)),
-    [groupUsers],
-  );
 
   const openPrivateDraft = (user: SearchUserType) => {
     openChat({ type: "PRIVATE_DRAFT", user });
@@ -1449,7 +1130,15 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   const getVisibleReactions = (message: ChatMessage) => {
     if (!message.reactionStats) return [];
-    return reactionOptions
+    const optionsList = [
+      { type: "LIKE" as ChatReactionType, label: "Like", image: "/like.png" },
+      { type: "LOVE" as ChatReactionType, label: "Love", image: "/love.png" },
+      { type: "HAHA" as ChatReactionType, label: "Haha", image: "/haha.png" },
+      { type: "WOW" as ChatReactionType, label: "Wow", image: "/wow.png" },
+      { type: "SAD" as ChatReactionType, label: "Sad", image: "/sad.png" },
+      { type: "ANGRY" as ChatReactionType, label: "Angry", image: "/angry.png" },
+    ];
+    return optionsList
       .map((r) => ({ ...r, count: message.reactionStats?.[reactionStatKeys[r.type]] ?? 0 }))
       .filter((r) => r.count > 0);
   };
@@ -1524,139 +1213,41 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     );
   };
 
-  // ── Computed values ──
   const isMessagesLoading =
     Boolean(activeChat) && messages.length === 0 && (messagesQuery.isPending || messagesQuery.isFetching);
   const composerPlaceholderName = activeChat ? getChatTitle(activeChat) : "chat";
   const isRouteResolving = Boolean(activeChatId && !activeChat && isResolvingRoute);
 
-  // ── Modals ──
   const chatModals = (
     <>
       {composeMode && (
-        <OverlayPortal>
-          <div className="fixed inset-0 z-130 flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
-            <div className="max-h-[85dvh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-neutral-950">
-              <div className="flex h-14 items-center justify-between border-b border-black/5 px-4 dark:border-white/10">
-                <h2 className="font-semibold">{composeMode === "private" ? "New Chat" : "New Group"}</h2>
-                <button type="button" onClick={() => setComposeMode(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900" aria-label="Close">
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="max-h-[calc(85dvh-56px)] overflow-y-auto p-4 scrollbar-none">
-                {composeMode === "private" ? (
-                  <>
-                    <div className="flex h-11 items-center gap-2 rounded-xl border border-black/10 bg-neutral-50 px-3 dark:border-white/10 dark:bg-neutral-900">
-                      <Search size={17} className="text-neutral-400" />
-                      <input value={privateSearch} onChange={(e) => setPrivateSearch(e.target.value)} placeholder="Search people" className="min-w-0 flex-1 bg-transparent text-base outline-none" style={{ fontSize: 16 }} />
-                    </div>
-                    <div className="mt-3 divide-y divide-black/5 dark:divide-white/10">
-                      {privateSearchQuery.isLoading ? (
-                        <p className="py-6 text-center text-sm text-neutral-400">Searching...</p>
-                      ) : privateSearch.trim().length === 0 ? (
-                        <p className="py-6 text-center text-sm text-neutral-400">Start typing to search people.</p>
-                      ) : privateSearchResults.length === 0 ? (
-                        <p className="py-6 text-center text-sm text-neutral-400">No users found.</p>
-                      ) : (
-                        privateSearchResults.map((user) => (
-                          <button key={user.id} type="button" onClick={() => openPrivateDraft(user)} className="flex w-full min-w-0 items-center gap-3 py-3 text-left">
-                            <RecoverableImage src={user.profilePic || "/default-avatar.png"} alt={user.name} width={44} height={44} className="h-11 w-11 rounded-full object-cover" wrapperClassName="h-11 w-11 shrink-0 rounded-full" fallbackSrc="/default-avatar.png" />
-                            <span className="min-w-0">
-                              <span className="block truncate font-semibold">{user.name}</span>
-                              <span className="block truncate text-sm text-neutral-400">@{user.username}</span>
-                            </span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name" className="h-11 w-full rounded-xl border border-black/10 bg-neutral-50 px-3 text-base outline-none focus:border-blue-400 dark:border-white/10 dark:bg-neutral-900" style={{ fontSize: 16 }} />
-                    {groupUsers.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {groupUsers.map((user) => (
-                          <button key={user.id} type="button" onClick={() => toggleGroupUser(user)} className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-neutral-900 dark:text-neutral-100">
-                            <span className="truncate">{user.name}</span>
-                            <X size={12} />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-3 flex h-11 items-center gap-2 rounded-xl border border-black/10 bg-neutral-50 px-3 dark:border-white/10 dark:bg-neutral-900">
-                      <Search size={17} className="text-neutral-400" />
-                      <input value={groupSearch} onChange={(e) => setGroupSearch(e.target.value)} placeholder="Add people" className="min-w-0 flex-1 bg-transparent text-base outline-none" style={{ fontSize: 16 }} />
-                    </div>
-                    <div className="mt-3 divide-y divide-black/5 dark:divide-white/10">
-                      {groupSearch.trim().length === 0 ? (
-                        <p className="py-6 text-center text-sm text-neutral-400">Start typing to add people.</p>
-                      ) : groupSearchQuery.isLoading ? (
-                        <p className="py-6 text-center text-sm text-neutral-400">Searching...</p>
-                      ) : groupSearchResults.length === 0 ? (
-                        <p className="py-6 text-center text-sm text-neutral-400">No users found.</p>
-                      ) : (
-                        groupSearchResults.map((user) => (
-                          <button key={user.id} type="button" onClick={() => toggleGroupUser(user)} className="flex w-full min-w-0 items-center gap-3 py-3 text-left">
-                            <RecoverableImage src={user.profilePic || "/default-avatar.png"} alt={user.name} width={44} height={44} className="h-11 w-11 rounded-full object-cover" wrapperClassName="h-11 w-11 shrink-0 rounded-full" fallbackSrc="/default-avatar.png" />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate font-semibold">{user.name}</span>
-                              <span className="block truncate text-sm text-neutral-400">@{user.username}</span>
-                            </span>
-                            <span className={`h-5 w-5 rounded-full border ${selectedUserIds.has(user.id) ? "border-blue-400 bg-blue-400" : "border-neutral-300 dark:border-neutral-600"}`} />
-                          </button>
-                        ))
-                      )}
-                    </div>
-                    <button type="button" disabled={createGroupMutation.isPending} onClick={() => createGroupMutation.mutate()} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-400 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-50 dark:bg-white dark:text-black">
-                      {createGroupMutation.isPending ? <Loader2 size={17} className="animate-spin" /> : <Plus size={17} />}
-                      <span>Create Group</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </OverlayPortal>
+        <ComposeModal
+          composeMode={composeMode}
+          onClose={() => setComposeMode(null)}
+          privateSearch={privateSearch}
+          setPrivateSearch={setPrivateSearch}
+          privateSearchLoading={privateSearchQuery.isLoading}
+          privateSearchResults={privateSearchResults}
+          openPrivateDraft={openPrivateDraft}
+          groupName={groupName}
+          setGroupName={setGroupName}
+          groupSearch={groupSearch}
+          setGroupSearch={setGroupSearch}
+          groupSearchLoading={groupSearchQuery.isLoading}
+          groupSearchResults={groupSearchResults}
+          groupUsers={groupUsers}
+          toggleGroupUser={toggleGroupUser}
+          isCreatingGroup={createGroupMutation.isPending}
+          onCreateGroup={() => createGroupMutation.mutate()}
+        />
       )}
 
       {reactionUsersMessage && (
-        <OverlayPortal>
-          <div className="fixed inset-0 z-130 flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
-            <div className="max-h-[85dvh] w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-neutral-950">
-              <div className="flex h-14 items-center justify-between border-b border-black/5 px-4 dark:border-white/10">
-                <h2 className="font-semibold text-slate-700 dark:text-neutral-100">Reactions</h2>
-                <button type="button" onClick={() => setReactionUsersMessage(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900" aria-label="Close reactions">
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="max-h-[calc(85dvh-56px)] overflow-y-auto p-4 scrollbar-none">
-                {reactionUsersQuery.isLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-neutral-400">
-                    <Loader2 size={17} className="animate-spin" /><span>Loading reactions...</span>
-                  </div>
-                ) : (reactionUsersQuery.data?.reactions ?? []).length === 0 ? (
-                  <p className="py-8 text-center text-sm text-neutral-400">No reactions yet.</p>
-                ) : (
-                  <div className="divide-y divide-black/5 dark:divide-white/10">
-                    {(reactionUsersQuery.data?.reactions ?? []).map((reaction) => {
-                      const reactionMeta = reactionOptions.find((r) => r.type === reaction.reactionType);
-                      return (
-                        <div key={reaction.id} className="flex min-w-0 items-center gap-3 py-3">
-                          <RecoverableImage src={reaction.user.profilePic || "/default-avatar.png"} alt={reaction.user.name} width={44} height={44} className="h-11 w-11 rounded-full object-cover" wrapperClassName="h-11 w-11 shrink-0 rounded-full" fallbackSrc="/default-avatar.png" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-semibold text-slate-700 dark:text-neutral-100">{reaction.user.name}</p>
-                            <p className="truncate text-sm text-neutral-400">@{reaction.user.username}</p>
-                          </div>
-                          {reactionMeta && <Image src={reactionMeta.image} alt={reactionMeta.label} width={28} height={28} className="h-7 w-7 shrink-0" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </OverlayPortal>
+        <ReactionsModal
+          onClose={() => setReactionUsersMessage(null)}
+          isLoading={reactionUsersQuery.isLoading}
+          reactions={reactionUsersQuery.data?.reactions ?? []}
+        />
       )}
 
       {mediaViewer && (
@@ -1721,10 +1312,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             onScroll={handleMessagesScroll}
             className="flex-1 space-y-3 overflow-y-auto bg-neutral-50 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
           >
-            {/* Sentinel for scroll-up older message loading */}
             <div ref={loadOlderSentinelRef} className="h-px w-full shrink-0" aria-hidden />
 
-            {/* Loading spinner at the top when fetching older messages */}
             {messagesQuery.isFetchingNextPage && (
               <div className="flex justify-center py-3">
                 <div className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400">
@@ -1734,7 +1323,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
               </div>
             )}
 
-            {/* "No more messages" indicator at the top */}
             {!messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage && messages.length > 0 && (
               <div className="flex justify-center py-2">
                 <span className="rounded-full border border-black/5 bg-white px-3 py-1 text-xs text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
@@ -1743,7 +1331,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
               </div>
             )}
 
-            {/* Messages */}
             {combinedMessages.map((message) => {
               const isMine = message.senderId === viewer?.id;
               const currentReaction = getCurrentReaction(message);
@@ -1786,13 +1373,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
                   <div className={`max-w-[75%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
                     <div
-                      className={`relative rounded-2xl px-3 py-2 text-sm transition-shadow ${
-                        isMine
+                      className={`relative rounded-2xl px-3 py-2 text-sm transition-shadow ${isMine
                           ? "rounded-br-md bg-blue-400 text-white dark:bg-neutral-700"
                           : "rounded-bl-md bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
-                      } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${
-                        highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
-                      }`}
+                        } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
+                        }`}
                     >
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0 flex-1 space-y-2">
@@ -1809,11 +1394,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                 if (parentId) scrollToChatMessage(parentId);
                               }}
                               disabled={!getParentMessageId(message)}
-                              className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${
-                                isMine
+                              className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
                                   ? "border-white/50 text-white/75"
                                   : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
-                              } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
+                                } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
                               aria-label="Jump to replied message"
                             >
                               <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
@@ -1833,7 +1417,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                         </div>
                       </div>
 
-                      {/* Timestamp + status indicator */}
                       <p className={`mt-1 flex items-center justify-end gap-1 text-right text-[10px] ${isMine ? "text-white/70" : "text-neutral-400"}`}>
                         {message.isEdited && !message.isDeleted && <span>edited</span>}
                         <span>{formatDate(message.createdAt, false, true)}</span>
@@ -1841,7 +1424,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                       </p>
                     </div>
 
-                    {/* Reaction pill */}
                     {!message.isDeleted && !isDeleting && !isPendingSend && visibleReactions.length > 0 && (
                       <div className={`relative mt-1 flex max-w-full flex-wrap items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}>
                         <button
@@ -1889,7 +1471,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           </div>
         )}
 
-        {/* Scroll-to-bottom button */}
         {showScrollToBottom && (
           <button
             type="button"
@@ -1901,112 +1482,32 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           </button>
         )}
 
-        {/* Composer */}
         {showPanel && (
-          <form
+          <ChatComposer
+            isEditing={isEditing}
+            clearComposer={clearComposer}
+            replyToMessage={replyToMessage}
+            setReplyToMessage={setReplyToMessage}
+            updateReplyMsgIdInUrl={updateReplyMsgIdInUrl}
+            editingImages={editingImages}
+            setEditingImages={setEditingImages}
+            editingAttachments={editingAttachments}
+            setEditingAttachments={setEditingAttachments}
+            draftFiles={draftFiles}
+            removeDraftFile={removeDraftFile}
+            fileInputRef={fileInputRef}
+            handleFileChange={handleFileChange}
+            composerTextareaRef={composerTextareaRef}
+            composerText={composerText}
+            setComposerText={setComposerText}
+            handleComposerKeyDown={handleComposerKeyDown}
+            handleComposerPaste={handleComposerPaste}
+            composerPlaceholderName={composerPlaceholderName}
+            composerIsPending={composerIsPending}
+            composerCanSubmit={composerCanSubmit}
+            composerSubmitEnabled={composerSubmitEnabled}
             onSubmit={(e) => { e.preventDefault(); submitComposer(); }}
-            className="sticky bottom-0 z-20 border-t border-black/5 bg-white/95 p-3 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95"
-          >
-            {isEditing && (
-              <div className={composerBannerClass}>
-                <Edit3 size={14} className="shrink-0" />
-                <span className="min-w-0 flex-1 truncate">Editing message</span>
-                <button type="button" onClick={clearComposer} className={composerBannerDismissClass} aria-label="Cancel edit">
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-            {replyToMessage && (
-              <div className={composerBannerClass}>
-                <Reply size={14} className="shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{replyToMessage.content || "Replying to attachment"}</span>
-                <button type="button" onClick={() => { setReplyToMessage(null); updateReplyMsgIdInUrl(null); }} className={composerBannerDismissClass} aria-label="Cancel reply">
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            {/* Existing media being edited */}
-            {isEditing && (editingImages.length > 0 || editingAttachments.length > 0) && (
-              <div className="mb-2 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {[...editingImages, ...editingAttachments].map((media) => {
-                  const kind = getMediaKind(media);
-                  const mediaKey = media.id ?? media.key;
-                  return (
-                    <div key={mediaKey} className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg border border-black/10 bg-neutral-100 dark:border-white/10 dark:bg-neutral-900">
-                      {kind === "image" && (media.url || media.thumbnailUrl) && (
-                        <RecoverableImage src={media.url || media.thumbnailUrl} alt={media.fileName} fill className="object-cover" wrapperClassName="h-full w-full" showLoadingOverlay />
-                      )}
-                      {kind === "video" && (media.url || media.thumbnailUrl) && (
-                        <div className="relative h-full w-full bg-black">
-                          <video src={media.url || media.thumbnailUrl} className="h-full w-full object-cover" preload="metadata" />
-                          <div className="absolute inset-0 flex items-center justify-center text-white"><Play size={20} fill="currentColor" /></div>
-                        </div>
-                      )}
-                      {(kind === "audio" || kind === "file") && (
-                        <div className="flex h-full flex-col items-center justify-center gap-1 px-2 text-center text-xs text-neutral-500 dark:text-neutral-400">
-                          {kind === "audio" ? <Mic size={18} /> : <FileText size={18} />}
-                          <span className="line-clamp-2 break-all">{media.fileName}</span>
-                        </div>
-                      )}
-                      <button type="button" onClick={() => { setEditingImages((prev) => prev.filter((m) => (m.id ?? m.key) !== mediaKey)); setEditingAttachments((prev) => prev.filter((m) => (m.id ?? m.key) !== mediaKey)); }} className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75" aria-label="Remove existing attachment">
-                        <X size={13} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Draft files preview */}
-            {draftFiles.length > 0 && (
-              <div className="mb-2 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {draftFiles.map((df) => (
-                  <div key={df.id} className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg border border-black/10 bg-neutral-100 dark:border-white/10 dark:bg-neutral-900">
-                    {df.kind === "image" && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={df.previewUrl} alt={df.file.name} className="h-full w-full object-cover" />
-                    )}
-                    {df.kind === "video" && <video src={df.previewUrl} className="h-full w-full object-cover" />}
-                    {(df.kind === "audio" || df.kind === "file") && (
-                      <div className="flex h-full flex-col items-center justify-center gap-1 px-2 text-center text-xs text-neutral-500 dark:text-neutral-400">
-                        {df.kind === "audio" ? <Mic size={18} /> : <FileText size={18} />}
-                        <span className="line-clamp-2 break-all">{df.file.name}</span>
-                      </div>
-                    )}
-                    <button type="button" onClick={() => removeDraftFile(df.id)} className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75" aria-label="Remove attachment">
-                      <X size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <input ref={fileInputRef} type="file" multiple onChange={handleFileChange} className="hidden" />
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-600 transition hover:bg-blue-100 active:bg-blue-200 dark:border-white dark:bg-white dark:text-black dark:hover:bg-neutral-200" aria-label="Attach media" title="Attach media">
-                <Paperclip size={18} />
-              </button>
-              <textarea
-                ref={composerTextareaRef}
-                value={composerText}
-                onChange={(e) => setComposerText(e.target.value)}
-                onKeyDown={handleComposerKeyDown}
-                onPaste={handleComposerPaste}
-                placeholder={isEditing ? "Edit message" : `Message ${composerPlaceholderName}`}
-                rows={1}
-                className={composerFieldClass}
-              />
-              <button
-                type="submit"
-                disabled={composerIsPending || !composerCanSubmit || !composerSubmitEnabled}
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-400 text-white transition hover:bg-blue-500 active:bg-blue-600 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
-                aria-label="Send message"
-              >
-                {composerIsPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-              </button>
-            </div>
-          </form>
+          />
         )}
       </div>
 
@@ -2014,164 +1515,3 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     </>
   );
 };
-
-// ─── ChatVideoTile ─────────────────────────────────────────────────────────────
-
-function ChatVideoTile({ media, onOpen }: { media: ChatMedia; onOpen: () => void }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const src = media.url || media.thumbnailUrl || "";
-  return (
-    <button type="button" onClick={onOpen} className="relative block max-w-full overflow-hidden rounded-lg bg-black text-left">
-      {isLoading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 text-white">
-          <Loader2 size={18} className="animate-spin" />
-        </div>
-      )}
-      <video src={src} className="max-h-80 w-full object-cover" preload="metadata" playsInline muted onLoadedData={() => setIsLoading(false)} onError={() => setIsLoading(false)} />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55">
-          <Play size={24} fill="currentColor" />
-        </span>
-      </div>
-    </button>
-  );
-}
-
-// ─── MessageActions ────────────────────────────────────────────────────────────
-
-type MessageActionsProps = {
-  isMine: boolean;
-  message: ChatMessage;
-  currentReaction: ChatReactionType | null;
-  openReactionMessageId: string | null;
-  setOpenReactionMessageId: Dispatch<SetStateAction<string | null>>;
-  onReply: (message: ChatMessage) => void;
-  startEditing: (message: ChatMessage) => void;
-  deleteMutation: UseMutationResult<string, Error, string>;
-  reactionMutation: UseMutationResult<
-    { messageId: string; reactionType: ChatReactionType | null },
-    Error,
-    { messageId: string; reactionType: ChatReactionType; currentReaction?: ChatReactionType | null }
-  >;
-  isDeleting: boolean;
-};
-
-type ReactionPickerProps = {
-  anchorRef: RefObject<HTMLButtonElement | null>;
-  isOpen: boolean;
-  isMine: boolean;
-  currentReaction: ChatReactionType | null;
-  isPending: boolean;
-  onClose: () => void;
-  onSelect: (reactionType: ChatReactionType) => void;
-};
-
-function ReactionPicker({ anchorRef, isOpen, isMine, currentReaction, isPending, onClose, onSelect }: ReactionPickerProps) {
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    const anchor = anchorRef.current;
-    const picker = pickerRef.current;
-    if (!anchor || !picker) return;
-
-    const viewport = anchor.closest("[data-chat-messages-viewport]") as HTMLElement | null;
-    const anchorRect = anchor.getBoundingClientRect();
-    const viewportRect = viewport?.getBoundingClientRect() ?? { top: 0, left: 8, right: window.innerWidth - 8, bottom: window.innerHeight };
-    const pickerWidth = picker.offsetWidth || 280;
-    const pickerHeight = picker.offsetHeight || 48;
-    const edgePadding = 8;
-
-    const spaceAbove = anchorRect.top - viewportRect.top;
-    const spaceBelow = viewportRect.bottom - anchorRect.bottom;
-    const openBelow = spaceAbove < pickerHeight + edgePadding && spaceBelow > spaceAbove;
-
-    let left = isMine ? anchorRect.right - pickerWidth : anchorRect.left;
-    const maxLeft = viewportRect.right - pickerWidth - edgePadding;
-    const minLeft = viewportRect.left + edgePadding;
-    left = Math.max(minLeft, Math.min(left, maxLeft));
-    const top = openBelow ? anchorRect.bottom + edgePadding : anchorRect.top - pickerHeight - edgePadding;
-
-    picker.style.top = `${top}px`;
-    picker.style.left = `${left}px`;
-    picker.style.visibility = "visible";
-    picker.style.pointerEvents = "auto";
-  }, [anchorRef, isMine, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handlePointerDown = (e: MouseEvent) => {
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-      if (pickerRef.current?.contains(target)) return;
-      if (anchorRef.current?.contains(target)) return;
-      onClose();
-    };
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [anchorRef, isOpen, onClose]);
-
-  if (!isOpen || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      ref={pickerRef}
-      data-chat-reaction-picker=""
-      style={{ top: 0, left: 0, visibility: "hidden", pointerEvents: "none" }}
-      className="fixed z-120 flex w-max max-w-[min(18rem,calc(100vw-1rem))] gap-0.5 overflow-x-auto rounded-full border border-black/10 bg-white p-1 shadow-xl scrollbar-none dark:border-white/10 dark:bg-neutral-900"
-      onMouseLeave={(e) => {
-        const related = e.relatedTarget;
-        if (related instanceof Element && pickerRef.current?.contains(related)) return;
-        if (related instanceof Element && anchorRef.current?.contains(related)) return;
-        onClose();
-      }}
-    >
-      {reactionOptions.map((r) => (
-        <button key={r.type} type="button" disabled={isPending} onClick={() => onSelect(r.type)} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-neutral-100 active:scale-95 disabled:opacity-50 dark:hover:bg-neutral-800 ${currentReaction === r.type ? "bg-blue-50 ring-1 ring-blue-400 dark:bg-blue-500/10" : ""}`} aria-label={`React ${r.label}`} title={r.label}>
-          <Image src={r.image} alt={r.label} width={24} height={24} className="h-6 w-6" />
-        </button>
-      ))}
-    </div>,
-    document.body,
-  );
-}
-
-function MessageActions({ isMine, message, currentReaction, openReactionMessageId, setOpenReactionMessageId, onReply, startEditing, deleteMutation, reactionMutation, isDeleting }: MessageActionsProps) {
-  const reactButtonRef = useRef<HTMLButtonElement>(null);
-  const isPickerOpen = openReactionMessageId === message.id;
-
-  return (
-    <div className="relative flex shrink-0 items-center rounded-lg border border-black/10 bg-white p-0.5 text-neutral-600 opacity-0 shadow-lg transition group-hover/message:opacity-100 group-focus-within/message:opacity-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300">
-      <div className="relative">
-        <button ref={reactButtonRef} type="button" onClick={() => setOpenReactionMessageId((prev) => (prev === message.id ? null : message.id))} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="React to message" title="React" aria-expanded={isPickerOpen}>
-          <SmilePlus size={16} />
-        </button>
-        <ReactionPicker
-          anchorRef={reactButtonRef}
-          isOpen={isPickerOpen}
-          isMine={isMine}
-          currentReaction={currentReaction}
-          isPending={reactionMutation.isPending}
-          onClose={() => setOpenReactionMessageId(null)}
-          onSelect={(reactionType) => {
-            setOpenReactionMessageId(null);
-            reactionMutation.mutate({ messageId: message.id, reactionType, currentReaction });
-          }}
-        />
-      </div>
-      <button type="button" onClick={() => onReply(message)} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Reply to message" title="Reply">
-        <Reply size={16} />
-      </button>
-      {isMine && (
-        <>
-          <button type="button" onClick={() => startEditing(message)} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Edit message" title="Edit">
-            <Edit3 size={15} />
-          </button>
-          <button type="button" disabled={isDeleting} onClick={() => deleteMutation.mutate(message.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/30" aria-label="Delete message" title="Delete">
-            <Trash2 size={15} />
-          </button>
-        </>
-      )}
-    </div>
-  );
-}

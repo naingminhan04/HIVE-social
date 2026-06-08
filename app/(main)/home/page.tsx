@@ -1,5 +1,5 @@
-import PostReel from "../../_components/PostReel";
-import AddPostBtn from "@/app/_components/AddPostForm";
+import PostReel from "../../_components/post/PostReel";
+import AddPostBtn from "@/app/_components/post/AddPostForm";
 
 const HomePage = () => {
   return (

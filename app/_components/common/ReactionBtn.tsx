@@ -8,8 +8,8 @@ import {
 import {
   addReactionAction,
   removeReactionAction,
-} from "../_actions/reaction";
-import { formatCount } from "./PostCard";
+} from "@/app/_actions/reaction";
+import { formatCount } from "../post/PostCard";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ThumbsUp } from "lucide-react";
@@ -153,8 +153,8 @@ export default function ReactionBtn({ post }: ReactionBtnProps) {
           reaction.toLowerCase() as keyof typeof p.stats.reactions;
         p.stats.reactions[nextKey] += 1;
 
-        p.reaction = { 
-          id: "optimistic", 
+        p.reaction = {
+          id: "optimistic",
           userId: "",
           postId: p.id,
           reactionType: reaction,

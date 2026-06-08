@@ -1,7 +1,11 @@
 "use server";
 
 import { ActionResponse } from "@/types/action";
-import { LoginSuccessResponse } from "@/types/auth";
+import {
+  LoginSuccessResponse,
+  CheckAccountStatusInput,
+  CheckAccountStatusResponse,
+} from "@/types/auth";
 import { UserType } from "@/types/user";
 import {
   getPendingVerifyEmail,
@@ -12,19 +16,6 @@ import {
 import googleLoginAction from "./googleLogin";
 import loginAction from "./login";
 import { getCurrentUserAction } from "./me";
-
-export type CheckAccountStatusInput = {
-  userId?: string | null;
-  idToken?: string;
-  email?: string;
-  password?: string;
-};
-
-export type CheckAccountStatusResponse = ActionResponse<LoginSuccessResponse> & {
-  noSession?: boolean;
-  needsGoogleSignIn?: boolean;
-  needsPassword?: boolean;
-};
 
 function pendingUserFromEmail(email: string, userId?: string | null): UserType {
   return {

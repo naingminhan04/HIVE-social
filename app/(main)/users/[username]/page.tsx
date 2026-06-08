@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Profile from "@/app/_components/Profile";
+import Profile from "@/app/_components/profile/Profile";
 import { useAuthStore } from "@/store/auth";
 import { usePortalBarVisible } from "@/hooks/usePortalBarVisible";
 

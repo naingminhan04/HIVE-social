@@ -4,7 +4,7 @@ import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
 import { getRefreshToken } from "./cookies";
 import axios from "axios";
-import { API_BASE_URL } from "@/libs/apiBase";
+import api from "@/libs/axios";
 import { getApiErrorMessage } from "@/utils/apiError";
 import {
   applyAuthSessionFromPayload,
@@ -22,7 +22,7 @@ export async function refreshAction(): Promise<ActionResponse<LoginSuccessRespon
       };
     }
 
-    const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+    const { data } = await api.post(`/auth/refresh-token`, {
       refreshToken,
     });
 
@@ -30,7 +30,7 @@ export async function refreshAction(): Promise<ActionResponse<LoginSuccessRespon
     let response = toLoginSuccessResponse(session);
 
     if (!response && session.accessToken) {
-      const meResponse = await axios.get(`${API_BASE_URL}/auth/me`, {
+      const meResponse = await api.get(`/auth/me`, {
         headers: { Authorization: `Bearer ${session.accessToken}` },
       });
       const meSession = await applyAuthSessionFromPayload(meResponse.data);

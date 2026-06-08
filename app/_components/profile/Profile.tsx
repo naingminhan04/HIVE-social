@@ -8,7 +8,7 @@ import {
   updateProfilePicAction,
   updateProfileAction,
   changePasswordAction,
-} from "../_actions/user";
+} from "@/app/_actions/user";
 import { uploadFiles } from "@/utils/uploadUtils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -31,14 +31,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth";
-import PostReel from "./PostReel";
+import PostReel from "../post/PostReel";
 import { useEffect, useState } from "react";
-import ImageViewer from "./ImageViewer";
-import DummyProfile from "./DummyProfile";
-import PointsModal from "./PointsModal";
+import ImageViewer from "@/app/_components/common/ImageViewer";
+import DummyProfile from "@/app/_components/common/DummyProfile";
+import PointsModal from "../PointsModal";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
-import OverlayPortal from "./OverlayPortal";
-import RecoverableImage from "./RecoverableImage";
+import OverlayPortal from "../layout/OverlayPortal";
+import RecoverableImage from "../common/RecoverableImage";
 
 type ProfileFormValues = {
   name: string;
@@ -94,11 +94,11 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
     label: string;
     icon: LucideIcon;
   }[] = [
-    { id: "photo", label: "Photo", icon: ImageUp },
-    { id: "basic", label: "Basic Info", icon: UserRoundCog },
-    { id: "username", label: "Username", icon: AtSign },
-    { id: "password", label: "Password", icon: KeyRound },
-  ];
+      { id: "photo", label: "Photo", icon: ImageUp },
+      { id: "basic", label: "Basic Info", icon: UserRoundCog },
+      { id: "username", label: "Username", icon: AtSign },
+      { id: "password", label: "Password", icon: KeyRound },
+    ];
 
   useLockBodyScroll(isEditOpen);
 
@@ -398,16 +398,14 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
 
   return (
     <main
-      className={`@container/profile bg-white relative text-sm sm:text-base dark:bg-neutral-900 ${
-        isPortal ? "min-h-full" : "lg:min-h-dvh min-h-[calc(100dvh-60px)]"
-      }`}
+      className={`@container/profile bg-white relative text-sm sm:text-base dark:bg-neutral-900 ${isPortal ? "min-h-full" : "lg:min-h-dvh min-h-[calc(100dvh-60px)]"
+        }`}
     >
       <div
-        className={`z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${
-          isPortal
+        className={`z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${isPortal
             ? "sticky top-0 items-center border-b border-black/5 px-3 dark:border-white/10"
             : "sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
-        }`}
+          }`}
       >
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {!isPortal && (
@@ -673,18 +671,16 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveEditTab(tab.id)}
-                        className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${
-                          activeEditTab === tab.id
+                        className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${activeEditTab === tab.id
                             ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
                             : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
-                        }`}
+                          }`}
                       >
                         <span
-                          className={`shrink-0 rounded-xl p-2 shadow-sm ${
-                            activeEditTab === tab.id
+                          className={`shrink-0 rounded-xl p-2 shadow-sm ${activeEditTab === tab.id
                               ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
                               : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
-                          }`}
+                            }`}
                         >
                           <Icon size={16} />
                         </span>
@@ -692,10 +688,10 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                           {tab.label}
                         </span>
                       </button>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto p-5 scrollbar-none overscroll-contain">
                 {activeEditTab === "photo" && (

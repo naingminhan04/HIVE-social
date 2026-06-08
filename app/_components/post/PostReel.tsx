@@ -3,7 +3,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import PostCard from "./PostCard";
-import { getAllPostAction } from "../_actions/postAction";
+import { getAllPostAction } from "@/app/_actions/postAction";
 import { PostType } from "@/types/post";
 import DummyPostCard from "./DummyPostCard";
 import toast from "react-hot-toast";
@@ -21,8 +21,8 @@ const PostReel = ({
   scrollContainerId?: string;
 }) => {
   const isTouchDevice =
-  typeof window !== "undefined" &&
-  ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    typeof window !== "undefined" &&
+    ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
   const {
     data,
@@ -49,18 +49,18 @@ const PostReel = ({
   });
 
   const handleRefresh = async () => {
-      scrollToTop();
-      return toast.promise(
-        refetch(),
-        {
-          loading: "Refreshing the feed",
-          success: "Feed updated!",
-          error: "Error refreshing feed",
-        },
-        {
-          id: "feed-refresh",
-        },
-      );
+    scrollToTop();
+    return toast.promise(
+      refetch(),
+      {
+        loading: "Refreshing the feed",
+        success: "Feed updated!",
+        error: "Error refreshing feed",
+      },
+      {
+        id: "feed-refresh",
+      },
+    );
   };
 
   const scrollToTop = () => {
@@ -164,7 +164,7 @@ const PostReel = ({
               <div className="flex w-full justify-between items-center rounded-xl p-2 bg-white dark:bg-neutral-900 text-gray-500 dark:text-gray-400 text-sm">
                 <span>You have reached the end</span>{" "}
                 <button
-                  onClick={userId? scrollToTop :handleRefresh}
+                  onClick={userId ? scrollToTop : handleRefresh}
                   className="bg-blue-400 dark:bg-white active:scale-98 transition-all text-neutral-50 dark:text-black rounded-md p-2"
                 >
                   {userId ? "Scroll to top" : "Refresh the feed"}

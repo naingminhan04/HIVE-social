@@ -1,6 +1,6 @@
 "use client";
 
-import type { Chat, DraftPrivateChat, SelectedChat } from "@/types/chat";
+import type { Chat, SelectedChat } from "@/types/chat";
 import { findChatById, syncChatUrl } from "@/utils/chatRoutes";
 import { isDraftChat } from "@/utils/chatDisplay";
 import {

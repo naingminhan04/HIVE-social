@@ -1,8 +1,8 @@
 import { getPostAction } from "@/app/_actions/postAction";
 import { notFound } from "next/navigation";
-import { CommentPage } from "@/app/_components/Comment";
-import PostViewClient from "@/app/_components/PostView";
-import PostViewNav from "@/app/_components/PostViewNav";
+import { CommentPage } from "@/app/_components/common/Comment";
+import PostViewClient from "@/app/_components/post/PostView";
+import PostViewNav from "@/app/_components/post/PostViewNav";
 
 export default async function PostView({
   params,

@@ -1,9 +1,9 @@
 import { Metadata } from "next";
-import NavBar from "../_components/NavBar";
-import PortalBar from "../_components/PortalBar";
+import NavBar from "@/app/_components/layout/NavBar";
+import PortalBar from "@/app/_components/layout/PortalBar";
 
 export const metadata: Metadata = {
-  title: "Home - Star Education Academy",
+  title: "HIVE - Social Hub For Bees",
 };
 
 export default function MainLayout({
@@ -16,7 +16,7 @@ export default function MainLayout({
       <NavBar />
       <div className="md:flex w-full">
         <div className="md:w-3/5">{children}</div>
-        <PortalBar /> 
+        <PortalBar />
       </div>
     </div>
   );

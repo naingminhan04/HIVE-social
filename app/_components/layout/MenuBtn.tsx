@@ -5,12 +5,12 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
-import LogOutBtn from "./LogOutBtn";
+import LogOutBtn from "../auth/LogOutBtn";
 import { getMenuArr, getProfileSlug } from "./SideBar";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth";
 import HomeRefreshLink from "./HomeRefreshLink";
-import RecoverableImage from "./RecoverableImage";
+import RecoverableImage from "../common/RecoverableImage";
 
 const MenuBtn = () => {
   const [menu, setMenu] = useState(false);
@@ -24,7 +24,7 @@ const MenuBtn = () => {
     if (window.innerWidth >= 768) return;
     router.push(`/users/${getProfileSlug(user)}`);
   };
-  
+
   return (
     <div className="flex lg:hidden">
       <button
@@ -53,11 +53,10 @@ const MenuBtn = () => {
                     <HomeRefreshLink
                       key={item.name}
                       onNavigate={() => setMenu(false)}
-                      className={`block p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${
-                        isActive
+                      className={`block p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${isActive
                           ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"
                           : "hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-800"
-                      }`}
+                        }`}
                     >
                       {item.name}
                     </HomeRefreshLink>
@@ -65,11 +64,10 @@ const MenuBtn = () => {
                     <Link
                       key={item.name}
                       onClick={() => setMenu(false)}
-                      className={`p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${
-                        isActive
+                      className={`p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${isActive
                           ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"
                           : "hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-800"
-                      }`}
+                        }`}
                       href={item.href}
                     >
                       {item.name}

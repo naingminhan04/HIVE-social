@@ -3,11 +3,11 @@
 import { PostType } from "@/types/post";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import RichTextContent from "./RichTextContent";
+import RichTextContent from "../common/RichTextContent";
 
 const CONTENT_LIMIT = 200;
 
-const PostContent = ({ post,view }: { post: PostType, view:boolean }) => {
+const PostContent = ({ post, view }: { post: PostType, view: boolean }) => {
   const [seeMore, setSeeMore] = useState(false);
   const router = useRouter();
   const content = post.content;
@@ -20,7 +20,7 @@ const PostContent = ({ post,view }: { post: PostType, view:boolean }) => {
 
   return (
     <div
-      onClick={(e)=>{if(isLongContent) {toggleSeeMore(); e.stopPropagation()}}}
+      onClick={(e) => { if (isLongContent) { toggleSeeMore(); e.stopPropagation() } }}
       className={!view && isLongContent ? "cursor-pointer" : ""}
     >
       <RichTextContent

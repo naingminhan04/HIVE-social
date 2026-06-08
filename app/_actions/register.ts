@@ -10,11 +10,8 @@ import {
 } from "./cookies";
 import { getApiErrorMessage } from "@/utils/apiError";
 
-export type RegisterPayload = {
-  name: string;
-  email: string;
-  password: string;
-};
+import { RegisterPayload } from "@/types/register";
+
 
 export default async function registerAction(
   payload: RegisterPayload,

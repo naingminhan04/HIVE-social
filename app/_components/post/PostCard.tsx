@@ -1,18 +1,18 @@
 "use client";
 
 import { MouseEvent, useState } from "react";
-import ImageViewer from "./ImageViewer";
+import ImageViewer from "../common/ImageViewer";
 import { PostImageType, PostType } from "@/types/post";
 import PostContent from "./PostContent";
 import PostMenu from "./PostMenu";
-import ReactionBtn from "./ReactionBtn";
+import ReactionBtn from "../common/ReactionBtn";
 import { Share2, FileIcon, Play } from "lucide-react";
-import ViewReaction from "./ViewReaction";
+import ViewReaction from "../common/ViewReaction";
 import { formatDate } from "@/utils/formatDate";
-import CommentBtn from "./Comment";
+import CommentBtn from "../common/Comment";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import RecoverableImage from "./RecoverableImage";
+import RecoverableImage from "../common/RecoverableImage";
 import { isVideoMedia } from "@/utils/media";
 
 const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
@@ -103,9 +103,8 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
                 <PostMediaTile
                   key={img.id}
                   media={img}
-                  className={`${
-                    images.length === 3 && index === 2 ? "col-span-2" : ""
-                  }`}
+                  className={`${images.length === 3 && index === 2 ? "col-span-2" : ""
+                    }`}
                   onOpen={() => {
                     setViewerIndex(index);
                     setViewerOpen(true);

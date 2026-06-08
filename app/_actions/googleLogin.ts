@@ -4,7 +4,7 @@ import axios from "axios";
 import { GoogleLoginInput } from "@/types/auth";
 import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
-import { API_BASE_URL } from "@/libs/apiBase";
+import api from "@/libs/axios";
 import { getApiErrorMessage } from "@/utils/apiError";
 import {
   applyAuthSessionFromPayload,
@@ -16,7 +16,7 @@ export default async function googleLoginAction(
   input: GoogleLoginInput,
 ): Promise<ActionResponse<LoginSuccessResponse>> {
   try {
-    const { data } = await axios.post(`${API_BASE_URL}/auth/google-login`, input);
+    const { data } = await api.post(`/auth/google-login`, input);
 
     const session = await applyAuthSessionFromPayload(data, {
       authMethod: "google",

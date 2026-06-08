@@ -1,6 +1,5 @@
 "use client";
 
-import type { Chat } from "@/types/chat";
 import { useQuery } from "@tanstack/react-query";
 import { getUnreadMessagesCountAction } from "@/app/_actions/chat";
 import ChatListItem from "./ChatListItem";

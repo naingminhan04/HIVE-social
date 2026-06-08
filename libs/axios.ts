@@ -1,9 +1,8 @@
 import { getToken } from "@/app/_actions/cookies";
-import { API_BASE_URL } from "@/libs/apiBase";
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -18,7 +17,7 @@ api.interceptors.request.use(async (config) => {
   }
 
   config.headers.Authorization = `Bearer ${token}`;
-  
+
   // For FormData, explicitly remove Content-Type so axios sets it with boundary
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];
@@ -26,7 +25,7 @@ api.interceptors.request.use(async (config) => {
     // Only set Content-Type for non-FormData requests
     config.headers["Content-Type"] = "application/json";
   }
-  
+
   return config;
 });
 
@@ -60,23 +59,23 @@ api.interceptors.response.use(
           // Refresh failed - clear auth state and redirect to login
           const { clearAuthCookies } = await import("@/app/_actions/cookies");
           await clearAuthCookies();
-          
+
           // Redirect to login in the browser
           if (typeof window !== 'undefined') {
             window.location.href = '/';
           }
-          
+
           return Promise.reject(new Error('Session expired. Please login again.'));
         }
       } catch (refreshError) {
         // If refresh fails, clear cookies and reject
         const { clearAuthCookies } = await import("@/app/_actions/cookies");
         await clearAuthCookies();
-        
+
         if (typeof window !== 'undefined') {
           window.location.href = '/';
         }
-        
+
         return Promise.reject(refreshError);
       }
     }

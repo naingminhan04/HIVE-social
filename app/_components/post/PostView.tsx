@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import PostCard from "@/app/_components/PostCard";
+import PostCard from "./PostCard";
 import { getPostAction } from "@/app/_actions/postAction";
 import { PostType } from "@/types/post";
 

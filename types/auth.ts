@@ -1,3 +1,4 @@
+import { ActionResponse } from "./action";
 import { UserType } from "./user";
 
 export type LoginInput = {
@@ -60,3 +61,17 @@ export type VerifySuccessResponse = {
   refreshToken?: string;
   user: UserType;
 };
+
+export type CheckAccountStatusInput = {
+  userId?: string | null;
+  idToken?: string;
+  email?: string;
+  password?: string;
+};
+
+export type CheckAccountStatusResponse = ActionResponse<LoginSuccessResponse> & {
+  noSession?: boolean;
+  needsGoogleSignIn?: boolean;
+  needsPassword?: boolean;
+};
+

@@ -1,6 +1,6 @@
 "use client";
 
-import RecoverableImage from "@/app/_components/RecoverableImage";
+import RecoverableImage from "../common/RecoverableImage";
 import { useChatNavigation } from "@/app/_components/chat/ChatNavigation";
 import { findChatById } from "@/utils/chatRoutes";
 import {
@@ -59,11 +59,10 @@ const ChatPanelHeader = ({ isSocketConnected: socketProp }: ChatPanelHeaderProps
         </p>
       </div>
       <span
-        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
-          isSocketConnected
+        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${isSocketConnected
             ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
             : "bg-neutral-100 text-neutral-400 dark:bg-neutral-900"
-        }`}
+          }`}
       >
         {isSocketConnected ? "Live" : "Offline"}
       </span>

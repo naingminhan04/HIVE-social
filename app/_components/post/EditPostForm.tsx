@@ -12,7 +12,7 @@ import Image from "next/image";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useCallback, useState } from "react";
-import { patchPostAction } from "../_actions/postAction";
+import { patchPostAction } from "@/app/_actions/postAction";
 import {
   AddPostType,
   ImageType,
@@ -21,13 +21,13 @@ import {
 } from "@/types/post";
 import { uploadFiles } from "@/utils/uploadUtils";
 import toast from "react-hot-toast";
-import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { formatDate } from "@/utils/formatDate";
 import { useAuthStore } from "@/store/auth";
-import OverlayPortal from "./OverlayPortal";
+import OverlayPortal from "../layout/OverlayPortal";
 import { isVideoMedia } from "@/utils/media";
-import ImageViewer from "./ImageViewer";
-import RichTextContent from "./RichTextContent";
+import ImageViewer from "../common/ImageViewer";
+import RichTextContent from "../common/RichTextContent";
 
 type FormValues = {
   content: string;
@@ -60,7 +60,7 @@ export default function EditPostForm({
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  
+
   const [existingAttachments, setExistingAttachments] = useState<PostImageType[]>(
     post.attachments ?? []
   );
@@ -630,9 +630,8 @@ function MediaDropzone({
 }) {
   return (
     <label
-      className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center transition hover:border-neutral-900 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-400 dark:hover:bg-neutral-800 ${
-        disabled ? "pointer-events-none opacity-50" : ""
-      }`}
+      className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center transition hover:border-neutral-900 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-400 dark:hover:bg-neutral-800 ${disabled ? "pointer-events-none opacity-50" : ""
+        }`}
     >
       <span className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100">
         {icon}

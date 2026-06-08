@@ -2,7 +2,6 @@
 
 import { getAuthToken } from "@/app/_actions/cookies";
 import api from "@/libs/axios";
-import { API_BASE_URL } from "@/libs/apiBase";
 import type { ActionResponse } from "@/types/action";
 import type {
   Chat,
@@ -23,14 +22,12 @@ import type {
   SendMessageResponse,
   UnreadCountResponse,
   UpdateMessageResponse,
+  ChatMessagesQueryOptions,
 } from "@/types/chat";
 import { getApiErrorMessage } from "@/utils/apiError";
 
 const socketUrlFromApiBase = () => {
-  const configured = process.env.NEXT_PUBLIC_SOCKET_URL;
-  if (configured) return configured;
-
-  return API_BASE_URL.replace(/\/v1\/api\/?$/, "");
+  return process.env.NEXT_PUBLIC_SOCKET_URL ?? "";
 };
 
 export async function getChatsAction(
@@ -69,11 +66,7 @@ export async function createChatAction(
   }
 }
 
-type ChatMessagesQueryOptions = {
-  cursor?: string;
-  limit?: number;
-  direction?: "older" | "newer";
-};
+
 
 export async function getPrivateChatByUserIdAction(
   userId: string,

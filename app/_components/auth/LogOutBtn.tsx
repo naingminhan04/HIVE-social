@@ -1,6 +1,6 @@
 'use client'
 
-import { logoutAction } from "../_actions/logout";
+import { logoutAction } from "@/app/_actions/logout";
 import { useAuthStore } from "@/store/auth";
 import { useRouter } from "nextjs-toploader/app";
 import toast from "react-hot-toast";
@@ -9,7 +9,7 @@ export default function LogOutBtn({ className = "" }: { className?: string }) {
   const clearUser = useAuthStore((state) => state.logOut);
   const router = useRouter();
 
-  const handleLogOut = async() => {
+  const handleLogOut = async () => {
     try {
       const result = await logoutAction();
       if (result.success) {

@@ -4,7 +4,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
 import { useRouter } from "nextjs-toploader/app";
-import loginAction from "../_actions/login";
+import loginAction from "@/app/_actions/login";
 import { useState } from "react";
 import { PiWarningCircle } from "react-icons/pi";
 import GoogleAuthButton from "./GoogleAuthButton";
@@ -90,11 +90,10 @@ const LoginForm = () => {
             id="email"
             type="text"
             placeholder=" "
-            className={`peer w-full border border-gray-300 dark:border-neutral-700 outline-0 p-4 rounded-md ${
-              errors.email
+            className={`peer w-full border border-gray-300 dark:border-neutral-700 outline-0 p-4 rounded-md ${errors.email
                 ? "border-red-600"
                 : "focus:border-black dark:focus:border-white"
-            }`}
+              }`}
             {...register("email", {
               required: "Please enter your email",
               pattern: {
@@ -122,11 +121,10 @@ const LoginForm = () => {
             id="password"
             type="password"
             placeholder=" "
-            className={`peer w-full border border-gray-300 dark:border-neutral-700 outline-0 p-4 rounded-md ${
-              errors.password
+            className={`peer w-full border border-gray-300 dark:border-neutral-700 outline-0 p-4 rounded-md ${errors.password
                 ? "border-red-600"
                 : "focus:border-black dark:focus:border-white"
-            }`}
+              }`}
             {...register("password", {
               required: "Please enter your password",
             })}

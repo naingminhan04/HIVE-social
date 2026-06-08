@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/auth";
-import Profile from "./Profile";
+import Profile from "../profile/Profile";
 
 const PortalBar = () => {
   const user = useAuthStore((state) => state.user);

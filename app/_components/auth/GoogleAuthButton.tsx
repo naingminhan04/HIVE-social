@@ -6,7 +6,7 @@ import { useRouter } from "nextjs-toploader/app";
 import { useEffect, useRef, useState } from "react";
 import { PiWarningCircle } from "react-icons/pi";
 import { FcGoogle } from "react-icons/fc";
-import googleLoginAction from "../_actions/googleLogin";
+import googleLoginAction from "@/app/_actions/googleLogin";
 import { useAuthStore } from "@/store/auth";
 import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
@@ -89,9 +89,8 @@ const GoogleAuthButton = ({
         >
           <div
             aria-hidden
-            className={`flex h-full w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white p-3 text-sm font-bold text-neutral-900 transition hover:bg-neutral-100 active:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-50 dark:active:bg-neutral-300 ${
-              isDisabled ? "opacity-60" : ""
-            }`}
+            className={`flex h-full w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white p-3 text-sm font-bold text-neutral-900 transition hover:bg-neutral-100 active:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-50 dark:active:bg-neutral-300 ${isDisabled ? "opacity-60" : ""
+              }`}
           >
             <FcGoogle className="h-5 w-5 shrink-0" />
             <span>{label}</span>

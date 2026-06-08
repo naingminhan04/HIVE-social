@@ -2,8 +2,8 @@
 
 import axios from "axios";
 import { cookies } from "next/headers";
-import { API_BASE_URL } from "@/libs/apiBase";
 import type { PendingAuthMethod } from "@/types/auth";
+
 
 export async function setAccessCookies(token: string) {
   const cookie = await cookies();
@@ -166,7 +166,7 @@ async function refreshAccessTokenFromCookie() {
   if (!refreshToken) return null;
 
   try {
-    const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+    const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh-token`, {
       refreshToken,
     });
     const payload = data?.data ?? data;
@@ -198,7 +198,7 @@ export async function getToken() {
 
 export async function getRefreshToken() {
   const cookie = await cookies();
-  
+
   return cookie.get("refresh_token")?.value;
 }
 

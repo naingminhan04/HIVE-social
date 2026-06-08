@@ -209,3 +209,31 @@ export type DraftPrivateChat = {
 };
 
 export type SelectedChat = Chat | DraftPrivateChat;
+
+export type ComposeMode = "private" | "group" | null;
+
+export type DraftFileKind = "image" | "video" | "audio" | "file";
+
+export type DraftFile = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  kind: DraftFileKind;
+};
+
+export type MessageSendStatus = "sending" | "sent" | "read" | "failed";
+
+export type ChatMessagesPage = {
+  messages: ChatMessage[];
+  cursors: Record<string, unknown> | null;
+  hasMore?: boolean;
+};
+
+export type MessagesPagePayload = ChatMessagesResponse & { hasMore?: boolean };
+
+export type ChatMessagesQueryOptions = {
+  cursor?: string;
+  limit?: number;
+  direction?: "older" | "newer";
+};
+

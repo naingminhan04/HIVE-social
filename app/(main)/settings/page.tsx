@@ -1,5 +1,5 @@
 import { Settings } from "lucide-react";
-import WorkInProgressPlaceholder from "@/app/_components/WorkInProgressPlaceholder";
+import WorkInProgressPlaceholder from "@/app/_components/common/WorkInProgressPlaceholder";
 
 const SettingsPage = () => {
   return (

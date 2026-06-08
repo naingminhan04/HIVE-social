@@ -1,6 +1,6 @@
 "use client";
 
-import RecoverableImage from "@/app/_components/RecoverableImage";
+import RecoverableImage from "../common/RecoverableImage";
 import { useChatNavigation } from "@/app/_components/chat/ChatNavigation";
 import { useAuthStore } from "@/store/auth";
 import type { Chat } from "@/types/chat";
@@ -27,13 +27,12 @@ const ChatListItem = ({ chat, initialActive }: ChatListItemProps) => {
     <button
       type="button"
       onClick={() => openChat(chat)}
-      className={`relative flex w-full min-w-0 items-center gap-3 px-4 py-4 text-left transition ${
-        isActive
-          ? "bg-blue-50 dark:bg-neutral-900"
-          : hasUnread
-            ? "border-l-4 border-l-blue-500 bg-blue-50/90 hover:bg-blue-100/90 dark:border-l-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
-            : "hover:bg-neutral-50 dark:hover:bg-neutral-900"
-      }`}
+      className={`relative flex w-full min-w-0 items-center gap-3 px-4 py-4 text-left transition ${isActive
+        ? "bg-blue-50 dark:bg-neutral-900"
+        : hasUnread
+          ? "border-l-4 border-l-blue-500 bg-blue-50/90 hover:bg-blue-100/90 dark:border-l-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
+          : "hover:bg-neutral-50 dark:hover:bg-neutral-900"
+        }`}
     >
       <div className="relative shrink-0">
         <RecoverableImage
@@ -55,30 +54,27 @@ const ChatListItem = ({ chat, initialActive }: ChatListItemProps) => {
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center justify-between gap-2">
           <span
-            className={`truncate ${
-              hasUnread
-                ? "font-bold text-slate-800 dark:text-neutral-50"
-                : "font-semibold text-slate-700 dark:text-neutral-100"
-            }`}
+            className={`truncate ${hasUnread
+              ? "font-bold text-slate-800 dark:text-neutral-50"
+              : "font-semibold text-slate-700 dark:text-neutral-100"
+              }`}
           >
             {getChatTitle(chat)}
           </span>
           {chat.lastMessage && (
             <span
-              className={`shrink-0 text-xs ${
-                hasUnread ? "font-semibold text-blue-600 dark:text-blue-400" : "text-neutral-400"
-              }`}
+              className={`shrink-0 text-xs ${hasUnread ? "font-semibold text-blue-600 dark:text-blue-400" : "text-neutral-400"
+                }`}
             >
               {formatDate(chat.lastMessage.createdAt, false, true)}
             </span>
           )}
         </span>
         <span
-          className={`mt-1 block truncate text-sm ${
-            hasUnread
-              ? "font-medium text-slate-700 dark:text-neutral-200"
-              : "text-neutral-500 dark:text-neutral-400"
-          }`}
+          className={`mt-1 block truncate text-sm ${hasUnread
+            ? "font-medium text-slate-700 dark:text-neutral-200"
+            : "text-neutral-500 dark:text-neutral-400"
+            }`}
         >
           {getChatSubtitle(chat, viewer?.id)}
         </span>

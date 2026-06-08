@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Provider } from "./_components/Provider";
+import { Provider } from "./_components/common/Provider";
 import { Inter } from "next/font/google";
 
 const inter = Inter({
@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Star Education Academy",
-  description: "A social hub for students from Star Education Academy",
+  title: "HIVE",
+  description: "Your social hive — share, connect, and buzz together",
 };
 
 export default function RootLayout({
