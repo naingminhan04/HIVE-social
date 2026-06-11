@@ -227,8 +227,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
       const joinChatRooms = (roomChats: Chat[]) => {
         roomChats.forEach((chat) => {
-          socket.emit("join-chat", { chatId: chat.id });
-          socket.emit("chat:join", chat.id);
+          socket.emit("join-chat", chat.id);
         });
       };
 
@@ -477,9 +476,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
       };
 
-      socket.on("message:new", handleIncomingMessage);
-      socket.on("new-message", handleIncomingMessage);
-      socket.on("message-sent", handleIncomingMessage);
+      socket.on("new-chat-message", handleIncomingMessage);
       socket.on("message:updated", handleMessageUpdated);
       socket.on("message-updated", handleMessageUpdated);
       socket.on("message:deleted", handleMessageDeleted);
@@ -508,16 +505,14 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   useEffect(() => {
     if (!activeChat || isDraftChat(activeChat)) return;
-    socketRef.current?.emit("join-chat", { chatId: activeChat.id });
-    socketRef.current?.emit("chat:join", activeChat.id);
+    socketRef.current?.emit("join-chat", activeChat.id);
   }, [activeChat]);
 
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket?.connected) return;
     chats.forEach((chat) => {
-      socket.emit("join-chat", { chatId: chat.id });
-      socket.emit("chat:join", chat.id);
+      socket.emit("join-chat", chat.id);
     });
   }, [chats]);
 
@@ -689,7 +684,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         prev.forEach((f) => URL.revokeObjectURL(f.previewUrl));
         return [];
       });
-      socketRef.current?.emit("message:sent", message);
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
       await queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
     },
@@ -796,10 +790,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           },
         );
       }
-
-      const readEventChatId = activeChat && !isDraftChat(activeChat) ? activeChat.id : undefined;
-      socketRef.current?.emit("message:read", { messageId, chatId: readEventChatId });
-      socketRef.current?.emit("message-read", { messageId, chatId: readEventChatId });
       await queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
     },
   });
