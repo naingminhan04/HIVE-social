@@ -16,15 +16,16 @@ export const buildChatPath = (
   chat: Chat | SelectedChat,
   query?: { replyMsgId?: string | null },
 ) => {
+  const chatId = getChatIdParam(chat);
   const params = new URLSearchParams();
-  params.set("chatId", getChatIdParam(chat));
 
   const replyMsgId = query?.replyMsgId;
   if (replyMsgId) {
     params.set("replyMsgId", replyMsgId);
   }
 
-  return `/chat?${params.toString()}`;
+  const queryString = params.toString();
+  return `/chat/${encodeURIComponent(chatId)}${queryString ? `?${queryString}` : ""}`;
 };
 
 export const findChatById = (chats: Chat[], chatId: string | null | undefined) => {
@@ -42,7 +43,10 @@ export const chatMatchesId = (chat: SelectedChat, chatId: string | null | undefi
   return chat.id === id;
 };
 
-export const syncChatUrl = (chatId: string | null, replyMsgId?: string | null) => {
+export const syncChatUrl = (
+  chatId: string | null,
+  replyMsgId?: string | null,
+) => {
   if (typeof window === "undefined") return;
 
   if (!chatId) {
@@ -50,11 +54,16 @@ export const syncChatUrl = (chatId: string | null, replyMsgId?: string | null) =
     return;
   }
 
-  const params = new URLSearchParams({ chatId });
+  const params = new URLSearchParams();
   if (replyMsgId) {
     params.set("replyMsgId", replyMsgId);
   }
-  window.history.replaceState(null, "", `/chat?${params.toString()}`);
+  const queryString = params.toString();
+  window.history.replaceState(
+    null,
+    "",
+    `/chat/${encodeURIComponent(chatId)}${queryString ? `?${queryString}` : ""}`,
+  );
 };
 
 export const userToDraftChatUser = (user: UserType): SearchUserType => ({

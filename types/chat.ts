@@ -233,7 +233,8 @@ export type MessagesPagePayload = ChatMessagesResponse & { hasMore?: boolean };
 
 export type ChatMessagesQueryOptions = {
   cursor?: string;
+  dateCursor?: string;
+  idCursor?: string;
   limit?: number;
   direction?: "older" | "newer";
 };
-

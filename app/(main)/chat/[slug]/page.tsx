@@ -1,19 +1,20 @@
-import { getUserByUsernameAction } from "@/app/_actions/user";
-import { redirect } from "next/navigation";
+import ChatPage from "../page";
 
 type ChatSlugPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const ChatSlugPage = async ({ params }: ChatSlugPageProps) => {
+const ChatSlugPage = async ({ params, searchParams }: ChatSlugPageProps) => {
   const { slug } = await params;
-  const userResult = await getUserByUsernameAction(slug);
-
-  if (userResult.success) {
-    redirect(`/chat?chatId=${encodeURIComponent(userResult.data.id)}`);
-  }
-
-  redirect("/chat");
+  const decodedSlug = decodeURIComponent(slug).trim();
+  const currentSearchParams = await searchParams;
+  return ChatPage({
+    searchParams: Promise.resolve({
+      ...currentSearchParams,
+      chatId: decodedSlug || undefined,
+    }),
+  });
 };
 
 export default ChatSlugPage;

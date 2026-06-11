@@ -95,8 +95,8 @@ export const getOlderCursor = (cursors?: Record<string, unknown> | null): string
   return null;
 };
 
-export const getOldestMessageId = (messages: ChatMessage[]) =>
-  sortMessages(messages)[0]?.id ?? null;
+export const getOldestMessageCreatedAt = (messages: ChatMessage[]) =>
+  sortMessages(messages)[0]?.createdAt ?? null;
 
 export const inferHasMoreOlder = (page: ChatMessagesPage) => {
   if (page.hasMore === true) return true;
@@ -133,7 +133,13 @@ export const getMessageSendStatus = (
 
 export const requestMessagesPage = async (
   chat: SelectedChat,
-  options: { limit: number; direction: "older" | "newer"; cursor?: string },
+  options: {
+    limit: number;
+    direction: "older" | "newer";
+    cursor?: string;
+    dateCursor?: string;
+    idCursor?: string;
+  },
 ): Promise<MessagesPagePayload> => {
   const primaryResult = isDraftChat(chat)
     ? await getPrivateMessagesAction(chat.user.id, options)
@@ -168,7 +174,7 @@ export const fetchChatMessagesPage = async (
   const payload = await requestMessagesPage(chat, {
     limit: MESSAGES_PAGE_SIZE,
     direction: "older",
-    ...(pageParam ? { cursor: pageParam } : {}),
+    ...(pageParam ? { dateCursor: pageParam } : {}),
   });
   let page = toMessagesPage(payload);
 
@@ -178,7 +184,7 @@ export const fetchChatMessagesPage = async (
     const anchoredPayload = await requestMessagesPage(chat, {
       limit: MESSAGES_PAGE_SIZE,
       direction: "older",
-      cursor: anchorMessage.id,
+      idCursor: anchorMessage.id,
     });
     const merged = new Map<string, ChatMessage>();
     [...sortMessages(anchoredPayload.messages), anchorMessage].forEach((m) => merged.set(m.id, m));

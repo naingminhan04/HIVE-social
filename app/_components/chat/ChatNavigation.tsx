@@ -1,8 +1,13 @@
 "use client";
 
 import type { Chat, SelectedChat } from "@/types/chat";
-import { findChatById, syncChatUrl } from "@/utils/chatRoutes";
+import {
+  buildChatPath,
+  findChatById,
+  syncChatUrl,
+} from "@/utils/chatRoutes";
 import { isDraftChat } from "@/utils/chatDisplay";
+import { useRouter } from "nextjs-toploader/app";
 import {
   createContext,
   useCallback,
@@ -21,7 +26,7 @@ type ChatNavigationContextValue = {
   showPanel: boolean;
   isLeavingChat: boolean;
   setIsLeavingChat: (value: boolean) => void;
-  openChat: (chat: SelectedChat, options?: { replyMsgId?: string | null }) => void;
+  openChat: (chat: SelectedChat, options?: { replyMsgId?: string | null; navigate?: boolean }) => void;
   leaveChat: () => void;
   syncReplyInUrl: (replyMsgId: string | null) => void;
   isSocketConnected: boolean;
@@ -49,6 +54,7 @@ export const ChatNavigationProvider = ({
   initialChats,
   initialChatId,
 }: ChatNavigationProviderProps) => {
+  const router = useRouter();
   const [chats, setChats] = useState(initialChats);
   const [activeChatId, setActiveChatId] = useState<string | null>(initialChatId);
   const [selectedChat, setSelectedChat] = useState<SelectedChat | null>(() =>
@@ -58,22 +64,32 @@ export const ChatNavigationProvider = ({
   const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   const openChat = useCallback(
-    (chat: SelectedChat, options?: { replyMsgId?: string | null }) => {
-      setIsLeavingChat(false);
-      setSelectedChat(chat);
+    (chat: SelectedChat, options?: { replyMsgId?: string | null; navigate?: boolean }) => {
       const chatId = isDraftChat(chat) ? chat.user.id : chat.id;
-      setActiveChatId(chatId);
-      syncChatUrl(chatId, options?.replyMsgId ?? null);
+
+      if (options?.navigate === false) {
+        setIsLeavingChat(false);
+        setSelectedChat(chat);
+        setActiveChatId(chatId);
+        syncChatUrl(chatId, options.replyMsgId ?? null);
+        return;
+      }
+
+      router.push(
+        buildChatPath(chat, {
+          replyMsgId: options?.replyMsgId ?? null,
+        }),
+      );
     },
-    [],
+    [router],
   );
 
   const leaveChat = useCallback(() => {
     setIsLeavingChat(true);
     setSelectedChat(null);
     setActiveChatId(null);
-    syncChatUrl(null);
-  }, []);
+    router.back();
+  }, [router]);
 
   const syncReplyInUrl = useCallback(
     (replyMsgId: string | null) => {

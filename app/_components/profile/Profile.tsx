@@ -28,7 +28,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth";
 import PostReel from "../post/PostReel";
@@ -39,6 +39,7 @@ import PointsModal from "../PointsModal";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import OverlayPortal from "../layout/OverlayPortal";
 import RecoverableImage from "../common/RecoverableImage";
+import { buildChatPath } from "@/utils/chatRoutes";
 
 type ProfileFormValues = {
   name: string;
@@ -393,7 +394,17 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
     profilePreviewUrl || user?.profilePic || "/default-avatar.png";
   const openMessage = () => {
     if (!user?.username) return;
-    router.replace(`/chat?${new URLSearchParams({ chatId: user.id }).toString()}`);
+    router.push(
+      buildChatPath({
+        type: "PRIVATE_DRAFT",
+        user: {
+          id: user.id,
+          name: user.name ?? user.username,
+          username: user.username,
+          profilePic: user.profilePic ?? null,
+        },
+      }),
+    );
   };
 
   return (

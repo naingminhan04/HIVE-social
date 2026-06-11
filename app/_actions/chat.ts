@@ -107,7 +107,8 @@ export async function getChatMessagesAction(
       params: {
         direction: options?.direction ?? "older",
         limit: options?.limit ?? 50,
-        ...(options?.cursor ? { cursor: options.cursor } : {}),
+        ...(options?.dateCursor ?? options?.cursor ? { dateCursor: options?.dateCursor ?? options?.cursor } : {}),
+        ...(options?.idCursor ? { idCursor: options.idCursor } : {}),
       },
     });
 
@@ -131,7 +132,8 @@ export async function getPrivateMessagesAction(
         params: {
           direction: options?.direction ?? "older",
           limit: options?.limit ?? 50,
-          ...(options?.cursor ? { cursor: options.cursor } : {}),
+          ...(options?.dateCursor ?? options?.cursor ? { dateCursor: options?.dateCursor ?? options?.cursor } : {}),
+          ...(options?.idCursor ? { idCursor: options.idCursor } : {}),
         },
       },
     );

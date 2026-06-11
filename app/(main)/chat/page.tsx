@@ -1,4 +1,4 @@
-import { getChatsAction, getUnreadMessagesCountAction } from "@/app/_actions/chat";
+import { getChatsAction } from "@/app/_actions/chat";
 import { ChatClient } from "@/app/_components/ChatClient";
 import ChatListSection from "@/app/_components/chat/ChatListSection";
 import { ChatNavigationProvider } from "@/app/_components/chat/ChatNavigation";
@@ -17,26 +17,22 @@ const ChatPage = async ({ searchParams }: ChatPageProps) => {
   const initialChatId =
     typeof chatIdParam === "string" ? chatIdParam.trim() || null : null;
 
-  const [chatsResult, unreadResult] = await Promise.all([
-    getChatsAction(),
-    getUnreadMessagesCountAction(),
-  ]);
+  const chatsResult = await getChatsAction();
 
   const initialChats = chatsResult.success
     ? chatsResult.data.chats.filter(visibleChatHasMessage)
     : [];
-  const initialUnreadCount = unreadResult.success
-    ? unreadResult.data.unreadMessagesCount
-    : 0;
 
   return (
-    <ChatNavigationProvider initialChats={initialChats} initialChatId={initialChatId}>
+    <ChatNavigationProvider
+      initialChats={initialChats}
+      initialChatId={initialChatId}
+    >
       <ChatPageShell>
         <ChatWorkspaceLayout
           list={
             <ChatListSection
               activeChatId={initialChatId}
-              unreadCount={initialUnreadCount}
             />
           }
           panel={

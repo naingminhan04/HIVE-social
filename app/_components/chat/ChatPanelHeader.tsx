@@ -10,37 +10,32 @@ import {
   isDraftChat,
 } from "@/utils/chatDisplay";
 import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
-type ChatPanelHeaderProps = {
-  isSocketConnected?: boolean;
-};
-
-const ChatPanelHeader = ({ isSocketConnected: socketProp }: ChatPanelHeaderProps) => {
+const ChatPanelHeader = () => {
   const {
     activeChatId,
     chats,
-    isSocketConnected: socketFromContext,
     leaveChat,
     selectedChat,
     showPanel,
   } = useChatNavigation();
-  const isSocketConnected = socketProp ?? socketFromContext;
   const chat = selectedChat ?? findChatById(chats, activeChatId) ?? null;
 
   if (!showPanel || !chat) {
     return null;
   }
 
-  return (
-    <div className="flex h-15 shrink-0 items-center gap-3 border-b border-black/5 px-3 dark:border-white/10">
-      <button
-        type="button"
-        onClick={leaveChat}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-900"
-        aria-label="Back to chats"
-      >
-        <ArrowLeft size={20} />
-      </button>
+  const profileUser = isDraftChat(chat)
+    ? chat.user
+    : chat.type === "PRIVATE"
+      ? chat.otherUser?.user ?? null
+      : null;
+  const profileHref = profileUser?.username
+    ? `/users/${encodeURIComponent(profileUser.username)}`
+    : null;
+  const identity = (
+    <>
       <RecoverableImage
         src={getChatImage(chat) || "/default-avatar.png"}
         alt={getChatTitle(chat)}
@@ -58,14 +53,29 @@ const ChatPanelHeader = ({ isSocketConnected: socketProp }: ChatPanelHeaderProps
           {isDraftChat(chat) ? `@${chat.user.username}` : getPanelSubtitle(chat)}
         </p>
       </div>
-      <span
-        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${isSocketConnected
-            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
-            : "bg-neutral-100 text-neutral-400 dark:bg-neutral-900"
-          }`}
+    </>
+  );
+
+  return (
+    <div className="flex h-15 shrink-0 items-center gap-3 border-b border-black/5 px-3 dark:border-white/10">
+      <button
+        type="button"
+        onClick={leaveChat}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-900"
+        aria-label="Back to chats"
       >
-        {isSocketConnected ? "Live" : "Offline"}
-      </span>
+        <ArrowLeft size={20} />
+      </button>
+      {profileHref ? (
+        <Link
+          href={profileHref}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+        >
+          {identity}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">{identity}</div>
+      )}
     </div>
   );
 };

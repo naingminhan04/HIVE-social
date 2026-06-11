@@ -63,6 +63,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -89,7 +90,7 @@ import {
   makeDraftUser,
   sortMessages,
   getOlderCursor,
-  getOldestMessageId,
+  getOldestMessageCreatedAt,
   getParentMessageId,
   getMessageSendStatus,
   fetchChatMessagesPage,
@@ -541,7 +542,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       if (!hasMoreOlder) return undefined;
       const olderCursor = getOlderCursor(lastPage.cursors);
       if (olderCursor) return olderCursor;
-      return getOldestMessageId(lastPage.messages) ?? undefined;
+      return getOldestMessageCreatedAt(lastPage.messages) ?? undefined;
     },
     enabled: Boolean(activeChat) && (!isDraftChat(activeChat) || Boolean(activeChat.user.id)),
   });
@@ -790,6 +791,21 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           },
         );
       }
+      queryClient.setQueryData<Chat[] | undefined>(["chats"], (current) => {
+        if (!current) return current;
+        return current.map((chat) =>
+          chat.lastMessage?.id === messageId
+            ? {
+              ...chat,
+              lastMessage: {
+                ...chat.lastMessage,
+                isReadByMe: true,
+                isRead: true,
+              },
+            }
+            : chat,
+        );
+      });
       await queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
     },
   });
@@ -989,11 +1005,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     void (async () => {
       try {
         const chatById = await getChatByIdAction(activeChatId);
-        if (chatById.success) { openChat(chatById.data); return; }
+        if (chatById.success) { openChat(chatById.data, { navigate: false }); return; }
         const privateChat = await getPrivateChatByUserIdAction(activeChatId);
-        if (privateChat.success) { openChat(privateChat.data.chat); return; }
+        if (privateChat.success) { openChat(privateChat.data.chat, { navigate: false }); return; }
         const userResult = await getUserAction(activeChatId);
-        if (userResult.success) { openChat({ type: "PRIVATE_DRAFT", user: userToDraftChatUser(userResult.data) }); return; }
+        if (userResult.success) { openChat({ type: "PRIVATE_DRAFT", user: userToDraftChatUser(userResult.data) }, { navigate: false }); return; }
         toast.error("Chat not found");
         leaveChat();
       } finally {
@@ -1226,6 +1242,50 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setMediaViewer({ items: viewerItems, index });
   };
 
+  const getSystemNoticeText = (message: ChatMessage) => {
+    if (message.content?.trim()) return message.content.trim();
+    if (message.systemType === "CREATED") {
+      return activeChat && !isDraftChat(activeChat) && activeChat.type === "GROUP"
+        ? "Group created"
+        : "Account created";
+    }
+    return message.systemType
+      ? message.systemType
+        .toLowerCase()
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ")
+      : "Chat update";
+  };
+
+  const renderSenderAvatar = (message: ChatMessage) => {
+    const avatar = (
+      <RecoverableImage
+        src={message.sender.profilePic || "/default-avatar.png"}
+        alt={message.sender.name}
+        width={36}
+        height={36}
+        className="h-9 w-9 rounded-full object-cover"
+        wrapperClassName="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800"
+        fallbackSrc="/default-avatar.png"
+      />
+    );
+
+    if (message.senderId === viewer?.id || !message.sender.username) {
+      return avatar;
+    }
+
+    return (
+      <Link
+        href={`/users/${encodeURIComponent(message.sender.username)}`}
+        className="shrink-0 rounded-full transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+        aria-label={`Open ${message.sender.name}'s profile`}
+      >
+        {avatar}
+      </Link>
+    );
+  };
+
   const renderMediaItem = (media: ChatMedia, mediaGroup?: ChatMedia[], index = 0) => {
     const kind = getMediaKind(media);
     const url = media.url || media.thumbnailUrl;
@@ -1402,6 +1462,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
             {combinedMessages.map((message) => {
               const isMine = message.senderId === viewer?.id;
+              const isSystemNotice = message.type === "SYSTEM";
               const currentReaction = getCurrentReaction(message);
               const reactionTotal = getReactionTotal(message);
               const visibleReactions = getVisibleReactions(message);
@@ -1411,11 +1472,31 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                 ? getMessageSendStatus(message, activeChat, isPendingSend)
                 : null;
 
+              if (isSystemNotice) {
+                return (
+                  <div
+                    key={message.id}
+                    data-chat-message-id={message.id}
+                    className="flex justify-center px-6 py-1"
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-full border border-black/5 bg-white px-3 py-1 text-center text-xs text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
+                        }`}
+                    >
+                      <span className="wrap-break-word">{getSystemNoticeText(message)}</span>
+                      <span className="ml-2 whitespace-nowrap text-[10px] opacity-60">
+                        {formatDate(message.createdAt, false, true)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={message.id}
                   data-chat-message-id={message.id}
-                  className={`group/message flex items-center gap-2 ${isMine ? "justify-end" : "justify-start"}`}
+                  className={`group/message flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}
                   onMouseLeave={(event) => {
                     const related = event.relatedTarget;
                     if (related instanceof Element) {
@@ -1439,6 +1520,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                       isDeleting={isDeleting}
                     />
                   )}
+
+                  {!isMine && renderSenderAvatar(message)}
 
                   <div className={`max-w-[75%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
                     <div
