@@ -3,7 +3,6 @@
 import { ActionResponse } from "@/types/action";
 import { LoginSuccessResponse } from "@/types/auth";
 import { getRefreshToken } from "./cookies";
-import axios from "axios";
 import api from "@/libs/axios";
 import { getApiErrorMessage } from "@/utils/apiError";
 import {

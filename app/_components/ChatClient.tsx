@@ -4,7 +4,6 @@ import {
   createChatAction,
   deleteMessageAction,
   getChatByIdAction,
-  getChatMessagesAction,
   getChatsAction,
   getChatSocketConfigAction,
   getPrivateChatByUserIdAction,
@@ -32,8 +31,8 @@ import type {
   SelectedChat,
   ComposeMode,
   DraftFile,
-  MessageSendStatus,
   ChatMessagesPage,
+  SendMessageInput,
 } from "@/types/chat";
 import type { SearchUserType } from "@/types/search";
 import { formatDate } from "@/utils/formatDate";
@@ -164,9 +163,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-  // Track which message IDs have been read so we update their status in cache
-  const [socketReadMessageIds, setSocketReadMessageIds] = useState<Set<string>>(new Set());
-
   // ── Refs ──
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -177,6 +173,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const isNearBottomRef = useRef(true);
   const socketRef = useRef<Socket | null>(null);
   const readMessageIdsRef = useRef<Set<string>>(new Set());
+  const activeChatRef = useRef<SelectedChat | null>(null);
+  const chatsRef = useRef<Chat[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const draftFilesRef = useRef<DraftFile[]>([]);
@@ -211,6 +209,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const activeKey = getSelectedKey(activeChat);
 
   useEffect(() => { activeKeyRef.current = activeKey; }, [activeKey]);
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
+  useEffect(() => { chatsRef.current = chats; }, [chats]);
 
   // ── Socket setup ──
   useEffect(() => {
@@ -225,40 +225,99 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         auth: result.data.token ? { token: result.data.token } : undefined,
       });
 
+      const joinChatRooms = (roomChats: Chat[]) => {
+        roomChats.forEach((chat) => {
+          socket.emit("join-chat", { chatId: chat.id });
+          socket.emit("chat:join", chat.id);
+        });
+      };
+
       socketRef.current = socket;
-      socket.on("connect", () => setIsSocketConnected(true));
+      socket.on("connect", () => {
+        setIsSocketConnected(true);
+        joinChatRooms(chatsRef.current);
+      });
       socket.on("disconnect", () => setIsSocketConnected(false));
 
-      const handleIncomingMessage = (
-        payload: ChatMessage | { message: ChatMessage; chatId?: string },
-      ) => {
-        try {
-          const message = "message" in payload ? payload.message : payload as ChatMessage;
-          const chatId = ("chatId" in payload ? (payload as { chatId?: string }).chatId : undefined) ?? message?.chatId;
-          if (!chatId || !message?.id) return;
+      const getMessageQueryKeys = (chatId: string, message?: ChatMessage) => {
+        const keys = new Set<string>();
+        keys.add(chatId);
 
-          const ak = activeKeyRef.current;
+        const currentChat = activeChatRef.current;
+        const currentKey = activeKeyRef.current;
+        if (!currentChat || !currentKey || currentKey === "none") return [...keys];
 
-          if (ak && ak !== "none" && message.senderId !== viewer?.id) {
-            queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
-              ["chatMessages", ak],
-              (current) => {
-                if (!current || current.pages.length === 0) return current;
-                const alreadyExists = current.pages.some((p) =>
-                  p.messages.some((m) => m.id === message.id),
-                );
-                if (alreadyExists) return current;
+        if (!isDraftChat(currentChat) && currentChat.id === chatId) {
+          keys.add(currentKey);
+        }
+
+        if (
+          isDraftChat(currentChat) &&
+          message &&
+          message.senderId === currentChat.user.id
+        ) {
+          keys.add(currentKey);
+        }
+
+        return [...keys];
+      };
+
+      const setMessageInQueries = (chatId: string, message: ChatMessage) => {
+        getMessageQueryKeys(chatId, message).forEach((queryKey) => {
+          queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
+            ["chatMessages", queryKey],
+            (current) => {
+              if (!current) return current;
+              const alreadyExists = current.pages.some((p) =>
+                p.messages.some((m) => m.id === message.id),
+              );
+              if (alreadyExists) return current;
+              if (current.pages.length === 0) {
                 return {
                   ...current,
-                  pages: current.pages.map((page, idx) =>
-                    idx === current.pages.length - 1
-                      ? { ...page, messages: sortMessages([...page.messages, message]) }
-                      : page,
-                  ),
+                  pages: [{ messages: [message], cursors: null, hasMore: false }],
                 };
-              },
-            );
-          }
+              }
+              return {
+                ...current,
+                pages: current.pages.map((page, idx) =>
+                  idx === current.pages.length - 1
+                    ? { ...page, messages: sortMessages([...page.messages, message]) }
+                    : page,
+                ),
+              };
+            },
+          );
+        });
+      };
+
+      const getMessageFromPayload = (
+        payload: ChatMessage | { message?: ChatMessage | string; data?: ChatMessage; chatId?: string },
+      ) => {
+        const record = payload as {
+          message?: ChatMessage | string;
+          data?: ChatMessage;
+          chatId?: string;
+        };
+        const message =
+          record.data ??
+          (record.message && typeof record.message === "object"
+            ? record.message
+            : payload as ChatMessage);
+        return {
+          message,
+          chatId: record.chatId ?? message?.chatId,
+        };
+      };
+
+      const handleIncomingMessage = (
+        payload: ChatMessage | { message?: ChatMessage | string; data?: ChatMessage; chatId?: string },
+      ) => {
+        try {
+          const { message, chatId } = getMessageFromPayload(payload);
+          if (!chatId || !message?.id) return;
+
+          if (message.senderId !== viewer?.id) setMessageInQueries(chatId, message);
 
           queryClient.setQueryData<Chat[] | undefined>(["chats"], (current) => {
             if (!current) return current;
@@ -283,26 +342,26 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       };
 
       const handleMessageUpdated = (
-        payload: ChatMessage | { message: ChatMessage; chatId?: string },
+        payload: ChatMessage | { message?: ChatMessage | string; data?: ChatMessage; chatId?: string },
       ) => {
         try {
-          const message = "message" in payload ? payload.message : payload as ChatMessage;
+          const { message, chatId } = getMessageFromPayload(payload);
           if (!message?.id) return;
-          const ak = activeKeyRef.current;
-          if (!ak || ak === "none") return;
-          queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
-            ["chatMessages", ak],
-            (current) => {
-              if (!current) return current;
-              return {
-                ...current,
-                pages: current.pages.map((page) => ({
-                  ...page,
-                  messages: page.messages.map((m) => (m.id === message.id ? message : m)),
-                })),
-              };
-            },
-          );
+          getMessageQueryKeys(chatId ?? message.chatId, message).forEach((queryKey) => {
+            queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
+              ["chatMessages", queryKey],
+              (current) => {
+                if (!current) return current;
+                return {
+                  ...current,
+                  pages: current.pages.map((page) => ({
+                    ...page,
+                    messages: page.messages.map((m) => (m.id === message.id ? message : m)),
+                  })),
+                };
+              },
+            );
+          });
         } catch {
           // ignore
         }
@@ -353,29 +412,45 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
           const ak = activeKeyRef.current;
           if (!ak || ak === "none") return;
+          const targetChat =
+            chatId && !isDraftChat(activeChatRef.current) && activeChatRef.current?.id === chatId
+              ? activeChatRef.current
+              : chatId
+                ? chatsRef.current.find((chat) => chat.id === chatId)
+                : activeChatRef.current && !isDraftChat(activeChatRef.current)
+                  ? activeChatRef.current
+                  : null;
+          const isGroupRead = targetChat?.type === "GROUP";
 
           if (messageId) {
-            setSocketReadMessageIds((prev) => new Set([...prev, messageId]));
-            queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
-              ["chatMessages", ak],
-              (current) => {
-                if (!current) return current;
-                return {
-                  ...current,
-                  pages: current.pages.map((page) => ({
-                    ...page,
-                    messages: page.messages.map((m) =>
-                      m.id === messageId
-                        ? { ...m, isRead: true, readCount: (m.readCount ?? 0) + 1 }
-                        : m,
-                    ),
-                  })),
-                };
-              },
-            );
+            const queryKeys = chatId ? getMessageQueryKeys(chatId) : [ak];
+            queryKeys.forEach((queryKey) => {
+              queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
+                ["chatMessages", queryKey],
+                (current) => {
+                  if (!current) return current;
+                  return {
+                    ...current,
+                    pages: current.pages.map((page) => ({
+                      ...page,
+                      messages: page.messages.map((m) =>
+                        m.id === messageId
+                          ? {
+                            ...m,
+                            isRead: isGroupRead ? m.isRead : true,
+                            readCount: (m.readCount ?? 0) + 1,
+                          }
+                          : m,
+                      ),
+                    })),
+                  };
+                },
+              );
+            });
           } else if (chatId) {
+            if (isGroupRead) return;
             queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
-              ["chatMessages", ak],
+              ["chatMessages", chatId],
               (current) => {
                 if (!current) return current;
                 return {
@@ -435,11 +510,16 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     if (!activeChat || isDraftChat(activeChat)) return;
     socketRef.current?.emit("join-chat", { chatId: activeChat.id });
     socketRef.current?.emit("chat:join", activeChat.id);
-    return () => {
-      socketRef.current?.emit("leave-chat", { chatId: activeChat.id });
-      socketRef.current?.emit("chat:leave", activeChat.id);
-    };
   }, [activeChat]);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket?.connected) return;
+    chats.forEach((chat) => {
+      socket.emit("join-chat", { chatId: chat.id });
+      socket.emit("chat:join", chat.id);
+    });
+  }, [chats]);
 
   // ── Messages infinite query ──
   const messagesQuery = useInfiniteQuery({
@@ -481,7 +561,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setShowScrollToBottom(false);
     setOpenReactionMessageId(null);
     setReactionUsersMessage(null);
-    setSocketReadMessageIds(new Set());
   }, [activeKey]);
 
   useLayoutEffect(() => {
@@ -539,7 +618,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       if (!selectedChat) throw new Error("Select a chat first");
       if (!content && mutationDraftFiles.length === 0) throw new Error("Message cannot be empty");
 
-      const input: any = {
+      const input: SendMessageInput = {
         content,
         ...(parentMessageId ? { parentMessageId } : {}),
       };
@@ -631,7 +710,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       if (!content && editingImages.length === 0 && editingAttachments.length === 0 && draftFiles.length === 0) {
         throw new Error("Message cannot be empty");
       }
-      const input: any = {
+      const input: SendMessageInput = {
         content,
         images: editingImages.map(toMessageInputMedia),
         attachments: editingAttachments.map(toMessageInputMedia),
@@ -950,7 +1029,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       readMessageIdsRef.current.add(m.id);
       markReadMutation.mutate(m.id);
     });
-  }, [messages, viewer?.id]);
+  }, [markReadMutation, messages, viewer?.id]);
 
   useEffect(() => {
     if (!jumpToMessageId || messagesQuery.isPending) return;

@@ -119,11 +119,12 @@ export const getMessageSendStatus = (
 ): MessageSendStatus => {
   if (isPending) return "sending";
 
-  if (message.isRead === true) return "read";
-
-  if (!isDraftChat(chat) && chat && chat.type === "GROUP" && (message.readCount ?? 0) > 0) {
-    return "read";
+  if (!isDraftChat(chat) && chat?.type === "GROUP") {
+    const requiredReaderCount = Math.max((chat.participantsCount ?? 1) - 1, 1);
+    return (message.readCount ?? 0) >= requiredReaderCount ? "read" : "sent";
   }
+
+  if (message.isRead === true) return "read";
 
   return "sent";
 };
