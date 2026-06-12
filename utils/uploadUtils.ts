@@ -1,6 +1,6 @@
 "use client";
 
-import { getAuthToken } from "@/app/_actions/cookies";
+import api from "@/libs/axios";// adjust path if needed
 
 /**
  * Generic file response from upload API
@@ -13,39 +13,32 @@ export interface UploadedFile {
 }
 
 /**
- * Upload files to backend API (which handles S3 upload)
+ * Upload files to backend API (S3 handled by backend)
  * Used by AddPostForm, EditPostForm, and Profile components
  */
 export async function uploadFiles(files: File[]): Promise<UploadedFile[]> {
-  const results: UploadedFile[] = [];
+  try {
+    const results: UploadedFile[] = [];
 
-  const token = await getAuthToken();
-  if (!token) {
-    throw new Error("Authentication required. Please log in again.");
-  }
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
 
-  for (const file of files) {
-    const formData = new FormData();
-    formData.append("file", file);
+      const response = await api.post<UploadedFile>(
+        "/upload/upload",
+        formData
+      );
 
-    const response = await fetch(
-      "https://seaapi.mine.bz/v1/api/upload/upload",
-      {
-        method: "POST",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to upload ${file.name} (${response.status})`);
+      results.push(response.data);
     }
 
-    const data = await response.json();
-    results.push(data);
-  }
+    return results;
+  } catch (error: any) {
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "File upload failed";
 
-  return results;
+    throw new Error(message);
+  }
 }

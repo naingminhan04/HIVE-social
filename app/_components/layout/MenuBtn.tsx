@@ -31,13 +31,14 @@ const MenuBtn = () => {
     queryKey: ["chatUnreadCount"],
     queryFn: async () => {
       const result = await getUnreadMessagesCountAction();
-
       if (!result.success) {
         throw new Error(result.error);
       }
-
       return result.data.unreadMessagesCount;
     },
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
   });
 
   const unreadCount = unreadCountData ?? 0;
