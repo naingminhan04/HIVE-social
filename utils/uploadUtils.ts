@@ -1,6 +1,4 @@
-"use client";
-
-import api from "@/libs/axios";// adjust path if needed
+import { uploadFileAction } from "@/app/_actions/upload";
 
 /**
  * Generic file response from upload API
@@ -13,32 +11,23 @@ export interface UploadedFile {
 }
 
 /**
- * Upload files to backend API (S3 handled by backend)
- * Used by AddPostForm, EditPostForm, and Profile components
+ * Upload files via server action (avoids browser CORS on production).
+ * Used by AddPostForm, EditPostForm, Chat, Comments, and Profile.
  */
 export async function uploadFiles(files: File[]): Promise<UploadedFile[]> {
-  try {
-    const results: UploadedFile[] = [];
+  const results: UploadedFile[] = [];
 
-    for (const file of files) {
-      const formData = new FormData();
-      formData.append("file", file);
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const response = await api.post<UploadedFile>(
-        "/upload/upload",
-        formData
-      );
-
-      results.push(response.data);
+    const result = await uploadFileAction(formData);
+    if (!result.success) {
+      throw new Error(result.error);
     }
 
-    return results;
-  } catch (error: any) {
-    const message =
-      error?.response?.data?.message ||
-      error?.message ||
-      "File upload failed";
-
-    throw new Error(message);
+    results.push(result.data);
   }
+
+  return results;
 }

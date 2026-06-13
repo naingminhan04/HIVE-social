@@ -11,6 +11,7 @@ import RecoverableImage from "../common/RecoverableImage";
 import { UserType } from "@/types/user";
 import { useQuery } from "@tanstack/react-query";
 import { getUnreadMessagesCountAction } from "@/app/_actions/chat";
+import { getUnreadNotificationCountAction } from "@/app/_actions/notification";
 
 export const getProfileSlug = (
   user?: Pick<UserType, "id" | "username"> | null,
@@ -30,12 +31,8 @@ export const getMenuArr = (profileSlug: string) => [
     href: "/leaderboard",
   },
   {
-    name: "Redeem",
-    href: "/redeem",
-  },
-  {
-    name: "Settings",
-    href: "/settings",
+    name: "Notifications",
+    href: "/notifications",
   },
   {
     name: "Profile",
@@ -68,7 +65,22 @@ const SideBar = () => {
     },
   });
 
+  const { data: notificationUnreadCountData } = useQuery({
+    queryKey: ["notificationUnreadCount"],
+    queryFn: async () => {
+      const result = await getUnreadNotificationCountAction();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      return result.data.totalUnreadCount;
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
+
   const unreadCount = unreadCountData ?? 0;
+  const notificationUnreadCount = notificationUnreadCountData ?? 0;
 
   return (
     <div className="hidden lg:flex w-9/10 h-full flex-col">
@@ -104,7 +116,12 @@ const SideBar = () => {
                   <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
                     {unreadCount}
                   </span>
-                )} 
+                )}
+                {item.name === "Notifications" && notificationUnreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                    {notificationUnreadCount}
+                  </span>
+                )}
               </div>
             </Link>
           );

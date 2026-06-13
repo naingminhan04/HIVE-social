@@ -47,6 +47,7 @@ import {
   visibleChatHasMessage,
 } from "@/utils/chatDisplay";
 import { uploadFiles } from "@/utils/uploadUtils";
+import { createVideoPreviewUrl } from "@/utils/videoThumbnail";
 import {
   useInfiniteQuery,
   useMutation,
@@ -808,6 +809,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       });
       await queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
     },
+    onError: (_error, messageId) => {
+      readMessageIdsRef.current.delete(messageId);
+    },
   });
 
   // ── Reaction mutation ──
@@ -1028,6 +1032,20 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   }, [activeChat, activeKey, messagesQuery.isPending, replyMsgIdParam]);
 
   useEffect(() => {
+    if (!activeChat || !viewer?.id || isDraftChat(activeChat)) return;
+    const lastMessage = activeChat.lastMessage;
+    if (
+      lastMessage &&
+      lastMessage.senderId !== viewer.id &&
+      lastMessage.isReadByMe !== true &&
+      !readMessageIdsRef.current.has(lastMessage.id)
+    ) {
+      readMessageIdsRef.current.add(lastMessage.id);
+      markReadMutation.mutate(lastMessage.id);
+    }
+  }, [activeChat, markReadMutation, viewer?.id]);
+
+  useEffect(() => {
     const unread = messages.filter(
       (m) => m.senderId !== viewer?.id && !m.isReadByMe && !readMessageIdsRef.current.has(m.id),
     );
@@ -1111,15 +1129,27 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   const addDraftFiles = (files: File[]) => {
     if (files.length === 0) return;
-    setDraftFiles((prev) => [
-      ...prev,
-      ...files.map((file) => ({
-        id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
-        kind: getDraftFileKind(file),
-      })),
-    ]);
+
+    void (async () => {
+      const nextDrafts = await Promise.all(
+        files.map(async (file) => {
+          const kind = getDraftFileKind(file);
+          const previewUrl = URL.createObjectURL(file);
+          const posterUrl =
+            kind === "video" ? await createVideoPreviewUrl(file) : undefined;
+
+          return {
+            id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
+            file,
+            previewUrl,
+            posterUrl: posterUrl !== previewUrl ? posterUrl : undefined,
+            kind,
+          };
+        }),
+      );
+
+      setDraftFiles((prev) => [...prev, ...nextDrafts]);
+    })();
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {

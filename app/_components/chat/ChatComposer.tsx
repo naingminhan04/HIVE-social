@@ -138,7 +138,14 @@ export function ChatComposer({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={df.previewUrl} alt={df.file.name} className="h-full w-full object-cover" />
               )}
-              {df.kind === "video" && <video src={df.previewUrl} className="h-full w-full object-cover" />}
+              {df.kind === "video" && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={df.posterUrl || df.previewUrl}
+                  alt={df.file.name}
+                  className="h-full w-full object-cover"
+                />
+              )}
               {(df.kind === "audio" || df.kind === "file") && (
                 <div className="flex h-full flex-col items-center justify-center gap-1 px-2 text-center text-xs text-neutral-500 dark:text-neutral-400">
                   {df.kind === "audio" ? <Mic size={18} /> : <FileText size={18} />}

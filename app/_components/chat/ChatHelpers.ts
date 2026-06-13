@@ -22,6 +22,7 @@ export type DraftFile = {
   id: string;
   file: File;
   previewUrl: string;
+  posterUrl?: string;
   kind: DraftFileKind;
 };
 

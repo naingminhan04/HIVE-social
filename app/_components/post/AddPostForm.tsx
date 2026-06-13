@@ -18,6 +18,7 @@ import { ReactNode, useCallback, useState } from "react";
 import { addPostAction } from "@/app/_actions/postAction";
 import { AddPostType, ImageType } from "@/types/post";
 import { uploadFiles } from "@/utils/uploadUtils";
+import { captureVideoThumbnail } from "@/utils/videoThumbnail";
 import toast from "react-hot-toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useAuthStore } from "@/store/auth";
@@ -44,6 +45,7 @@ export default function AddPostBtn({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [videoPosterUrls, setVideoPosterUrls] = useState<string[]>([]);
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -164,11 +166,27 @@ export default function AddPostBtn({
         return;
       }
 
+      const startIndex = selectedFiles.length;
       setSelectedFiles((prev) => [...prev, ...filesArray]);
-      const newPreviewUrls = filesArray.map((file) =>
-        URL.createObjectURL(file)
-      );
+      const newPreviewUrls = filesArray.map((file) => URL.createObjectURL(file));
       setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+      setVideoPosterUrls((prev) => [...prev, ...filesArray.map(() => "")]);
+
+      void (async () => {
+        const posters = await Promise.all(
+          filesArray.map(async (file) =>
+            isVideoFile(file) ? captureVideoThumbnail(file).catch(() => "") : "",
+          ),
+        );
+        setVideoPosterUrls((prev) => {
+          const next = [...prev];
+          posters.forEach((poster, offset) => {
+            if (poster) next[startIndex + offset] = poster;
+          });
+          return next;
+        });
+      })();
+
       e.target.value = "";
     },
     [selectedFiles.length]
@@ -197,6 +215,7 @@ export default function AddPostBtn({
         URL.revokeObjectURL(prev[index]);
         return prev.filter((_, i) => i !== index);
       });
+      setVideoPosterUrls((prev) => prev.filter((_, i) => i !== index));
     },
     []
   );
@@ -364,13 +383,22 @@ export default function AddPostBtn({
                           <div className="relative aspect-square w-full">
                             {isVideoFile(file) ? (
                               <>
-                                <video
-                                  src={previewUrls[index]}
-                                  className="h-full w-full object-cover"
-                                  preload="metadata"
-                                  muted
-                                  playsInline
-                                />
+                                {videoPosterUrls[index] ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={videoPosterUrls[index]}
+                                    alt={file.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <video
+                                    src={previewUrls[index]}
+                                    className="h-full w-full object-cover"
+                                    preload="metadata"
+                                    muted
+                                    playsInline
+                                  />
+                                )}
                                 <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
                                   <Play size={24} fill="currentColor" />
                                 </span>
