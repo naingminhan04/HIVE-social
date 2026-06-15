@@ -41,12 +41,12 @@ const ChatPanelHeader = () => {
         alt={getChatTitle(chat)}
         width={42}
         height={42}
-        className="h-10 w-10 rounded-full bg-neutral-200 object-cover"
-        wrapperClassName="h-10 w-10 shrink-0 rounded-full"
+        className="h-9 w-9 rounded-full bg-neutral-200 object-cover"
+        wrapperClassName="h-9 w-9 shrink-0 rounded-full"
         fallbackSrc="/default-avatar.png"
       />
       <div className="min-w-0 flex-1">
-        <h2 className="truncate font-semibold text-slate-700 dark:text-neutral-100">
+        <h2 className="truncate text-sm font-semibold text-slate-700 dark:text-neutral-100">
           {getChatTitle(chat)}
         </h2>
         <p className="truncate text-xs text-neutral-400">
@@ -57,24 +57,24 @@ const ChatPanelHeader = () => {
   );
 
   return (
-    <div className="sticky top-0 z-10 flex h-15 shrink-0 items-center gap-3 border-b border-black/5 bg-white px-4 dark:border-white/10 dark:bg-neutral-900">
+    <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2.5 border-b border-black/5 bg-white px-3 dark:border-white/10 dark:bg-neutral-900">
       <button
         type="button"
         onClick={leaveChat}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-900"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-900"
         aria-label="Back to chats"
       >
-        <ArrowLeft size={20} />
+        <ArrowLeft size={18} />
       </button>
       {profileHref ? (
         <Link
           href={profileHref}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
         >
           {identity}
         </Link>
       ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-3">{identity}</div>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">{identity}</div>
       )}
     </div>
   );

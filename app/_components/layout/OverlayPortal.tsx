@@ -3,12 +3,22 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-const OverlayPortal = ({ children }: { children: ReactNode }) => {
+type OverlayPortalProps = {
+  children: ReactNode;
+  /** Use the chat page overlay only for in-column floating controls (e.g. compose FAB). */
+  container?: "body" | "chat";
+};
+
+const OverlayPortal = ({ children, container = "body" }: OverlayPortalProps) => {
   if (typeof document === "undefined") {
     return null;
   }
 
-  const portalRoot = document.getElementById("chat-overlay-root") ?? document.body;
+  const portalRoot =
+    container === "chat"
+      ? document.getElementById("chat-overlay-root") ?? document.body
+      : document.body;
+
   return createPortal(children, portalRoot);
 };
 

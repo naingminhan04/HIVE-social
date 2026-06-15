@@ -19,16 +19,16 @@ const ChatListSection = ({ activeChatId: activeChatIdProp }: ChatListSectionProp
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1">
       <div className="z-10 shrink-0">
-        <div className="rounded-xl border-2 border-white bg-white px-4 py-4 dark:border-neutral-900 dark:bg-neutral-900">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
-              <MessageCircle size={18} />
+        <div className="rounded-xl border-2 border-white bg-white px-3 dark:border-neutral-900 dark:bg-neutral-900">
+          <div className="flex h-14 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
+              <MessageCircle size={16} />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-slate-800 dark:text-neutral-50">
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-sm font-semibold text-slate-800 dark:text-neutral-50">
                 Messages
               </h1>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
                 {unreadChatsCount > 0
                   ? `${unreadChatsCount} unread ${unreadChatsCount === 1 ? "chat" : "chats"}`
                   : "All caught up"}

@@ -142,7 +142,7 @@ const ImageViewer = ({
 
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#080808] text-white">
+      <div className="pointer-events-auto fixed inset-0 z-[120] flex items-center justify-center bg-[#080808] text-white">
         <button
           onClick={onClose}
           className="absolute right-3 top-3 z-[140] flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 active:scale-95"

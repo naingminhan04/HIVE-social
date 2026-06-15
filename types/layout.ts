@@ -6,6 +6,7 @@ export type MainLayoutProps = {
 
 export type OverlayPortalProps = {
   children: ReactNode;
+  container?: "body" | "chat";
 };
 
 export type ProviderProps = {

@@ -12,7 +12,7 @@ const DummyProfile = ({ isPortal = false }: { isPortal?: boolean }) => {
         }`}
     >
       <div
-        className={`bg-white dark:bg-neutral-900 flex w-full z-10 justify-between h-12 lg:h-15 px-2 items-center ${isPortal ? "border-b border-black/5 dark:border-white/10" : "sticky top-15 lg:top-0"
+        className={`bg-white dark:bg-neutral-900 flex w-full z-10 justify-between h-14 px-3 items-center ${isPortal ? "border-b border-black/5 dark:border-white/10" : "sticky top-15 lg:top-0"
           }`}
       >
         <div className="flex items-center gap-2">

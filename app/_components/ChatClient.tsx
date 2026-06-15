@@ -1428,8 +1428,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   if (!showPanel) {
     return (
       <>
-        <OverlayPortal>
-          <div className="pointer-events-auto absolute bottom-5 right-5 z-50">
+        <OverlayPortal container="chat">
+          <div className="pointer-events-auto absolute bottom-5 right-5 z-20">
             <div className="relative">
               {isComposeMenuOpen && (
                 <div className="pointer-events-auto absolute bottom-full right-0 mb-3 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-xl dark:border-white/10 dark:bg-neutral-900">

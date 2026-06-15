@@ -14,7 +14,7 @@ const ChatPageShell = ({ children }: ChatPageShellProps) => {
       {children}
       <div
         id="chat-overlay-root"
-        className="pointer-events-none absolute inset-0 z-50"
+        className="pointer-events-none absolute inset-0 z-20"
       />
     </main>
   );

@@ -336,7 +336,7 @@ const PointsModal = ({
 
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-md">
+      <div className="pointer-events-auto fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-md">
         <div className="@container/points flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/95 shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-neutral-900/95">
           <div className="sticky top-0 z-10 shrink-0 flex items-center justify-between gap-4 border-b border-black/5 bg-white/90 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-neutral-900/90">
             <div className="min-w-0">

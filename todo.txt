@@ -1,0 +1,1 @@
+just show profile icon and profile text just like chat and noti navs for the portal bar navbar and owns profile, show profile icon and user's profile for other user profiles, fix the issue where the profile's chat button and chat list buttons doesnt act the same when openinig a chat view, I want the chat view to be ssr'ed most part

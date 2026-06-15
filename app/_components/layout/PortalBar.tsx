@@ -10,7 +10,7 @@ const PortalBar = () => {
 
   return (
     <aside className="hidden md:block md:w-2/5">
-      <div className="sticky top-15 right-0 bottom-0 lg:top-0 lg:h-dvh h-[calc(100dvh-64px)]">
+      <div className="sticky top-15 right-0 bottom-0 h-[calc(100dvh-60px)] lg:top-0 lg:h-dvh">
         <div
           id="portal-scroll-container"
           data-home-scroll-target="true"

@@ -414,38 +414,63 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
     >
       <div
         className={`z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${isPortal
-            ? "sticky top-0 items-center border-b border-black/5 px-3 dark:border-white/10"
-            : "sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
+          ? "sticky top-0 items-center gap-2 border-b border-black/5 px-3 dark:border-white/10"
+          : "sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
           }`}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           {!isPortal && (
             <button
               onClick={() => router.back()}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
               aria-label="Go back"
             >
               <ArrowLeft size={18} />
             </button>
           )}
-          <span className="truncate text-lg text-neutral-950 dark:text-neutral-50">
-            {isPortal ? "Your Profile" : `${user?.name}'s Profile`}
-          </span>
+          {isPortal && user ? (
+            <>
+              <RecoverableImage
+                src={user.profilePic || "/default-avatar.png"}
+                alt={user.name}
+                width={36}
+                height={36}
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-blue-100 dark:ring-neutral-700"
+                wrapperClassName="h-9 w-9 shrink-0 rounded-full"
+                fallbackSrc="/default-avatar.png"
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                  {user.name}
+                </p>
+                <p className="truncate text-xs font-normal text-neutral-500 dark:text-neutral-400">
+                  @{user.username}
+                </p>
+              </div>
+            </>
+          ) : (
+            <span className="truncate text-sm text-neutral-950 dark:text-neutral-50 sm:text-base">
+              {`${user?.name}'s Profile`}
+            </span>
+          )}
         </div>
 
         {isOwner ? (
           <button
             onClick={() => setIsEditOpen(true)}
-            className="ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-300 bg-white text-sm text-neutral-950 shadow-sm transition hover:bg-blue-300 active:bg-blue-400 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black sm:w-auto sm:gap-2 sm:px-4"
+            className={`ml-2 inline-flex shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-blue-100 active:bg-blue-200 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700 ${isPortal ? "h-9 w-9" : "h-9 gap-2 px-3 sm:h-10 sm:px-4"
+              }`}
             aria-label="Edit profile"
           >
             <PencilLine size={16} />
-            <span className="hidden text-sm font-medium sm:inline">Edit Profile</span>
+            {!isPortal ? (
+              <span className="hidden text-sm font-medium sm:inline">Edit Profile</span>
+            ) : null}
           </button>
         ) : user?.id ? (
           <button
             onClick={openMessage}
-            className="ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-300 bg-blue-300 text-sm text-neutral-950 shadow-sm transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black sm:w-auto sm:gap-2 sm:px-4"
+            className="ml-2 inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-2xl border border-blue-300 bg-blue-300 px-3 text-sm text-neutral-950 shadow-sm transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black sm:h-10 sm:px-4"
             aria-label={`Message ${user.name}`}
           >
             <MessageCircle size={16} />
@@ -683,14 +708,14 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                         type="button"
                         onClick={() => setActiveEditTab(tab.id)}
                         className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${activeEditTab === tab.id
-                            ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
-                            : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                          ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
+                          : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                           }`}
                       >
                         <span
                           className={`shrink-0 rounded-xl p-2 shadow-sm ${activeEditTab === tab.id
-                              ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
-                              : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+                            ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
+                            : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
                             }`}
                         >
                           <Icon size={16} />
