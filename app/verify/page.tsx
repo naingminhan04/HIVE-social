@@ -178,7 +178,7 @@ const Verify = () => {
       <div className="flex w-full max-w-md flex-col items-center gap-6 text-center">
         <Image
           src="/Hive.jpeg"
-          alt="Star Education Academy Logo"
+          alt="Hive Social Logo"
           width={96}
           height={96}
           className="rounded-full"

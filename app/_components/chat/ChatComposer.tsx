@@ -5,6 +5,7 @@ import RecoverableImage from "../common/RecoverableImage";
 import type { ChatMessage, ChatMedia } from "@/types/chat";
 import type { DraftFile } from "./ChatHelpers";
 import { getMediaKind } from "./ChatHelpers";
+import { isVideoObjectUrl } from "@/utils/videoThumbnail";
 
 const composerFieldClass =
   "max-h-28 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-gray-300 bg-white px-4 py-3 text-base text-neutral-900 outline-none transition scrollbar-none focus:border-2 focus:border-black dark:border-neutral-700 dark:bg-black dark:text-neutral-100 dark:focus:border-white";
@@ -76,7 +77,7 @@ export function ChatComposer({
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 z-20 border-t border-black/5 bg-white/95 p-3 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95"
+      className="sticky bottom-0 z-20 border-t border-black/5 bg-white/95 p-3 backdrop-blur-sm dark:border-white/10 dark:bg-neutral-950/95 sm:px-4"
     >
       {isEditing && (
         <div className={composerBannerClass}>
@@ -110,7 +111,13 @@ export function ChatComposer({
                 )}
                 {kind === "video" && (media.url || media.thumbnailUrl) && (
                   <div className="relative h-full w-full bg-black">
-                    <video src={media.url || media.thumbnailUrl} className="h-full w-full object-cover" preload="metadata" />
+                    <video
+                      src={media.url || media.thumbnailUrl}
+                      className="h-full w-full object-cover"
+                      preload="metadata"
+                      playsInline
+                      muted
+                    />
                     <div className="absolute inset-0 flex items-center justify-center text-white"><Play size={20} fill="currentColor" /></div>
                   </div>
                 )}
@@ -139,12 +146,27 @@ export function ChatComposer({
                 <img src={df.previewUrl} alt={df.file.name} className="h-full w-full object-cover" />
               )}
               {df.kind === "video" && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={df.posterUrl || df.previewUrl}
-                  alt={df.file.name}
-                  className="h-full w-full object-cover"
-                />
+                df.posterUrl && !isVideoObjectUrl(df.posterUrl) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={df.posterUrl}
+                    alt={df.file.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="relative h-full w-full bg-black">
+                    <video
+                      src={df.previewUrl}
+                      className="h-full w-full object-cover"
+                      preload="metadata"
+                      playsInline
+                      muted
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-white">
+                      <Play size={20} fill="currentColor" />
+                    </div>
+                  </div>
+                )
               )}
               {(df.kind === "audio" || df.kind === "file") && (
                 <div className="flex h-full flex-col items-center justify-center gap-1 px-2 text-center text-xs text-neutral-500 dark:text-neutral-400">

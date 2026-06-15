@@ -14,6 +14,7 @@ import RecoverableImage from "../common/RecoverableImage";
 import { useQuery } from "@tanstack/react-query";
 import { getUnreadMessagesCountAction } from "@/app/_actions/chat";
 import { getUnreadNotificationCountAction } from "@/app/_actions/notification";
+import { useResetChatUnreadCount } from "@/hooks/useResetChatUnreadCount";
 
 const MenuBtn = () => {
   const [menu, setMenu] = useState(false);
@@ -58,6 +59,7 @@ const MenuBtn = () => {
 
   const unreadCount = unreadCountData ?? 0;
   const notificationUnreadCount = notificationUnreadCountData ?? 0;
+  const resetChatUnreadCount = useResetChatUnreadCount();
 
   return (
     <div className="flex lg:hidden">
@@ -99,7 +101,12 @@ const MenuBtn = () => {
                 ) : (
                   <Link
                     key={item.name}
-                    onClick={() => setMenu(false)}
+                    onClick={() => {
+                      setMenu(false);
+                      if (item.name === "Chat") {
+                        resetChatUnreadCount();
+                      }
+                    }}
                     className={`p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${
                       isActive
                         ? "bg-gray-300 dark:bg-neutral-800 text-black dark:text-white"

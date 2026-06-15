@@ -1,9 +1,3 @@
 Cursor or Codex todo
 
-why cant i upload  photo videos or files in posts or chat or comments on production build netlify(it says failed to fetch or load fail or network error)it works on the dev server and every other features work. also why is there no auto thumbnails on mobile safari or chrome
-
-unread count is incorrect, we should use read POST /v1/api/messages/{id}/read to mark messages as read so both navbar and chat unread msg counts use the same value that come from the backend not just optimistic ui fix, currently the nav bar is showing what returns from the backend but ive already seen the messages so i think i forgets to call the read endpoitn when clicking a chat.
-
-replace redeem and settings with Notification tab.
-
-on search view, whenever I click and go into a post or user, the infinite query resets and reload the more stutts.
+why is there no auto thumbnails on mobile safari or chrome

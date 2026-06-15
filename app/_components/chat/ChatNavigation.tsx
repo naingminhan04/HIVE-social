@@ -12,6 +12,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -63,14 +64,27 @@ export const ChatNavigationProvider = ({
   const [isLeavingChat, setIsLeavingChat] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
 
+  useEffect(() => {
+    setActiveChatId(initialChatId);
+    if (!initialChatId) {
+      setSelectedChat(null);
+      return;
+    }
+    const matched = findChatById(chats, initialChatId);
+    if (matched) {
+      setSelectedChat(matched);
+    }
+  }, [initialChatId, chats]);
+
   const openChat = useCallback(
     (chat: SelectedChat, options?: { replyMsgId?: string | null; navigate?: boolean }) => {
       const chatId = isDraftChat(chat) ? chat.user.id : chat.id;
 
+      setIsLeavingChat(false);
+      setSelectedChat(chat);
+      setActiveChatId(chatId);
+
       if (options?.navigate === false) {
-        setIsLeavingChat(false);
-        setSelectedChat(chat);
-        setActiveChatId(chatId);
         syncChatUrl(chatId, options.replyMsgId ?? null);
         return;
       }

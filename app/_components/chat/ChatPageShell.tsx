@@ -1,3 +1,6 @@
+"use client";
+
+import { useChatNavigation } from "@/app/_components/chat/ChatNavigation";
 import type { ReactNode } from "react";
 
 type ChatPageShellProps = {
@@ -5,12 +8,18 @@ type ChatPageShellProps = {
 };
 
 const ChatPageShell = ({ children }: ChatPageShellProps) => {
+  const { showPanel } = useChatNavigation();
+
   return (
-    <main className="relative h-[calc(100dvh-60px)] w-full overflow-hidden bg-neutral-100 p-2 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50 lg:h-dvh lg:max-h-dvh">
-      <div className="relative flex h-full min-h-0 w-full overflow-hidden rounded-xl bg-white shadow-sm dark:bg-neutral-900">
-        <div id="chat-overlay-root" className="absolute inset-0" />
-        {children}
-      </div>
+    <main
+      className={`relative flex h-[calc(100dvh-60px)] w-full flex-col gap-2 p-2 text-neutral-900 lg:h-dvh dark:text-neutral-50 ${
+        showPanel
+          ? "overflow-hidden"
+          : "overflow-y-auto overscroll-contain scrollbar-none"
+      }`}
+    >
+      <div id="chat-overlay-root" className="pointer-events-none absolute inset-0 z-30" />
+      {children}
     </main>
   );
 };

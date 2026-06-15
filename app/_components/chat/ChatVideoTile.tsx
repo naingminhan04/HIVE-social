@@ -6,15 +6,20 @@ export function ChatVideoTile({ media, onOpen }: { media: ChatMedia; onOpen: () 
   const [isLoading, setIsLoading] = useState(true);
   const videoSrc = media.url || "";
   const posterSrc = media.thumbnailUrl || "";
+  const displaySrc = videoSrc
+    ? posterSrc
+      ? videoSrc
+      : `${videoSrc}#t=0.01`
+    : posterSrc;
   return (
-    <button type="button" onClick={onOpen} className="relative block max-w-full overflow-hidden rounded-lg bg-black text-left">
+    <button type="button" onClick={onOpen} className="relative block max-w-full overflow-hidden rounded-xl bg-black text-left shadow-sm">
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 text-white">
           <Loader2 size={18} className="animate-spin" />
         </div>
       )}
       <video
-        src={videoSrc || posterSrc}
+        src={displaySrc || undefined}
         poster={posterSrc || undefined}
         className="max-h-80 w-full object-cover"
         preload="metadata"

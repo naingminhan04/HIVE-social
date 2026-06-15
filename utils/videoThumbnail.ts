@@ -11,11 +11,18 @@ export async function captureVideoThumbnail(
     video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
 
     const objectUrl = URL.createObjectURL(file);
     let settled = false;
 
     const cleanup = () => {
+      video.onloadeddata = null;
+      video.onloadedmetadata = null;
+      video.oncanplay = null;
+      video.onseeked = null;
+      video.onerror = null;
       video.removeAttribute("src");
       video.load();
       URL.revokeObjectURL(objectUrl);
@@ -24,6 +31,7 @@ export async function captureVideoThumbnail(
     const finish = (result: string | Error) => {
       if (settled) return;
       settled = true;
+      clearTimeout(timeoutId);
       cleanup();
       if (result instanceof Error) {
         reject(result);
@@ -49,18 +57,39 @@ export async function captureVideoThumbnail(
         return;
       }
 
-      ctx.drawImage(video, 0, 0, width, height);
-      finish(canvas.toDataURL("image/jpeg", 0.82));
+      try {
+        ctx.drawImage(video, 0, 0, width, height);
+        finish(canvas.toDataURL("image/jpeg", 0.82));
+      } catch {
+        finish(new Error("Failed to draw video frame"));
+      }
     };
 
-    video.onloadeddata = () => {
+    const seekToFrame = () => {
       const duration = Number.isFinite(video.duration) ? video.duration : seekTime;
-      video.currentTime = Math.min(seekTime, Math.max(duration - 0.1, 0));
+      const target = duration > 0 ? Math.min(seekTime, Math.max(duration - 0.05, 0)) : 0;
+      video.currentTime = target;
     };
 
+    const onReady = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        seekToFrame();
+        return;
+      }
+      video.onloadeddata = seekToFrame;
+    };
+
+    video.onloadedmetadata = onReady;
+    video.oncanplay = onReady;
     video.onseeked = drawFrame;
     video.onerror = () => finish(new Error("Failed to load video for thumbnail"));
+
+    const timeoutId = window.setTimeout(() => {
+      finish(new Error("Video thumbnail capture timed out"));
+    }, 12_000);
+
     video.src = objectUrl;
+    video.load();
   });
 }
 
@@ -70,4 +99,8 @@ export async function createVideoPreviewUrl(file: File): Promise<string> {
   } catch {
     return URL.createObjectURL(file);
   }
+}
+
+export function isVideoObjectUrl(url: string): boolean {
+  return url.startsWith("blob:") && !url.startsWith("data:");
 }

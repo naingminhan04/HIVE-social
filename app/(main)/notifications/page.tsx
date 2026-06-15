@@ -92,67 +92,91 @@ const NotificationsPage = () => {
     notificationsQuery.isLoading && notifications.length === 0;
 
   return (
-    <main className="min-h-[calc(100dvh-60px)] lg:min-h-dvh">
-      <div className="sticky top-15 lg:top-0 z-20 border-b border-blue-200/80 bg-linear-to-r from-blue-100 to-blue-50 p-4 dark:border-neutral-800 dark:from-neutral-950 dark:to-neutral-900">
-        <div className="flex items-center gap-2">
-          <Bell size={20} className="text-blue-600 dark:text-blue-400" />
-          <h1 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
-            Notifications
-          </h1>
+    <main className="flex h-[calc(100dvh-60px)] w-full flex-col gap-2 overflow-y-auto p-2 overscroll-contain scrollbar-none lg:h-dvh">
+      <div className="shrink-0 rounded-xl border-2 border-white bg-white px-4 py-4 dark:border-neutral-900 dark:bg-neutral-900">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
+            <Bell size={18} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 dark:text-neutral-50">
+              Notifications
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Stay up to date with your hive
+            </p>
+          </div>
         </div>
       </div>
 
       {notificationsQuery.error ? (
-        <div className="p-4 text-red-600 dark:text-red-400">
+        <div className="rounded-xl border-2 border-white bg-white p-4 text-sm text-red-600 dark:border-neutral-900 dark:bg-neutral-900 dark:text-red-400">
           {(notificationsQuery.error as Error).message}
         </div>
       ) : null}
 
       {showInitialLoading ? (
-        <div className="space-y-2 p-2">
+        <>
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
-              className="animate-pulse flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900"
+              className="flex animate-pulse items-start gap-3 rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900"
             >
-              <div className="h-11 w-11 rounded-full bg-gray-200 dark:bg-neutral-700" />
+              <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-neutral-700" />
               <div className="flex-1 space-y-2">
                 <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-neutral-700" />
                 <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-neutral-700" />
               </div>
             </div>
           ))}
-        </div>
+        </>
       ) : notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 p-10 text-center text-gray-500 dark:text-gray-400">
-          <Bell size={40} className="opacity-40" />
-          <p>No notifications yet.</p>
+        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-white bg-white px-6 py-16 text-center dark:border-neutral-900 dark:bg-neutral-900">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-500 dark:bg-blue-500/10 dark:text-blue-300">
+            <Bell size={24} />
+          </div>
+          <div>
+            <p className="text-base font-medium text-neutral-800 dark:text-neutral-100">
+              No notifications yet
+            </p>
+            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              When something happens, you will see it here.
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 p-2">
+        <>
           {notifications.map((notification) => (
             <button
               key={notification.id}
               type="button"
               onClick={() => handleNotificationClick(notification)}
-              className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
+              className={`flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition ${
                 notification.isRead
-                  ? "border-gray-200 bg-white hover:bg-blue-50 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:bg-neutral-800"
-                  : "border-blue-200 bg-blue-50/80 hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
+                  ? "border-white bg-white hover:bg-blue-100 dark:border-neutral-900 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+                  : "border-blue-100 bg-blue-50/80 hover:bg-blue-100 dark:border-blue-500/20 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
               }`}
             >
-              <RecoverableImage
-                src={notification.actorUser?.profilePic || "/default-avatar.png"}
-                alt={notification.actorUser?.name || "Notification"}
-                width={44}
-                height={44}
-                className="h-11 w-11 rounded-full object-cover"
-                wrapperClassName="h-11 w-11 shrink-0 rounded-full"
-                fallbackSrc="/default-avatar.png"
-              />
+              <div className="relative shrink-0">
+                <RecoverableImage
+                  src={notification.actorUser?.profilePic || "/default-avatar.png"}
+                  alt={notification.actorUser?.name || "Notification"}
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 rounded-full object-cover"
+                  wrapperClassName="h-12 w-12 shrink-0 rounded-full"
+                  fallbackSrc="/default-avatar.png"
+                />
+                {!notification.isRead ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-blue-500 dark:border-neutral-900"
+                    aria-hidden
+                  />
+                ) : null}
+              </div>
               <span className="min-w-0 flex-1">
                 <span
-                  className={`block text-sm ${
+                  className={`block text-sm leading-relaxed ${
                     notification.isRead
                       ? "text-neutral-700 dark:text-neutral-200"
                       : "font-semibold text-neutral-900 dark:text-neutral-50"
@@ -160,16 +184,10 @@ const NotificationsPage = () => {
                 >
                   {notification.text || "You have a new notification"}
                 </span>
-                <span className="mt-1 block text-xs text-neutral-500 dark:text-neutral-400">
+                <span className="mt-1.5 block text-xs text-neutral-500 dark:text-neutral-400">
                   {formatDate(notification.createdAt, false, true)}
                 </span>
               </span>
-              {!notification.isRead ? (
-                <span
-                  className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500"
-                  aria-hidden
-                />
-              ) : null}
             </button>
           ))}
 
@@ -178,11 +196,11 @@ const NotificationsPage = () => {
           ) : null}
 
           {notificationsQuery.isFetchingNextPage ? (
-            <div className="py-3 text-center text-sm text-neutral-500 dark:text-neutral-400">
+            <div className="rounded-xl border-2 border-white bg-white py-4 text-center text-sm text-neutral-500 dark:border-neutral-900 dark:bg-neutral-900 dark:text-neutral-400">
               Loading more...
             </div>
           ) : null}
-        </div>
+        </>
       )}
     </main>
   );

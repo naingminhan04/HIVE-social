@@ -12,6 +12,7 @@ import { UserType } from "@/types/user";
 import { useQuery } from "@tanstack/react-query";
 import { getUnreadMessagesCountAction } from "@/app/_actions/chat";
 import { getUnreadNotificationCountAction } from "@/app/_actions/notification";
+import { useResetChatUnreadCount } from "@/hooks/useResetChatUnreadCount";
 
 export const getProfileSlug = (
   user?: Pick<UserType, "id" | "username"> | null,
@@ -81,6 +82,7 @@ const SideBar = () => {
 
   const unreadCount = unreadCountData ?? 0;
   const notificationUnreadCount = notificationUnreadCountData ?? 0;
+  const resetChatUnreadCount = useResetChatUnreadCount();
 
   return (
     <div className="hidden lg:flex w-9/10 h-full flex-col">
@@ -108,6 +110,11 @@ const SideBar = () => {
                   : "hover:bg-blue-300 dark:hover:bg-neutral-950 active:bg-blue-400 dark:active:bg-black"
               }`}
               href={item.href}
+              onClick={() => {
+                if (item.name === "Chat") {
+                  resetChatUnreadCount();
+                }
+              }}
             >
               <div className="flex items-center justify-between">
                 <span>{item.name}</span>

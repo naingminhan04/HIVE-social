@@ -18,6 +18,7 @@ import type {
   MessageReactionsResponse,
   ReadMessageResponse,
   RemoveMessageReactionResponse,
+  ResetUnreadCountResponse,
   SendMessageInput,
   SendMessageResponse,
   UnreadCountResponse,
@@ -242,6 +243,22 @@ export async function getUnreadMessagesCountAction(): Promise<
     return {
       success: false,
       error: getApiErrorMessage(error, "Failed to load unread count"),
+    };
+  }
+}
+
+export async function resetUnreadMessagesCountAction(): Promise<
+  ActionResponse<ResetUnreadCountResponse>
+> {
+  try {
+    const res = await api.post<ResetUnreadCountResponse>(
+      "/messages/unread-count/reset",
+    );
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to reset unread count"),
     };
   }
 }

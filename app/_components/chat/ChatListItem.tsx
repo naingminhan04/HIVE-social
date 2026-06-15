@@ -27,12 +27,13 @@ const ChatListItem = ({ chat, initialActive }: ChatListItemProps) => {
     <button
       type="button"
       onClick={() => openChat(chat)}
-      className={`relative flex w-full min-w-0 items-center gap-3 px-4 py-4 text-left transition ${isActive
-        ? "bg-blue-50 dark:bg-neutral-900"
-        : hasUnread
-          ? "border-l-4 border-l-blue-500 bg-blue-50/90 hover:bg-blue-100/90 dark:border-l-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
-          : "hover:bg-neutral-50 dark:hover:bg-neutral-900"
-        }`}
+      className={`relative flex w-full min-w-0 items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition ${
+        isActive
+          ? "border-blue-200 bg-blue-50 dark:border-blue-500/40 dark:bg-neutral-800"
+          : hasUnread
+            ? "border-blue-100 bg-blue-50/80 hover:bg-blue-100 dark:border-blue-500/20 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
+            : "border-white bg-white hover:bg-blue-100 dark:border-neutral-900 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+      }`}
     >
       <div className="relative shrink-0">
         <RecoverableImage

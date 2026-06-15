@@ -169,6 +169,11 @@ export type UnreadCountResponse = {
   unreadMessagesCount: number;
 };
 
+export type ResetUnreadCountResponse = {
+  message: string;
+  unreadMessagesCount: number;
+};
+
 export type MessageReactionResponse = {
   message: string;
   reaction: ChatReaction;

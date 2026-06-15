@@ -1469,7 +1469,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             ref={messagesViewportRef}
             data-chat-messages-viewport=""
             onScroll={handleMessagesScroll}
-            className="flex-1 space-y-3 overflow-y-auto bg-neutral-50 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
+            className="flex-1 space-y-3 overflow-y-auto bg-neutral-50/80 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
           >
             <div ref={loadOlderSentinelRef} className="h-px w-full shrink-0" aria-hidden />
 
