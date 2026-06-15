@@ -382,6 +382,7 @@ const CommentCard = ({
                 {isVideoMedia(comment.images[0]) ? (
                   <video
                     src={comment.images[0].url}
+                    poster={comment.images[0].thumbnailUrl || undefined}
                     controls
                     className="max-w-xs rounded-lg bg-black"
                     onClick={(e) => e.stopPropagation()}

@@ -25,7 +25,7 @@ import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { formatDate } from "@/utils/formatDate";
 import { useAuthStore } from "@/store/auth";
 import OverlayPortal from "../layout/OverlayPortal";
-import { isVideoMedia } from "@/utils/media";
+import { getVideoPosterUrl, isVideoMedia } from "@/utils/media";
 import ImageViewer from "../common/ImageViewer";
 import RichTextContent from "../common/RichTextContent";
 
@@ -47,7 +47,7 @@ export default function EditPostForm({
   post: PostType;
   onClose: () => void;
 }) {
-  const getSrc = (img: PostImageType) => img.url || "";
+  const getSrc = (img: PostImageType) => img.url || img.thumbnailUrl || "";
   const relativeTime = formatDate(post.createdAt);
   const user = useAuthStore((state) => state.user);
   const userId = user?.id;
@@ -436,6 +436,7 @@ export default function EditPostForm({
                   {existingImages.map((img, index) => {
                     const src = getSrc(img);
                     const isVideo = isVideoMedia(img);
+                    const posterUrl = getVideoPosterUrl(img);
                     return (
                       <div
                         key={img.id || index}
@@ -448,13 +449,22 @@ export default function EditPostForm({
                         <div className="relative aspect-square w-full">
                           {src && isVideo ? (
                             <>
-                              <video
-                                src={src}
-                                className="h-full w-full object-cover"
-                                preload="metadata"
-                                muted
-                                playsInline
-                              />
+                              {posterUrl ? (
+                                <Image
+                                  src={posterUrl}
+                                  alt="Video thumbnail"
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <video
+                                  src={`${src}#t=0.01`}
+                                  className="h-full w-full object-cover"
+                                  preload="metadata"
+                                  muted
+                                  playsInline
+                                />
+                              )}
                               <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
                                 <Play size={24} fill="currentColor" />
                               </span>

@@ -57,7 +57,7 @@ const ChatPanelHeader = () => {
   );
 
   return (
-    <div className="flex h-15 shrink-0 items-center gap-3 border-b border-black/5 px-4 dark:border-white/10">
+    <div className="sticky top-0 z-10 flex h-15 shrink-0 items-center gap-3 border-b border-black/5 bg-white px-4 dark:border-white/10 dark:bg-neutral-900">
       <button
         type="button"
         onClick={leaveChat}

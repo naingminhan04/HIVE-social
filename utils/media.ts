@@ -1,8 +1,11 @@
-type MediaLike = {
+export type MediaLike = {
   fileName?: string | null;
   mimeType?: string | null;
   url?: string | null;
+  thumbnailUrl?: string | null;
 };
+
+export const getVideoPosterUrl = (media: MediaLike) => media.thumbnailUrl || undefined;
 
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".m4v", ".ogg"];
 

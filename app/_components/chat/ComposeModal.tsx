@@ -53,7 +53,7 @@ export function ComposeModal({
 
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-130 flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
+      <div className="pointer-events-auto fixed inset-0 z-[130] flex items-end bg-black/40 p-3 backdrop-blur-sm sm:items-center sm:justify-center">
         <div className="max-h-[85dvh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-neutral-950">
           <div className="flex h-14 items-center justify-between border-b border-black/5 px-4 dark:border-white/10">
             <h2 className="font-semibold">{composeMode === "private" ? "New Chat" : "New Group"}</h2>

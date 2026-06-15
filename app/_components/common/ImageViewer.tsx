@@ -18,6 +18,7 @@ type ImageType = {
   url: string;
   fileName?: string | null;
   mimeType?: string | null;
+  thumbnailUrl?: string | null;
 };
 
 type Props = {
@@ -199,6 +200,7 @@ const ImageViewer = ({
                   key={`${image.id}-${safeIndex}`}
                   ref={videoRef}
                   src={image.url}
+                  poster={image.thumbnailUrl || undefined}
                   className="h-full w-full object-contain"
                   controls
                   autoPlay

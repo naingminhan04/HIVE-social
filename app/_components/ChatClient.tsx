@@ -1429,10 +1429,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     return (
       <>
         <OverlayPortal>
-          <div className="absolute bottom-5 right-5 z-30">
+          <div className="pointer-events-auto absolute bottom-5 right-5 z-50">
             <div className="relative">
               {isComposeMenuOpen && (
-                <div className="absolute bottom-full right-0 mb-3 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-xl dark:border-white/10 dark:bg-neutral-900">
+                <div className="pointer-events-auto absolute bottom-full right-0 mb-3 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-xl dark:border-white/10 dark:bg-neutral-900">
                   <button type="button" onClick={() => { setComposeMode("private"); setIsComposeMenuOpen(false); }} className="flex h-11 w-full items-center gap-3 px-3 text-left transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black">
                     <MessageCircle size={17} /><span>New Chat</span>
                   </button>

@@ -92,23 +92,26 @@ const NotificationsPage = () => {
     notificationsQuery.isLoading && notifications.length === 0;
 
   return (
-    <main className="flex h-[calc(100dvh-60px)] w-full flex-col gap-2 overflow-y-auto p-2 overscroll-contain scrollbar-none lg:h-dvh">
-      <div className="shrink-0 rounded-xl border-2 border-white bg-white px-4 py-4 dark:border-neutral-900 dark:bg-neutral-900">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
-            <Bell size={18} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-neutral-50">
-              Notifications
-            </h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Stay up to date with your hive
-            </p>
+    <main className="flex h-[calc(100dvh-60px)] w-full min-w-0 max-w-full flex-col overflow-hidden lg:h-dvh">
+      <div className="z-10 shrink-0 p-2 pb-1">
+        <div className="rounded-xl border-2 border-white bg-white px-4 py-4 dark:border-neutral-900 dark:bg-neutral-900">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
+              <Bell size={18} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-slate-800 dark:text-neutral-50">
+                Notifications
+              </h1>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Stay up to date with your hive
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-contain p-2 pt-0 scrollbar-none touch-pan-y">
       {notificationsQuery.error ? (
         <div className="rounded-xl border-2 border-white bg-white p-4 text-sm text-red-600 dark:border-neutral-900 dark:bg-neutral-900 dark:text-red-400">
           {(notificationsQuery.error as Error).message}
@@ -120,7 +123,7 @@ const NotificationsPage = () => {
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
-              className="flex animate-pulse items-start gap-3 rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900"
+              className="flex w-full min-w-0 max-w-full animate-pulse items-start gap-3 rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900"
             >
               <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-neutral-700" />
               <div className="flex-1 space-y-2">
@@ -151,7 +154,7 @@ const NotificationsPage = () => {
               key={notification.id}
               type="button"
               onClick={() => handleNotificationClick(notification)}
-              className={`flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition ${
+              className={`flex w-full min-w-0 max-w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition ${
                 notification.isRead
                   ? "border-white bg-white hover:bg-blue-100 dark:border-neutral-900 dark:bg-neutral-900 dark:hover:bg-neutral-800"
                   : "border-blue-100 bg-blue-50/80 hover:bg-blue-100 dark:border-blue-500/20 dark:bg-blue-500/10 dark:hover:bg-blue-500/15"
@@ -176,7 +179,7 @@ const NotificationsPage = () => {
               </div>
               <span className="min-w-0 flex-1">
                 <span
-                  className={`block text-sm leading-relaxed ${
+                  className={`block text-sm leading-relaxed wrap-break-word ${
                     notification.isRead
                       ? "text-neutral-700 dark:text-neutral-200"
                       : "font-semibold text-neutral-900 dark:text-neutral-50"
@@ -202,6 +205,7 @@ const NotificationsPage = () => {
           ) : null}
         </>
       )}
+      </div>
     </main>
   );
 };

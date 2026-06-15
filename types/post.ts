@@ -43,11 +43,13 @@ interface Author {
  export interface PostImageType {
     id: string;
     key: string;
+    thumbnailKey?: string;
     fileName: string;
     fileSize: number;
     mimeType: string;
     createdAt: string;
     url: string;
+    thumbnailUrl?: string;
  }
 
 

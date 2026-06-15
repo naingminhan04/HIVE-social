@@ -11,15 +11,26 @@ type ChatWorkspaceLayoutProps = {
 const ChatWorkspaceLayout = ({ list, panel }: ChatWorkspaceLayoutProps) => {
   const { showPanel } = useChatNavigation();
 
-  if (showPanel) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900">
-        {panel}
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        className={`min-h-0 w-full flex-col ${
+          showPanel ? "hidden" : "flex min-h-0 flex-1"
+        }`}
+      >
+        {list}
       </div>
-    );
-  }
-
-  return <>{list}</>;
+      <section
+        className={`min-h-0 w-full flex-col overflow-hidden ${
+          showPanel
+            ? "flex min-h-0 flex-1 rounded-xl border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900"
+            : "hidden"
+        }`}
+      >
+        {panel}
+      </section>
+    </div>
+  );
 };
 
 export default ChatWorkspaceLayout;

@@ -13,7 +13,7 @@ import CommentBtn from "../common/Comment";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import RecoverableImage from "../common/RecoverableImage";
-import { isVideoMedia } from "@/utils/media";
+import { getVideoPosterUrl, isVideoMedia } from "@/utils/media";
 
 const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
   const images = post.images || [];
@@ -222,6 +222,7 @@ function PostMediaTile({
   moreCount: number;
 }) {
   const isVideo = isVideoMedia(media);
+  const posterUrl = getVideoPosterUrl(media);
 
   return (
     <div
@@ -230,14 +231,28 @@ function PostMediaTile({
     >
       {isVideo ? (
         <>
-          <video
-            src={media.url}
-            className="h-full w-full object-cover"
-            preload="metadata"
-            playsInline
-            muted
-            aria-hidden="true"
-          />
+          {posterUrl ? (
+            <RecoverableImage
+              src={posterUrl}
+              fill
+              alt="Video thumbnail"
+              className="object-cover"
+              wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"
+              showRetryButton
+              showLoadingOverlay
+              retryButtonClassName="h-12 w-12"
+              brokenOverlayClassName="bg-black/35"
+            />
+          ) : (
+            <video
+              src={`${media.url}#t=0.01`}
+              className="h-full w-full object-cover"
+              preload="metadata"
+              playsInline
+              muted
+              aria-hidden="true"
+            />
+          )}
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 text-white">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55">
               <Play size={28} fill="currentColor" />
