@@ -12,7 +12,7 @@ export function ChatVideoTile({ media, onOpen }: { media: ChatMedia; onOpen: () 
       : `${videoSrc}#t=0.01`
     : posterSrc;
   return (
-    <button type="button" onClick={onOpen} className="relative block max-w-full overflow-hidden rounded-xl bg-black text-left shadow-sm">
+    <button type="button" onClick={onOpen} className="relative block aspect-square w-[50cqw] max-w-full overflow-hidden rounded-xl bg-black text-left shadow-sm">
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 text-white">
           <Loader2 size={18} className="animate-spin" />
@@ -21,7 +21,7 @@ export function ChatVideoTile({ media, onOpen }: { media: ChatMedia; onOpen: () 
       <video
         src={displaySrc || undefined}
         poster={posterSrc || undefined}
-        className="max-h-80 w-full object-cover"
+        className="h-full w-full object-cover"
         preload="metadata"
         playsInline
         muted

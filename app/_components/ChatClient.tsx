@@ -57,11 +57,16 @@ import {
 } from "@tanstack/react-query";
 import {
   ChevronDown,
+  Clipboard,
+  Edit3,
   FileText,
   Loader2,
   MessageCircle,
   PenLine,
+  Reply,
+  Trash2,
   UsersRound,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -102,7 +107,7 @@ import {
 import { ChatMessagesLoadingSkeleton } from "./chat/ChatMessagesLoadingSkeleton";
 import { MessageStatusIcon } from "./chat/MessageStatusIcon";
 import { ChatVideoTile } from "./chat/ChatVideoTile";
-import { MessageActions, reactionStatKeys } from "./chat/MessageActions";
+import { MessageActions, reactionOptions, reactionStatKeys } from "./chat/MessageActions";
 import { ComposeModal } from "./chat/ComposeModal";
 import { ReactionsModal } from "./chat/ReactionsModal";
 import { ChatComposer } from "./chat/ChatComposer";
@@ -147,6 +152,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const [editingImages, setEditingImages] = useState<ChatMedia[]>([]);
   const [editingAttachments, setEditingAttachments] = useState<ChatMedia[]>([]);
   const [openReactionMessageId, setOpenReactionMessageId] = useState<string | null>(null);
+  const [mobileActionMessage, setMobileActionMessage] = useState<ChatMessage | null>(null);
   const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
   // Track pending messages with their local IDs
   const [pendingSentMessages, setPendingSentMessages] = useState<{
@@ -833,6 +839,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     onSuccess: async ({ messageId, reactionType }) => {
       setLocalReactions((prev) => ({ ...prev, [messageId]: reactionType }));
       await queryClient.invalidateQueries({ queryKey: ["chatMessages", activeKey] });
+      await queryClient.invalidateQueries({ queryKey: ["chatMessageReactions", messageId] });
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
     },
     onError: (error) => {
@@ -914,6 +921,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   const dismissMessageOverlays = useCallback(() => {
     setOpenReactionMessageId(null);
+    setMobileActionMessage(null);
     setReactionUsersMessage(null);
   }, []);
 
@@ -1189,6 +1197,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     if (showPanel) return;
     clearComposer();
     setOpenReactionMessageId(null);
+    setMobileActionMessage(null);
     setReactionUsersMessage(null);
     setMediaViewer(null);
     setHighlightedMessageId(null);
@@ -1325,15 +1334,15 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           key={media.id ?? media.key}
           type="button"
           onClick={() => openMessageMediaViewer(mediaGroup ?? [media], index)}
-          className="block max-w-full overflow-hidden rounded-lg bg-neutral-200 text-left dark:bg-neutral-800"
+          className="block aspect-square w-[50cqw] max-w-full overflow-hidden rounded-lg bg-neutral-200 text-left dark:bg-neutral-800"
         >
           <RecoverableImage
             src={url}
             alt={media.fileName}
-            width={520}
-            height={360}
-            className="max-h-72 w-full object-cover"
-            wrapperClassName="block max-w-full overflow-hidden rounded-lg"
+            width={288}
+            height={288}
+            className="h-full w-full object-cover"
+            wrapperClassName="block h-full w-full overflow-hidden rounded-lg"
             fallbackSrc="/alt.png"
             showLoadingOverlay
           />
@@ -1363,7 +1372,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         href={media.url ?? "#"}
         target="_blank"
         rel="noreferrer"
-        className="flex min-w-0 items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-xs hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15"
+        className="flex h-14 min-w-0 items-center gap-2 rounded-lg bg-black/5 px-3 text-xs hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15"
       >
         <FileText size={16} className="shrink-0" />
         <span className="min-w-0 flex-1 truncate">{media.fileName}</span>
@@ -1372,10 +1381,185 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     );
   };
 
+  const openMobileMessageActions = (
+    event: React.MouseEvent<HTMLElement>,
+    message: ChatMessage,
+    options: { disabled: boolean },
+  ) => {
+    if (options.disabled) return;
+    const target = event.target;
+    if (target instanceof Element) {
+      if (target.closest("button,a,input,textarea,select,audio,video")) return;
+    }
+    setOpenReactionMessageId(null);
+    setMobileActionMessage(message);
+  };
+
+  const copyMessageContent = async (message: ChatMessage) => {
+    const text = message.content?.trim();
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Message copied");
+    } catch {
+      toast.error("Could not copy message");
+    } finally {
+      setMobileActionMessage(null);
+    }
+  };
+
   const isMessagesLoading =
     Boolean(activeChat) && messages.length === 0 && (messagesQuery.isPending || messagesQuery.isFetching);
   const composerPlaceholderName = activeChat ? getChatTitle(activeChat) : "chat";
   const isRouteResolving = Boolean(activeChatId && !activeChat && isResolvingRoute);
+
+  const mobileMessageActionSheet = mobileActionMessage ? (() => {
+    const message = mobileActionMessage;
+    const isMine = message.senderId === viewer?.id;
+    const currentReaction = getCurrentReaction(message);
+    const canCopy = Boolean(message.content?.trim());
+    const canEdit = isMine && !message.isDeleted;
+    const isDeleting = deletingMessageIds.includes(message.id);
+    const attachmentLinks = message.attachments.filter((media) => media.url);
+
+    return (
+      <OverlayPortal>
+        <div
+          className="pointer-events-auto fixed inset-0 z-[120] flex items-end bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileActionMessage(null)}
+        >
+          <div
+            className="w-full rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-neutral-950"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-700" />
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                  {message.sender.name}
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {formatDate(message.createdAt, false, true)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileActionMessage(null)}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                aria-label="Close message actions"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap justify-center gap-1.5 rounded-full border border-black/5 bg-neutral-50 p-1 dark:border-white/10 dark:bg-neutral-900">
+              {reactionOptions.map((reaction) => (
+                <button
+                  key={reaction.type}
+                  type="button"
+                  disabled={reactionMutation.isPending}
+                  onClick={() => {
+                    setMobileActionMessage(null);
+                    reactionMutation.mutate({
+                      messageId: message.id,
+                      reactionType: reaction.type,
+                      currentReaction,
+                    });
+                  }}
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-50 ${currentReaction === reaction.type
+                    ? "bg-blue-100 ring-1 ring-blue-400 dark:bg-neutral-800"
+                    : "hover:bg-white dark:hover:bg-neutral-800"
+                    }`}
+                  aria-label={`React ${reaction.label}`}
+                >
+                  <Image
+                    src={reaction.image}
+                    alt={reaction.label}
+                    width={26}
+                    height={26}
+                    className="h-6.5 w-6.5"
+                  />
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 grid gap-1 overflow-hidden rounded-xl border border-black/5 dark:border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileActionMessage(null);
+                  startReplyToMessage(message);
+                }}
+                className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+              >
+                <Reply size={18} />
+                <span>Reply</span>
+              </button>
+              {canCopy && (
+                <button
+                  type="button"
+                  onClick={() => void copyMessageContent(message)}
+                  className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                >
+                  <Clipboard size={18} />
+                  <span>Copy message</span>
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileActionMessage(null);
+                    startEditing(message);
+                  }}
+                  className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                >
+                  <Edit3 size={18} />
+                  <span>Edit</span>
+                </button>
+              )}
+              {isMine && (
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    setMobileActionMessage(null);
+                    deleteMutation.mutate(message.id);
+                  }}
+                  className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-red-500 transition hover:bg-red-50 active:bg-red-100 disabled:opacity-50 dark:hover:bg-red-950/30"
+                >
+                  <Trash2 size={18} />
+                  <span>{isDeleting ? "Deleting..." : "Delete"}</span>
+                </button>
+              )}
+            </div>
+
+            {attachmentLinks.length > 0 && (
+              <div className="mt-3 grid gap-1 overflow-hidden rounded-xl border border-black/5 dark:border-white/10">
+                {attachmentLinks.map((media) => (
+                  <a
+                    key={media.id ?? media.key}
+                    href={media.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex h-12 min-w-0 items-center gap-3 px-4 text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                    onClick={() => setMobileActionMessage(null)}
+                  >
+                    <FileText size={18} className="shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{media.fileName}</span>
+                    <span className="shrink-0 text-xs text-neutral-400">
+                      {formatFileSize(media.fileSize)}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </OverlayPortal>
+    );
+  })() : null;
 
   const chatModals = (
     <>
@@ -1406,6 +1590,16 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           onClose={() => setReactionUsersMessage(null)}
           isLoading={reactionUsersQuery.isLoading}
           reactions={reactionUsersQuery.data?.reactions ?? []}
+          currentUserId={viewer?.id}
+          isRemovingOwnReaction={reactionMutation.isPending}
+          onRemoveOwnReaction={(reactionType) => {
+            if (!reactionUsersMessage) return;
+            reactionMutation.mutate({
+              messageId: reactionUsersMessage.id,
+              reactionType,
+              currentReaction: reactionType,
+            });
+          }}
         />
       )}
 
@@ -1418,6 +1612,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           showPaginationOnVideo
         />
       )}
+
+      {mobileMessageActionSheet}
     </>
   );
 
@@ -1469,7 +1665,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             ref={messagesViewportRef}
             data-chat-messages-viewport=""
             onScroll={handleMessagesScroll}
-            className="flex-1 space-y-3 overflow-y-auto bg-neutral-50/80 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
+            className="@container/chatview flex-1 space-y-3 overflow-y-auto bg-neutral-50/80 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
           >
             <div ref={loadOlderSentinelRef} className="h-px w-full shrink-0" aria-hidden />
 
@@ -1536,74 +1732,81 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                     if (openReactionMessageId === message.id) setOpenReactionMessageId(null);
                   }}
                 >
-                  {isMine && !message.isDeleted && !isDeleting && !isPendingSend && (
-                    <MessageActions
-                      isMine={isMine}
-                      message={message}
-                      currentReaction={currentReaction}
-                      openReactionMessageId={openReactionMessageId}
-                      setOpenReactionMessageId={setOpenReactionMessageId}
-                      onReply={startReplyToMessage}
-                      startEditing={startEditing}
-                      deleteMutation={deleteMutation}
-                      reactionMutation={reactionMutation}
-                      isDeleting={isDeleting}
-                    />
-                  )}
-
                   {!isMine && renderSenderAvatar(message)}
 
                   <div className={`max-w-[75%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
-                    <div
-                      className={`relative rounded-2xl px-3 py-2 text-sm transition-shadow ${isMine
-                          ? "rounded-br-md bg-blue-400 text-white dark:bg-neutral-700"
-                          : "rounded-bl-md bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
-                        } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
-                        }`}
-                    >
-                      <div className="flex min-w-0 items-start gap-2">
-                        <div className="min-w-0 flex-1 space-y-2">
-                          {!isMine && (
-                            <p className="mb-1 truncate text-xs font-semibold opacity-70">
-                              {message.sender.name}
-                            </p>
-                          )}
-                          {getReplyPreview(message) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const parentId = getParentMessageId(message);
-                                if (parentId) scrollToChatMessage(parentId);
-                              }}
-                              disabled={!getParentMessageId(message)}
-                              className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
-                                  ? "border-white/50 text-white/75"
-                                  : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
-                                } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
-                              aria-label="Jump to replied message"
-                            >
-                              <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
-                            </button>
-                          )}
-                          {(message.images.length > 0 || message.attachments.length > 0) && (
-                            <div className="grid gap-2">
-                              {message.images.map((media, idx) => renderMediaItem(media, message.images, idx))}
-                              {message.attachments.map((media, idx) => renderMediaItem(media, message.attachments, idx))}
-                            </div>
-                          )}
-                          {(message.content || message.isDeleted) && (
-                            <p className={`whitespace-pre-wrap wrap-break-word ${message.isDeleted ? "italic opacity-60" : ""}`}>
-                              {message.isDeleted ? "Message deleted" : message.content}
-                            </p>
-                          )}
+                    <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
+                      <div
+                        onClick={(event) =>
+                          openMobileMessageActions(event, message, {
+                            disabled: message.isDeleted || isDeleting || isPendingSend,
+                          })
+                        }
+                        className={`relative rounded-2xl px-3 py-2 text-sm transition-shadow ${isMine
+                            ? "rounded-br-md bg-blue-400 text-white dark:bg-neutral-700"
+                            : "rounded-bl-md bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
+                          } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
+                          }`}
+                      >
+                        <div className="flex min-w-0 items-start gap-2">
+                          <div className="min-w-0 flex-1 space-y-2">
+                            {!isMine && (
+                              <p className="mb-1 truncate text-xs font-semibold opacity-70">
+                                {message.sender.name}
+                              </p>
+                            )}
+                            {getReplyPreview(message) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const parentId = getParentMessageId(message);
+                                  if (parentId) scrollToChatMessage(parentId);
+                                }}
+                                disabled={!getParentMessageId(message)}
+                                className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
+                                    ? "border-white/50 text-white/75"
+                                    : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
+                                  } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
+                                aria-label="Jump to replied message"
+                              >
+                                <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
+                              </button>
+                            )}
+                            {(message.images.length > 0 || message.attachments.length > 0) && (
+                              <div className="grid gap-2">
+                                {message.images.map((media, idx) => renderMediaItem(media, message.images, idx))}
+                                {message.attachments.map((media, idx) => renderMediaItem(media, message.attachments, idx))}
+                              </div>
+                            )}
+                            {(message.content || message.isDeleted) && (
+                              <p className={`whitespace-pre-wrap wrap-break-word ${message.isDeleted ? "italic opacity-60" : ""}`}>
+                                {message.isDeleted ? "Message deleted" : message.content}
+                              </p>
+                            )}
+                          </div>
                         </div>
+
+                        <p className={`mt-1 flex items-center justify-end gap-1 text-right text-[10px] ${isMine ? "text-white/70" : "text-neutral-400"}`}>
+                          {message.isEdited && !message.isDeleted && <span>edited</span>}
+                          <span>{formatDate(message.createdAt, false, true)}</span>
+                          {isMine && sendStatus && <MessageStatusIcon status={sendStatus} />}
+                        </p>
                       </div>
 
-                      <p className={`mt-1 flex items-center justify-end gap-1 text-right text-[10px] ${isMine ? "text-white/70" : "text-neutral-400"}`}>
-                        {message.isEdited && !message.isDeleted && <span>edited</span>}
-                        <span>{formatDate(message.createdAt, false, true)}</span>
-                        {isMine && sendStatus && <MessageStatusIcon status={sendStatus} />}
-                      </p>
+                      {!message.isDeleted && !isDeleting && !isPendingSend && (
+                        <MessageActions
+                          isMine={isMine}
+                          message={message}
+                          currentReaction={currentReaction}
+                          openReactionMessageId={openReactionMessageId}
+                          setOpenReactionMessageId={setOpenReactionMessageId}
+                          onReply={startReplyToMessage}
+                          startEditing={startEditing}
+                          deleteMutation={deleteMutation}
+                          reactionMutation={reactionMutation}
+                          isDeleting={isDeleting}
+                        />
+                      )}
                     </div>
 
                     {!message.isDeleted && !isDeleting && !isPendingSend && visibleReactions.length > 0 && (
@@ -1624,21 +1827,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                       </div>
                     )}
                   </div>
-
-                  {!isMine && !message.isDeleted && !isDeleting && (
-                    <MessageActions
-                      isMine={isMine}
-                      message={message}
-                      currentReaction={currentReaction}
-                      openReactionMessageId={openReactionMessageId}
-                      setOpenReactionMessageId={setOpenReactionMessageId}
-                      onReply={startReplyToMessage}
-                      startEditing={startEditing}
-                      deleteMutation={deleteMutation}
-                      reactionMutation={reactionMutation}
-                      isDeleting={isDeleting}
-                    />
-                  )}
                 </div>
               );
             })}

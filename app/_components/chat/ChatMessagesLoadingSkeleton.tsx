@@ -4,12 +4,12 @@ function ChatMessageSkeleton({ isMine = false }: { isMine?: boolean }) {
   return (
     <div className={`flex animate-pulse gap-2 ${isMine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[60%] space-y-2 rounded-2xl px-3 py-3 ${
+        className={`w-[min(16rem,70%)] space-y-2 rounded-2xl px-3 py-3 ${
           isMine ? "rounded-br-md bg-neutral-200 dark:bg-neutral-800" : "rounded-bl-md bg-neutral-200 dark:bg-neutral-800"
         }`}
       >
-        <div className="h-3 w-28 rounded bg-neutral-300 dark:bg-neutral-700" />
-        <div className="h-3 w-40 rounded bg-neutral-300/80 dark:bg-neutral-700/80" />
+        <div className="h-3 w-28 max-w-full rounded bg-neutral-300 dark:bg-neutral-700" />
+        <div className="h-3 w-40 max-w-full rounded bg-neutral-300/80 dark:bg-neutral-700/80" />
       </div>
     </div>
   );

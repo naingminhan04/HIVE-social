@@ -10,9 +10,8 @@ import HomeRefreshLink from "./HomeRefreshLink";
 import RecoverableImage from "../common/RecoverableImage";
 import { UserType } from "@/types/user";
 import { useQuery } from "@tanstack/react-query";
-import { getUnreadMessagesCountAction } from "@/app/_actions/chat";
 import { getUnreadNotificationCountAction } from "@/app/_actions/notification";
-import { useResetChatUnreadCount } from "@/hooks/useResetChatUnreadCount";
+import { useUnreadChatsCount } from "@/hooks/useUnreadChatsCount";
 
 export const getProfileSlug = (
   user?: Pick<UserType, "id" | "username"> | null,
@@ -53,18 +52,7 @@ const SideBar = () => {
     router.push(`/users/${getProfileSlug(user)}`);
   };
 
-  const { data: unreadCountData } = useQuery({
-    queryKey: ["chatUnreadCount"],
-    queryFn: async () => {
-      const result = await getUnreadMessagesCountAction();
-
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      return result.data.unreadMessagesCount;
-    },
-  });
+  const { data: unreadCountData } = useUnreadChatsCount();
 
   const { data: notificationUnreadCountData } = useQuery({
     queryKey: ["notificationUnreadCount"],
@@ -82,7 +70,6 @@ const SideBar = () => {
 
   const unreadCount = unreadCountData ?? 0;
   const notificationUnreadCount = notificationUnreadCountData ?? 0;
-  const resetChatUnreadCount = useResetChatUnreadCount();
 
   return (
     <div className="hidden lg:flex w-9/10 h-full flex-col">
@@ -110,17 +97,12 @@ const SideBar = () => {
                   : "hover:bg-blue-300 dark:hover:bg-neutral-950 active:bg-blue-400 dark:active:bg-black"
               }`}
               href={item.href}
-              onClick={() => {
-                if (item.name === "Chat") {
-                  resetChatUnreadCount();
-                }
-              }}
             >
               <div className="flex items-center justify-between">
                 <span>{item.name}</span>
 
                 {item.name === "Chat" && unreadCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                  <span className="rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-neutral-950 dark:text-neutral-100">
                     {unreadCount}
                   </span>
                 )}

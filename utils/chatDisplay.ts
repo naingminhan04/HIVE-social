@@ -1,4 +1,4 @@
-import type { Chat, ChatMessage, DraftPrivateChat, SelectedChat } from "@/types/chat";
+import type { Chat, DraftPrivateChat, SelectedChat } from "@/types/chat";
 
 export const isDraftChat = (chat: SelectedChat | null): chat is DraftPrivateChat =>
   chat?.type === "PRIVATE_DRAFT";
@@ -12,6 +12,9 @@ export const chatHasUnread = (chat: Chat, viewerId?: string) => {
   if (!last || !viewerId || last.senderId === viewerId) return false;
   return last.isReadByMe !== true;
 };
+
+export const getUnreadChatsCount = (chats: Chat[], viewerId?: string) =>
+  chats.filter((chat) => chatHasUnread(chat, viewerId)).length;
 
 export const getChatTitle = (chat: SelectedChat | Chat) => {
   if (isDraftChat(chat)) return chat.user.name;

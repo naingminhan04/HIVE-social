@@ -12,9 +12,8 @@ import { useAuthStore } from "@/store/auth";
 import HomeRefreshLink from "./HomeRefreshLink";
 import RecoverableImage from "../common/RecoverableImage";
 import { useQuery } from "@tanstack/react-query";
-import { getUnreadMessagesCountAction } from "@/app/_actions/chat";
 import { getUnreadNotificationCountAction } from "@/app/_actions/notification";
-import { useResetChatUnreadCount } from "@/hooks/useResetChatUnreadCount";
+import { useUnreadChatsCount } from "@/hooks/useUnreadChatsCount";
 
 const MenuBtn = () => {
   const [menu, setMenu] = useState(false);
@@ -29,19 +28,7 @@ const MenuBtn = () => {
     router.push(`/users/${getProfileSlug(user)}`);
   };
 
-  const { data: unreadCountData } = useQuery({
-    queryKey: ["chatUnreadCount"],
-    queryFn: async () => {
-      const result = await getUnreadMessagesCountAction();
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      return result.data.unreadMessagesCount;
-    },
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-    refetchInterval: 60_000,
-  });
+  const { data: unreadCountData } = useUnreadChatsCount();
 
   const { data: notificationUnreadCountData } = useQuery({
     queryKey: ["notificationUnreadCount"],
@@ -59,7 +46,6 @@ const MenuBtn = () => {
 
   const unreadCount = unreadCountData ?? 0;
   const notificationUnreadCount = notificationUnreadCountData ?? 0;
-  const resetChatUnreadCount = useResetChatUnreadCount();
 
   return (
     <div className="flex lg:hidden">
@@ -103,9 +89,6 @@ const MenuBtn = () => {
                     key={item.name}
                     onClick={() => {
                       setMenu(false);
-                      if (item.name === "Chat") {
-                        resetChatUnreadCount();
-                      }
                     }}
                     className={`p-4 transition-all active:bg-gray-200 ${profileVisibilityClass} ${
                       isActive
@@ -118,7 +101,7 @@ const MenuBtn = () => {
                       <span>{item.name}</span>
 
                       {item.name === "Chat" && unreadCount > 0 && (
-                        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                        <span className="rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-neutral-950 dark:text-neutral-100">
                           {unreadCount}
                         </span>
                       )}

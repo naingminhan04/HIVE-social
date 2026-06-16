@@ -1,8 +1,5 @@
 import DummyPostCard from "../post/DummyPostCard";
 
-const textOrder = [2, 2, 1, 1, 2];
-const imageOrder = [3, 1, 4, 3, 2];
-
 const DummyProfile = ({ isPortal = false }: { isPortal?: boolean }) => {
   return (
     <main
@@ -27,42 +24,30 @@ const DummyProfile = ({ isPortal = false }: { isPortal?: boolean }) => {
       <div className="bg-white dark:bg-neutral-900">
         <div className="animate-pulse">
           <div className="relative mb-[10vw] md:mb-[6vw] lg:mb-[clamp(10px,5vw,60px)]">
-            <div className="w-full aspect-5/2 bg-gray-300 dark:bg-neutral-700" />
+            <div className="w-full aspect-5/2 bg-gray-200 dark:bg-neutral-800" />
 
             <div className="absolute w-3/14 -bottom-2/9 left-1/10">
-              <div className="w-full aspect-square rounded-full border-[1vw] md:border-[0.6vw] lg:border-[clamp(5px,1vw,7px)] border-white dark:border-neutral-900 bg-gray-200 dark:bg-neutral-700" />
+              <div className="w-full aspect-square rounded-full border-[1vw] md:border-[0.6vw] lg:border-[clamp(5px,1vw,7px)] border-white dark:border-neutral-900 bg-gray-100 dark:bg-neutral-800" />
             </div>
           </div>
 
-          <section className="px-4 pb-5 space-y-6">
+          <section className="px-4 pb-4 space-y-5">
             <div className="flex justify-between">
-              <div className="flex flex-col gap-2">
-                <div className="w-[45vw] md:w-[27vw] lg:w-[clamp(250px,25vw,300px)] h-2/3 rounded bg-gray-200 dark:bg-neutral-700" />
-                <div className="w-[35vw] md:w-[21vw] lg:w-[clamp(200px,20vw,250px)] h-1/3 rounded bg-gray-200 dark:bg-neutral-700" />
+              <div className="flex flex-col gap-3">
+                <div className="h-5 w-[45vw] rounded-full bg-gray-200 dark:bg-neutral-800 md:w-[27vw] lg:w-[clamp(220px,22vw,280px)]" />
+                <div className="h-3 w-[32vw] rounded-full bg-gray-100 dark:bg-neutral-800 md:w-[18vw] lg:w-[clamp(160px,16vw,210px)]" />
               </div>
-              <div className="w-20 h-[14vw] md:h-[9vw] lg:h-[clamp(70px,4.5vw,80px)] rounded-lg bg-gray-200 dark:bg-neutral-700" />
+              <div className="h-10 w-20 rounded-full bg-gray-100 dark:bg-neutral-800" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               {Array.from({ length: 2 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border bg-black/5 dark:bg-white/3 border-black/5 dark:border-white/10 p-4 flex flex-col items-center justify-center gap-2"
+                  className="flex flex-col items-center justify-center gap-2 rounded-xl border border-black/5 bg-black/3 p-4 dark:border-white/10 dark:bg-white/3"
                 >
-                  <div className="w-10 h-6 rounded bg-gray-200 dark:bg-neutral-700" />
-                  <div className="w-16 h-3 rounded bg-gray-200 dark:bg-neutral-700" />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border border-black/10 dark:border-white/10 p-3 space-y-2"
-                >
-                  <div className="w-20 h-3 rounded bg-gray-200 dark:bg-neutral-700" />
-                  <div className="w-full h-4 rounded bg-gray-200 dark:bg-neutral-700" />
+                  <div className="h-5 w-10 rounded-full bg-gray-200 dark:bg-neutral-800" />
+                  <div className="h-2.5 w-16 rounded-full bg-gray-100 dark:bg-neutral-800" />
                 </div>
               ))}
             </div>
@@ -71,11 +56,11 @@ const DummyProfile = ({ isPortal = false }: { isPortal?: boolean }) => {
       </div>
 
       <section
-        className={`flex w-full flex-col gap-2 p-2 overflow-hidden ${isPortal ? "" : "md:px-0 lg:h-dvh h-[calc(100dvh-60px)]"
+        className={`flex w-full flex-col gap-2 overflow-hidden bg-neutral-100 p-2 dark:bg-neutral-950 ${isPortal ? "px-0" : "lg:h-dvh h-[calc(100dvh-60px)]"
           }`}
       >
-        {Array.from({ length: 5 }).map((_, i) => (
-          <DummyPostCard key={i} text={textOrder[i]} image={imageOrder[i]} />
+        {Array.from({ length: 2 }).map((_, i) => (
+          <DummyPostCard key={i} text={i === 0 ? 2 : 1} image={i === 1 ? 1 : 3} />
         ))}
       </section>
     </main>

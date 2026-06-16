@@ -65,15 +65,19 @@ export const ChatNavigationProvider = ({
   const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   useEffect(() => {
-    setActiveChatId(initialChatId);
-    if (!initialChatId) {
-      setSelectedChat(null);
-      return;
-    }
-    const matched = findChatById(chats, initialChatId);
-    if (matched) {
-      setSelectedChat(matched);
-    }
+    const timeout = window.setTimeout(() => {
+      setActiveChatId(initialChatId);
+      if (!initialChatId) {
+        setSelectedChat(null);
+        return;
+      }
+      const matched = findChatById(chats, initialChatId);
+      if (matched) {
+        setSelectedChat(matched);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [initialChatId, chats]);
 
   const openChat = useCallback(
@@ -81,10 +85,10 @@ export const ChatNavigationProvider = ({
       const chatId = isDraftChat(chat) ? chat.user.id : chat.id;
 
       setIsLeavingChat(false);
-      setSelectedChat(chat);
-      setActiveChatId(chatId);
 
       if (options?.navigate === false) {
+        setSelectedChat(chat);
+        setActiveChatId(chatId);
         syncChatUrl(chatId, options.replyMsgId ?? null);
         return;
       }

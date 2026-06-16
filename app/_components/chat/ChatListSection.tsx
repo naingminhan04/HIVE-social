@@ -3,7 +3,7 @@
 import ChatListItem from "./ChatListItem";
 import { useChatNavigation } from "@/app/_components/chat/ChatNavigation";
 import { useAuthStore } from "@/store/auth";
-import { chatHasUnread } from "@/utils/chatDisplay";
+import { getUnreadChatsCount } from "@/utils/chatDisplay";
 import { MessageCircle } from "lucide-react";
 
 type ChatListSectionProps = {
@@ -14,7 +14,7 @@ const ChatListSection = ({ activeChatId: activeChatIdProp }: ChatListSectionProp
   const { chats, activeChatId: contextActiveChatId } = useChatNavigation();
   const activeChatId = contextActiveChatId ?? activeChatIdProp ?? null;
   const viewer = useAuthStore((state) => state.user);
-  const unreadChatsCount = chats.filter((chat) => chatHasUnread(chat, viewer?.id)).length;
+  const unreadChatsCount = getUnreadChatsCount(chats, viewer?.id);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1">

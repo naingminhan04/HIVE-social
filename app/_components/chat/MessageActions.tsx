@@ -126,7 +126,7 @@ export function MessageActions({ isMine, message, currentReaction, openReactionM
   const isPickerOpen = openReactionMessageId === message.id;
 
   return (
-    <div className="relative flex shrink-0 items-center rounded-lg border border-black/10 bg-white p-0.5 text-neutral-600 opacity-0 shadow-lg transition group-hover/message:opacity-100 group-focus-within/message:opacity-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300">
+    <div className="relative hidden shrink-0 items-center rounded-lg border border-black/10 bg-white p-0.5 text-neutral-600 opacity-0 shadow-lg transition group-hover/message:opacity-100 group-focus-within/message:opacity-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 lg:flex">
       <div className="relative">
         <button ref={reactButtonRef} type="button" onClick={() => setOpenReactionMessageId((prev) => (prev === message.id ? null : message.id))} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="React to message" title="React" aria-expanded={isPickerOpen}>
           <SmilePlus size={16} />

@@ -8,7 +8,7 @@ const DummyPostCard = ({
 
   return (
     <div className="bg-white dark:bg-neutral-900 w-full rounded-2xl">
-      <div className="animate-pulse p-4 space-y-4 "><div className="flex items-center gap-3">
+      <div className="animate-pulse p-2 space-y-4 "><div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-full bg-gray-300 dark:bg-neutral-700" />
 
         <div className="flex-1 space-y-2">

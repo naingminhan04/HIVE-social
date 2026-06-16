@@ -24,6 +24,7 @@ import {
   AtSign,
   ImageUp,
   MessageCircle,
+  UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -40,6 +41,7 @@ import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import OverlayPortal from "../layout/OverlayPortal";
 import RecoverableImage from "../common/RecoverableImage";
 import { buildChatPath } from "@/utils/chatRoutes";
+import { getPrivateChatByUserIdAction } from "@/app/_actions/chat";
 
 type ProfileFormValues = {
   name: string;
@@ -88,6 +90,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const [isProfilePending, setIsProfilePending] = useState(false);
   const [isUsernamePending, setIsUsernamePending] = useState(false);
   const [isPasswordPending, setIsPasswordPending] = useState(false);
+  const [isMessagePending, setIsMessagePending] = useState(false);
   const [activeEditTab, setActiveEditTab] = useState<EditProfileTab>("photo");
 
   const editTabs: {
@@ -392,19 +395,33 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const displayedCoverSrc = coverPreviewUrl || user?.coverPic || null;
   const displayedProfileSrc =
     profilePreviewUrl || user?.profilePic || "/default-avatar.png";
-  const openMessage = () => {
-    if (!user?.username) return;
-    router.push(
-      buildChatPath({
-        type: "PRIVATE_DRAFT",
-        user: {
-          id: user.id,
-          name: user.name ?? user.username,
-          username: user.username,
-          profilePic: user.profilePic ?? null,
-        },
-      }),
-    );
+  const profileTitle = isOwner ? "Profile" : `${user?.name ?? "User"}'s Profile`;
+
+  const openMessage = async () => {
+    if (!user?.id || !user.username || isMessagePending) return;
+
+    setIsMessagePending(true);
+    try {
+      const existingChat = await getPrivateChatByUserIdAction(user.id);
+      if (existingChat.success) {
+        router.push(buildChatPath(existingChat.data.chat));
+        return;
+      }
+
+      router.push(
+        buildChatPath({
+          type: "PRIVATE_DRAFT",
+          user: {
+            id: user.id,
+            name: user.name ?? user.username,
+            username: user.username,
+            profilePic: user.profilePic ?? null,
+          },
+        }),
+      );
+    } finally {
+      setIsMessagePending(false);
+    }
   };
 
   return (
@@ -428,31 +445,12 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
               <ArrowLeft size={18} />
             </button>
           )}
-          {isPortal && user ? (
-            <>
-              <RecoverableImage
-                src={user.profilePic || "/default-avatar.png"}
-                alt={user.name}
-                width={36}
-                height={36}
-                className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-blue-100 dark:ring-neutral-700"
-                wrapperClassName="h-9 w-9 shrink-0 rounded-full"
-                fallbackSrc="/default-avatar.png"
-              />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                  {user.name}
-                </p>
-                <p className="truncate text-xs font-normal text-neutral-500 dark:text-neutral-400">
-                  @{user.username}
-                </p>
-              </div>
-            </>
-          ) : (
-            <span className="truncate text-sm text-neutral-950 dark:text-neutral-50 sm:text-base">
-              {`${user?.name}'s Profile`}
-            </span>
-          )}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
+            <UserRound size={16} />
+          </span>
+          <span className="truncate text-sm text-neutral-950 dark:text-neutral-50 sm:text-base">
+            {profileTitle}
+          </span>
         </div>
 
         {isOwner ? (
@@ -470,11 +468,18 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         ) : user?.id ? (
           <button
             onClick={openMessage}
+            disabled={isMessagePending}
             className="ml-2 inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-2xl border border-blue-300 bg-blue-300 px-3 text-sm text-neutral-950 shadow-sm transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black sm:h-10 sm:px-4"
             aria-label={`Message ${user.name}`}
           >
-            <MessageCircle size={16} />
-            <span className="hidden text-sm font-medium sm:inline">Message</span>
+            {isMessagePending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <MessageCircle size={16} />
+            )}
+            <span className="hidden text-sm font-medium sm:inline">
+              {isMessagePending ? "Opening..." : "Message"}
+            </span>
           </button>
         ) : null}
       </div>
@@ -579,7 +584,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         </div>
       </div>
 
-      <section className="px-4 pb-5 space-y-6">
+      <section className="px-4 pb-4 space-y-6">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="flex min-w-0 items-center font-semibold text-[clamp(1.5rem,6cqw,2.25rem)] text-black dark:text-white">
@@ -622,7 +627,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 ">
           {[
             { label: "Posts", value: user?.postsCount },
             { label: "Likes", value: user?.likesCount },

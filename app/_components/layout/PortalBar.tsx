@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/auth";
+import DummyProfile from "../common/DummyProfile";
 import Profile from "../profile/Profile";
 
 const PortalBar = () => {
@@ -19,9 +20,7 @@ const PortalBar = () => {
           {user && username ? (
             <Profile username={username} isPortal />
           ) : isSessionChecking ? (
-            <div className="flex h-full items-center justify-center bg-white p-6 text-center text-sm text-gray-500 dark:bg-neutral-900 dark:text-gray-400">
-              Loading your profile...
-            </div>
+            <DummyProfile isPortal />
           ) : (
             <div className="flex h-full items-center justify-center bg-white p-6 text-center text-sm text-gray-500 dark:bg-neutral-900 dark:text-gray-400">
               Sign in to view your profile here.
