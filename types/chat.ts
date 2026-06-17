@@ -33,6 +33,47 @@ export type ChatMedia = {
   mimeType: string;
 };
 
+export type ChatMediaItem = ChatMedia & {
+  messageId: string;
+  senderId: string | null;
+  sender: ChatUser | null;
+};
+
+export type ChatAttachmentItem = ChatMediaItem;
+
+export type ChatParticipantsListResponse = {
+  pagination: {
+    page: number;
+    size: number;
+    total: number;
+    totalPages: number;
+    nextPage: number | null;
+  };
+  participants: ChatParticipant[];
+};
+
+export type ChatMediaListResponse = {
+  pagination: {
+    page: number;
+    size: number;
+    total: number;
+    totalPages: number;
+    nextPage: number | null;
+  };
+  images: ChatMediaItem[];
+};
+
+export type ChatAttachmentListResponse = {
+  pagination: {
+    page: number;
+    size: number;
+    total: number;
+    totalPages: number;
+    nextPage: number | null;
+  };
+  attachments: ChatAttachmentItem[];
+};
+
 export type ChatReactionStats = {
   total: number;
   like: number;

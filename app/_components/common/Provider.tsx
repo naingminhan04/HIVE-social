@@ -7,6 +7,7 @@ import NextTopLoader from "nextjs-toploader";
 import UserRefresher from "./Refresher";
 import { ThemeProvider } from "next-themes";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { UserPresenceProvider } from "./UserPresenceProvider";
 
 export function Provider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -23,7 +24,7 @@ export function Provider({ children }: { children: ReactNode }) {
         >
           <NextTopLoader color="white" height={2} showSpinner={false} />
           <UserRefresher />
-          {children}
+          <UserPresenceProvider>{children}</UserPresenceProvider>
           <Toaster position="top-center" reverseOrder={false} />
         </ThemeProvider>
       </GoogleOAuthProvider>

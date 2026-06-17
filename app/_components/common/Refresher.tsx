@@ -8,6 +8,7 @@ const UserRefresher = () => {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const setIsSessionChecking = useAuthStore((state) => state.setIsSessionChecking);
   const setUser = useAuthStore((state) => state.setUser);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const logOut = useAuthStore((state) => state.logOut);
   const hasCheckedSessionRef = useRef(false);
 
@@ -53,6 +54,9 @@ const UserRefresher = () => {
 
         if (result.success && result.data?.user) {
           setUser(result.data.user);
+          if (result.data.accessToken) {
+            setAccessToken(result.data.accessToken);
+          }
         } else {
           logOut();
         }
@@ -70,7 +74,7 @@ const UserRefresher = () => {
     return () => {
       cancelled = true;
     };
-  }, [hasHydrated, logOut, pathname, setIsSessionChecking, setUser]);
+  }, [hasHydrated, logOut, pathname, setIsSessionChecking, setUser, setAccessToken]);
 
   return null;
 };

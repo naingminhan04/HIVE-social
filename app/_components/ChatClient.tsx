@@ -35,7 +35,7 @@ import type {
   SendMessageInput,
 } from "@/types/chat";
 import type { SearchUserType } from "@/types/search";
-import { formatDate } from "@/utils/formatDate";
+import { formatDate, formatChatTimestamp, formatScrollOverlayTimestamp, shouldShowTimestamp } from "@/utils/formatDate";
 import {
   chatMatchesId,
   findChatById,
@@ -153,6 +153,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const [editingAttachments, setEditingAttachments] = useState<ChatMedia[]>([]);
   const [openReactionMessageId, setOpenReactionMessageId] = useState<string | null>(null);
   const [mobileActionMessage, setMobileActionMessage] = useState<ChatMessage | null>(null);
+  const [floatingTimestamp, setFloatingTimestamp] = useState<string | null>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [showFloatingTimestamp, setShowFloatingTimestamp] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
   // Track pending messages with their local IDs
   const [pendingSentMessages, setPendingSentMessages] = useState<{
@@ -909,6 +913,29 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     return [...messages, ...pendingChatMessages];
   }, [messages, pendingSentMessages, viewer]);
 
+  // Group consecutive messages from same sender
+  const messageGroups = useMemo(() => {
+    const groups: Array<{ messages: ChatMessage[], senderId: string }> = [];
+    let currentGroup: { messages: ChatMessage[], senderId: string } | null = null;
+
+    combinedMessages.forEach((msg) => {
+      if (msg.type === "SYSTEM") {
+        // System messages are separate
+        groups.push({ messages: [msg], senderId: "system" });
+        currentGroup = null;
+      } else if (currentGroup && currentGroup.senderId === msg.senderId) {
+        // Same sender as current group
+        currentGroup.messages.push(msg);
+      } else {
+        // New group
+        currentGroup = { messages: [msg], senderId: msg.senderId };
+        groups.push(currentGroup);
+      }
+    });
+
+    return groups;
+  }, [combinedMessages]);
+
   // ── Scroll helpers ──
   const updateScrollToBottomVisibility = useCallback(() => {
     const viewport = messagesViewportRef.current;
@@ -961,10 +988,39 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     dismissMessageOverlays();
     updateScrollToBottomVisibility();
     const viewport = messagesViewportRef.current;
-    if (!viewport || messagesQuery.isFetchingNextPage || !messagesQuery.hasNextPage) return;
+    if (!viewport) return;
+    
+    // Handle floating timestamp
+    setIsScrolling(true);
+    setShowFloatingTimestamp(true);
+    
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+      setShowFloatingTimestamp(false);
+    }, 1000);
+
+    // Find the first visible message group
+    const messageElements = viewport.querySelectorAll('[data-chat-message-id]');
+    for (const el of messageElements) {
+      const rect = el.getBoundingClientRect();
+      const viewportRect = viewport.getBoundingClientRect();
+      if (rect.top >= viewportRect.top) {
+        // Find which group this message is in and get its date
+        const messageId = el.getAttribute('data-chat-message-id');
+        const message = combinedMessages.find(m => m.id === messageId);
+        if (message) {
+          setFloatingTimestamp(formatScrollOverlayTimestamp(message.createdAt));
+        }
+        break;
+      }
+    }
+
+    // Load older messages if needed
+    if (messagesQuery.isFetchingNextPage || !messagesQuery.hasNextPage) return;
     if (viewport.scrollTop > LOAD_OLDER_SCROLL_THRESHOLD) return;
     loadOlderMessages();
-  }, [dismissMessageOverlays, loadOlderMessages, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage, updateScrollToBottomVisibility]);
+  }, [dismissMessageOverlays, loadOlderMessages, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage, updateScrollToBottomVisibility, combinedMessages]);
 
   useEffect(() => {
     const viewport = messagesViewportRef.current;
@@ -1667,6 +1723,22 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             onScroll={handleMessagesScroll}
             className="@container/chatview flex-1 space-y-3 overflow-y-auto bg-neutral-50/80 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
           >
+            {/* Floating Timestamp Overlay */}
+                    {showFloatingTimestamp && floatingTimestamp && (
+                      <div className="sticky top-2 z-10 flex justify-center transition-opacity duration-300 ease-in-out opacity-100">
+                        <div className="rounded-full bg-white/90 dark:bg-neutral-900/90 px-4 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 shadow-lg backdrop-blur-sm">
+                          {floatingTimestamp}
+                        </div>
+                      </div>
+                    )}
+                    {!showFloatingTimestamp && floatingTimestamp && (
+                      <div className="sticky top-2 z-10 flex justify-center transition-opacity duration-300 ease-in-out opacity-0 pointer-events-none">
+                        <div className="rounded-full bg-white/90 dark:bg-neutral-900/90 px-4 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 shadow-lg backdrop-blur-sm">
+                          {floatingTimestamp}
+                        </div>
+                      </div>
+                    )}
+
             <div ref={loadOlderSentinelRef} className="h-px w-full shrink-0" aria-hidden />
 
             {messagesQuery.isFetchingNextPage && (
@@ -1686,150 +1758,215 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
               </div>
             )}
 
-            {combinedMessages.map((message) => {
-              const isMine = message.senderId === viewer?.id;
-              const isSystemNotice = message.type === "SYSTEM";
-              const currentReaction = getCurrentReaction(message);
-              const reactionTotal = getReactionTotal(message);
-              const visibleReactions = getVisibleReactions(message);
-              const isDeleting = deletingMessageIds.includes(message.id);
-              const isPendingSend = message.id.startsWith("pending-");
-              const sendStatus = isMine
-                ? getMessageSendStatus(message, activeChat, isPendingSend)
-                : null;
-
-              if (isSystemNotice) {
-                return (
-                  <div
-                    key={message.id}
-                    data-chat-message-id={message.id}
-                    className="flex justify-center px-6 py-1"
-                  >
+            {(() => {
+              let previousMessageDate: string | null = null;
+              let previousGroupIdx: number | null = null;
+              
+              return messageGroups.map((group, groupIdx) => {
+                const isSystemNotice = group.senderId === "system";
+                const isGroupChat = activeChat && !isDraftChat(activeChat) && activeChat.type === "GROUP";
+                
+                if (isSystemNotice) {
+                  const message = group.messages[0];
+                  previousMessageDate = null;
+                  return (
                     <div
-                      className={`max-w-[85%] rounded-full border border-black/5 bg-white px-3 py-1 text-center text-xs text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
-                        }`}
+                      key={message.id}
+                      data-chat-message-id={message.id}
+                      className="flex justify-center px-6 py-1"
                     >
-                      <span className="wrap-break-word">{getSystemNoticeText(message)}</span>
-                      <span className="ml-2 whitespace-nowrap text-[10px] opacity-60">
-                        {formatDate(message.createdAt, false, true)}
-                      </span>
+                      <div
+                        className={`max-w-[85%] rounded-full border border-black/5 bg-white px-3 py-1 text-center text-xs text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
+                          }`}
+                      >
+                        <span className="wrap-break-word">{getSystemNoticeText(message)}</span>
+                        <span className="ml-2 whitespace-nowrap text-[10px] opacity-60">
+                          {formatDate(message.createdAt, false, true)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const isMine = group.senderId === viewer?.id;
+                const firstMessage = group.messages[0];
+                const lastMessage = group.messages[group.messages.length - 1];
+                const firstInConversation = groupIdx === 0;
+                const showTimestampForGroup = shouldShowTimestamp(previousMessageDate, firstMessage.createdAt);
+                previousMessageDate = lastMessage.createdAt;
+
+                return (
+                  <div key={`group-${firstMessage.id}`} className="flex flex-col">
+                    {/* Date pill when date changes */}
+                    {showTimestampForGroup && (
+                      <div className="flex justify-center py-2">
+                        <div className="rounded-full border border-black/5 bg-white px-4 py-1 text-xs font-medium text-neutral-600 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300">
+                          {formatScrollOverlayTimestamp(firstMessage.createdAt)}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}>
+                      {/* Avatar only on last message of group if not mine */}
+                      <div className="w-9 shrink-0">
+                        {!isMine && lastMessage && renderSenderAvatar(lastMessage)}
+                      </div>
+
+                      <div className={`max-w-[85%] flex flex-col ${isMine ? "items-end" : "items-start"} space-y-1`}>
+                        {/* Show sender name only (no timestamp) for non-mine messages */}
+                        {!isMine && activeChat && !isDraftChat(activeChat) && activeChat.type === "GROUP" && (
+                          <div className="ml-3 mb-1">
+                            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                              {firstMessage.sender.name}
+                            </span>
+                          </div>
+                        )}
+                        {group.messages.map((message, idx) => {
+                          const isFirst = idx === 0;
+                          const isLast = idx === group.messages.length - 1;
+                          const currentReaction = getCurrentReaction(message);
+                          const reactionTotal = getReactionTotal(message);
+                          const visibleReactions = getVisibleReactions(message);
+                          const isDeleting = deletingMessageIds.includes(message.id);
+                          const isPendingSend = message.id.startsWith("pending-");
+                          const sendStatus = isMine
+                            ? getMessageSendStatus(message, activeChat, isPendingSend)
+                            : null;
+                          const showActions = !message.isDeleted && !isDeleting && !isPendingSend;
+                          
+                          // Calculate bubble border radius
+                          let bubbleRadius = "rounded-lg";
+                          if (group.messages.length === 1) {
+                            bubbleRadius = isMine ? "rounded-2xl rounded-br-md" : "rounded-2xl rounded-bl-md";
+                          } else if (isFirst) {
+                            bubbleRadius = isMine ? "rounded-2xl rounded-tr-md" : "rounded-2xl rounded-tl-md";
+                          } else if (isLast) {
+                            bubbleRadius = isMine ? "rounded-2xl rounded-br-md" : "rounded-2xl rounded-bl-md";
+                          } else {
+                            bubbleRadius = isMine ? "rounded-xl rounded-tr-sm rounded-br-sm" : "rounded-xl rounded-tl-sm rounded-bl-sm";
+                          }
+
+                          return (
+                            <div
+                              key={message.id}
+                              data-chat-message-id={message.id}
+                              className={`group/message flex items-center gap-2 ${isMine ? "justify-end" : "justify-start"}`}
+                              onMouseLeave={(event) => {
+                                const related = event.relatedTarget;
+                                if (related instanceof Element) {
+                                  if (event.currentTarget.contains(related)) return;
+                                  if (related.closest("[data-chat-reaction-picker]")) return;
+                                }
+                                if (openReactionMessageId === message.id) setOpenReactionMessageId(null);
+                              }}
+                            >
+                              <div className={`max-w-[85%] flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+                                <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
+                                  {/* More rectangular bubble with subtle rounding */}
+                                  <div
+                                    onClick={(event) =>
+                                      openMobileMessageActions(event, message, {
+                                        disabled: message.isDeleted || isDeleting || isPendingSend,
+                                      })
+                                    }
+                                    className={`relative px-4 py-2 text-sm transition-shadow min-w-[180px] ${bubbleRadius} ${isMine
+                                        ? "bg-blue-400 text-white dark:bg-neutral-700"
+                                        : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
+                                      } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
+                                      }`}
+                                  >
+                                    <div className="flex min-w-0 items-start gap-2">
+                                      <div className="min-w-0 flex-1 space-y-2">
+                                        {getReplyPreview(message) && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const parentId = getParentMessageId(message);
+                                              if (parentId) scrollToChatMessage(parentId);
+                                            }}
+                                            disabled={!getParentMessageId(message)}
+                                            className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
+                                                ? "border-white/50 text-white/75"
+                                                : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
+                                              } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
+                                            aria-label="Jump to replied message"
+                                          >
+                                            <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
+                                          </button>
+                                        )}
+                                        {(message.images.length > 0 || message.attachments.length > 0) && (
+                                          <div className="grid gap-2">
+                                            {message.images.map((media, idx) => renderMediaItem(media, message.images, idx))}
+                                            {message.attachments.map((media, idx) => renderMediaItem(media, message.attachments, idx))}
+                                          </div>
+                                        )}
+                                        {(message.content || message.isDeleted) && (
+                                          <p className={`whitespace-pre-wrap wrap-break-word ${message.isDeleted ? "italic opacity-60" : ""}`}>
+                                            {message.isDeleted ? "Message deleted" : message.content}
+                                          </p>
+                                        )}
+                                        
+                                        {/* Timestamp, status, and edited flag inside bubble */}
+                                        <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                                          <span className={`text-xs ${isMine ? "text-white/80" : "text-neutral-500 dark:text-neutral-400"}`}>
+                                            {formatChatTimestamp(message.createdAt)}
+                                          </span>
+                                          {message.isEdited && !message.isDeleted && (
+                                            <span className={`text-xs ${isMine ? "text-white/70" : "text-neutral-500 dark:text-neutral-400"}`}>
+                                              edited
+                                            </span>
+                                          )}
+                                          {sendStatus && <MessageStatusIcon status={sendStatus} />}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {showActions && (
+                                    <MessageActions
+                                      isMine={isMine}
+                                      message={message}
+                                      currentReaction={currentReaction}
+                                      openReactionMessageId={openReactionMessageId}
+                                      setOpenReactionMessageId={setOpenReactionMessageId}
+                                      onReply={startReplyToMessage}
+                                      startEditing={startEditing}
+                                      deleteMutation={deleteMutation}
+                                      reactionMutation={reactionMutation}
+                                      isDeleting={isDeleting}
+                                    />
+                                  )}
+                                </div>
+
+                                {/* Reactions */}
+                                {!message.isDeleted && !isDeleting && !isPendingSend && visibleReactions.length > 0 && (
+                                  <div className={`relative mt-1 flex max-w-full flex-wrap items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setReactionUsersMessage(message)}
+                                      className={`inline-flex h-8 max-w-full items-center gap-1 rounded-full border border-black/10 bg-white px-2 text-xs font-medium text-neutral-600 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 ${currentReaction ? "ring-1 ring-blue-400/60" : ""}`}
+                                      aria-label="Message reactions"
+                                    >
+                                      <span className="flex -space-x-1">
+                                        {visibleReactions.slice(0, 3).map((r) => (
+                                          <Image key={r.type} src={r.image} alt={r.label} width={18} height={18} className="h-4.5 w-4.5 rounded-full" />
+                                        ))}
+                                      </span>
+                                      <span>{reactionTotal}</span>
+                                    </button>
+                                  </div>
+                                )}
+
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
-              }
-
-              return (
-                <div
-                  key={message.id}
-                  data-chat-message-id={message.id}
-                  className={`group/message flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}
-                  onMouseLeave={(event) => {
-                    const related = event.relatedTarget;
-                    if (related instanceof Element) {
-                      if (event.currentTarget.contains(related)) return;
-                      if (related.closest("[data-chat-reaction-picker]")) return;
-                    }
-                    if (openReactionMessageId === message.id) setOpenReactionMessageId(null);
-                  }}
-                >
-                  {!isMine && renderSenderAvatar(message)}
-
-                  <div className={`max-w-[75%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
-                    <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
-                      <div
-                        onClick={(event) =>
-                          openMobileMessageActions(event, message, {
-                            disabled: message.isDeleted || isDeleting || isPendingSend,
-                          })
-                        }
-                        className={`relative rounded-2xl px-3 py-2 text-sm transition-shadow ${isMine
-                            ? "rounded-br-md bg-blue-400 text-white dark:bg-neutral-700"
-                            : "rounded-bl-md bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
-                          } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
-                          }`}
-                      >
-                        <div className="flex min-w-0 items-start gap-2">
-                          <div className="min-w-0 flex-1 space-y-2">
-                            {!isMine && (
-                              <p className="mb-1 truncate text-xs font-semibold opacity-70">
-                                {message.sender.name}
-                              </p>
-                            )}
-                            {getReplyPreview(message) && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const parentId = getParentMessageId(message);
-                                  if (parentId) scrollToChatMessage(parentId);
-                                }}
-                                disabled={!getParentMessageId(message)}
-                                className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
-                                    ? "border-white/50 text-white/75"
-                                    : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
-                                  } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
-                                aria-label="Jump to replied message"
-                              >
-                                <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
-                              </button>
-                            )}
-                            {(message.images.length > 0 || message.attachments.length > 0) && (
-                              <div className="grid gap-2">
-                                {message.images.map((media, idx) => renderMediaItem(media, message.images, idx))}
-                                {message.attachments.map((media, idx) => renderMediaItem(media, message.attachments, idx))}
-                              </div>
-                            )}
-                            {(message.content || message.isDeleted) && (
-                              <p className={`whitespace-pre-wrap wrap-break-word ${message.isDeleted ? "italic opacity-60" : ""}`}>
-                                {message.isDeleted ? "Message deleted" : message.content}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <p className={`mt-1 flex items-center justify-end gap-1 text-right text-[10px] ${isMine ? "text-white/70" : "text-neutral-400"}`}>
-                          {message.isEdited && !message.isDeleted && <span>edited</span>}
-                          <span>{formatDate(message.createdAt, false, true)}</span>
-                          {isMine && sendStatus && <MessageStatusIcon status={sendStatus} />}
-                        </p>
-                      </div>
-
-                      {!message.isDeleted && !isDeleting && !isPendingSend && (
-                        <MessageActions
-                          isMine={isMine}
-                          message={message}
-                          currentReaction={currentReaction}
-                          openReactionMessageId={openReactionMessageId}
-                          setOpenReactionMessageId={setOpenReactionMessageId}
-                          onReply={startReplyToMessage}
-                          startEditing={startEditing}
-                          deleteMutation={deleteMutation}
-                          reactionMutation={reactionMutation}
-                          isDeleting={isDeleting}
-                        />
-                      )}
-                    </div>
-
-                    {!message.isDeleted && !isDeleting && !isPendingSend && visibleReactions.length > 0 && (
-                      <div className={`relative mt-1 flex max-w-full flex-wrap items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}>
-                        <button
-                          type="button"
-                          onClick={() => setReactionUsersMessage(message)}
-                          className={`inline-flex h-8 max-w-full items-center gap-1 rounded-full border border-black/10 bg-white px-2 text-xs font-medium text-neutral-600 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 ${currentReaction ? "ring-1 ring-blue-400/60" : ""}`}
-                          aria-label="Message reactions"
-                        >
-                          <span className="flex -space-x-1">
-                            {visibleReactions.slice(0, 3).map((r) => (
-                              <Image key={r.type} src={r.image} alt={r.label} width={18} height={18} className="h-4.5 w-4.5 rounded-full" />
-                            ))}
-                          </span>
-                          <span>{reactionTotal}</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+              });
+            })()}
 
             {isMessagesLoading && <ChatMessagesLoadingSkeleton />}
             {!isMessagesLoading && combinedMessages.length === 0 && (

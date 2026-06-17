@@ -39,7 +39,7 @@ import type {
   CommentFormProps,
   CommentFormMode,
 } from "@/types/comment";
-import Image from "next/image";
+import RecoverableImage from "./RecoverableImage";
 import { isVideoMedia } from "@/utils/media";
 import { formatDate } from "@/utils/formatDate";
 import { useForm, SubmitHandler } from "react-hook-form";
@@ -339,12 +339,17 @@ const CommentCard = ({
     >
       <div className="flex gap-3 flex-1">
         <Link target="_blank" href={`/users/${comment.user.username}`}>
-          <Image
+          <RecoverableImage
             width={8}
             height={8}
             src={comment.user.profilePic || "/default-avatar.png"}
             alt={comment.user.name}
             className="w-8 h-8 rounded-full hover:brightness-85 active:brightness-85 transition-all bg-gray-300 object-cover"
+            wrapperClassName="w-8 h-8 rounded-full"
+            fallbackSrc="/default-avatar.png"
+            userId={comment.user.id}
+            showOnlineStatus
+            onlineStatusSize="sm"
           />
         </Link>
 

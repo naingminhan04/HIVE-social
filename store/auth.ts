@@ -4,9 +4,11 @@ import { UserType } from "@/types/user";
 
 interface AuthState {
   user: UserType | null;
+  accessToken: string | null;
   hasHydrated: boolean;
   isSessionChecking: boolean;
   setUser: (user: UserType | null) => void;
+  setAccessToken: (token: string | null) => void;
   setHasHydrated: (value: boolean) => void;
   setIsSessionChecking: (value: boolean) => void;
   logOut: () => void;
@@ -16,11 +18,15 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      accessToken: null,
       hasHydrated: false,
       isSessionChecking: true,
 
       setUser: (user) =>
         set((state) => (state.user === user ? state : { user })),
+
+      setAccessToken: (token) =>
+        set((state) => (state.accessToken === token ? state : { accessToken: token })),
 
       setHasHydrated: (hasHydrated) =>
         set((state) =>
@@ -34,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
             : { isSessionChecking },
         ),
 
-      logOut: () => set((state) => (state.user === null ? state : { user: null })),
+      logOut: () => set((state) => (state.user === null && state.accessToken === null ? state : { user: null, accessToken: null })),
     }),
     {
       name: "auth-store",

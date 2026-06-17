@@ -67,6 +67,9 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
                   fallbackSrc="/default-avatar.png"
                   showRetryButton
                   retryButtonClassName="h-8 w-8"
+                  userId={post.author.id}
+                  showOnlineStatus
+                  onlineStatusSize="sm"
                 />
               </Link>
               <div>

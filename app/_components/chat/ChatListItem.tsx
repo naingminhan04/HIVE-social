@@ -44,6 +44,9 @@ const ChatListItem = ({ chat, initialActive }: ChatListItemProps) => {
           className="h-13 w-13 rounded-full bg-neutral-200 object-cover"
           wrapperClassName="h-13 w-13 shrink-0 rounded-full"
           fallbackSrc="/default-avatar.png"
+          userId={chat.otherUser?.user.id}
+          showOnlineStatus={!!chat.otherUser}
+          onlineStatusSize="sm"
         />
         {hasUnread && !isActive && (
           <span

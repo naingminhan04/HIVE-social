@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import RecoverableImage from "@/app/_components/common/RecoverableImage";
 import PostCard from "@/app/_components/post/PostCard";
 import DummyPostCard from "@/app/_components/post/DummyPostCard";
 import { searchAction } from "@/app/_actions/search";
@@ -298,12 +298,17 @@ const SearchResults = ({ keyword }: { keyword: string }) => {
                 href={`/users/${user.username}`}
                 className="flex items-center gap-2 p-2 hover:bg-blue-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
               >
-                <Image
+                <RecoverableImage
                   src={user.profilePic || "/default-avatar.png"}
                   alt={user.name}
                   className="w-10 h-10 rounded-full object-cover bg-gray-300 dark:bg-neutral-700"
+                  wrapperClassName="w-10 h-10 rounded-full"
+                  fallbackSrc="/default-avatar.png"
                   width={40}
                   height={40}
+                  userId={user.id}
+                  showOnlineStatus
+                  onlineStatusSize="sm"
                 />
                 <div className="min-w-0">
                   <p className="font-medium truncate">{user.name}</p>

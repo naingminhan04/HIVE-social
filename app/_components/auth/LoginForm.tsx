@@ -16,6 +16,7 @@ type Inputs = {
 
 const LoginForm = () => {
   const setUser = useAuthStore((state) => state.setUser);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const router = useRouter();
   const [error, setError] = useState("");
 
@@ -43,6 +44,7 @@ const LoginForm = () => {
 
       if (result.needsVerification) {
         setUser(null);
+        setAccessToken(null);
         router.replace("/verify");
         return;
       }
@@ -53,6 +55,7 @@ const LoginForm = () => {
       }
 
       setUser(result.data.user);
+      setAccessToken(result.data.accessToken);
       router.replace(result.data.user.isVerified ? "/home" : "/verify");
     },
     onError: (err: Error) => {

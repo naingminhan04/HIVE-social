@@ -24,6 +24,9 @@ import type {
   UnreadCountResponse,
   UpdateMessageResponse,
   ChatMessagesQueryOptions,
+  ChatParticipantsListResponse,
+  ChatMediaListResponse,
+  ChatAttachmentListResponse,
 } from "@/types/chat";
 import { getApiErrorMessage } from "@/utils/apiError";
 
@@ -337,6 +340,130 @@ export async function getMessageReactionStatusAction(
     return {
       success: false,
       error: getApiErrorMessage(error, "Failed to load reaction status"),
+    };
+  }
+}
+
+export async function getChatParticipantsAction(
+  chatId: string,
+): Promise<ActionResponse<ChatParticipantsListResponse>> {
+  try {
+    const res = await api.get(`/chats/${chatId}/participants`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to get participants"),
+    };
+  }
+}
+
+export async function getChatMediaAction(
+  chatId: string,
+): Promise<ActionResponse<ChatMediaListResponse>> {
+  try {
+    const res = await api.get(`/chats/${chatId}/media`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to get media"),
+    };
+  }
+}
+
+export async function getChatAttachmentsAction(
+  chatId: string,
+): Promise<ActionResponse<ChatAttachmentListResponse>> {
+  try {
+    const res = await api.get(`/chats/${chatId}/attachments`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to get attachments"),
+    };
+  }
+}
+
+export async function leaveChatAction(
+  chatId: string,
+): Promise<ActionResponse<any>> {
+  try {
+    const res = await api.delete(`/chats/${chatId}/leave`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to leave chat"),
+    };
+  }
+}
+
+export async function promoteToAdminAction(
+  chatId: string,
+  participantId: string,
+): Promise<ActionResponse<any>> {
+  try {
+    const res = await api.patch(`/participants/promote-admin`, {
+      chatId,
+      participantId,
+    });
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to promote to admin"),
+    };
+  }
+}
+
+export async function demoteToMemberAction(
+  chatId: string,
+  participantId: string,
+): Promise<ActionResponse<any>> {
+  try {
+    const res = await api.patch(`/participants/demote-member`, {
+      chatId,
+      participantId,
+    });
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to demote to member"),
+    };
+  }
+}
+
+export async function removeParticipantAction(
+  chatId: string,
+  participantId: string,
+): Promise<ActionResponse<any>> {
+  try {
+    const res = await api.delete(`/chats/${chatId}/participants`, {
+      data: { participantId },
+    });
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to remove participant"),
+    };
+  }
+}
+
+export async function updateChatAction(
+  chatId: string,
+  data: { name?: string; chatImage?: any },
+): Promise<ActionResponse<any>> {
+  try {
+    const res = await api.put(`/chats/${chatId}`, data);
+    return { success: true, data: res.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: getApiErrorMessage(error, "Failed to update chat"),
     };
   }
 }

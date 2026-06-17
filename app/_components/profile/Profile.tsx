@@ -578,9 +578,10 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             onClick={() =>
               (user?.profilePic || profilePreviewUrl) && setImageView("profile")
             }
+            userId={user?.id}
+            showOnlineStatus={!!user?.id}
+            onlineStatusSize="md"
           />
-
-          <span className="absolute bottom-1/10 right-1/10 border w-[3vw] md:w-[1.8vw] lg:w-[clamp(17px,3vw,1px)] aspect-square bg-green-500 rounded-full"></span>
         </div>
       </div>
 

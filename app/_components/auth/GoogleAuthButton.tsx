@@ -22,6 +22,7 @@ const GoogleAuthButton = ({
 }: GoogleAuthButtonProps) => {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const isRecheck = mode === "recheck";
   const containerRef = useRef<HTMLDivElement>(null);
   const [buttonWidth, setButtonWidth] = useState(0);
@@ -61,6 +62,7 @@ const GoogleAuthButton = ({
     },
     onSuccess: (data) => {
       setUser(data.user);
+      setAccessToken(data.accessToken);
 
       if (isRecheck) {
         onRecheckResult?.({ success: true, data });

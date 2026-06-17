@@ -169,6 +169,9 @@ const NotificationsPage = () => {
                   className="h-12 w-12 rounded-full object-cover"
                   wrapperClassName="h-12 w-12 shrink-0 rounded-full"
                   fallbackSrc="/default-avatar.png"
+                  userId={notification.actorUser?.id}
+                  showOnlineStatus={!!notification.actorUser?.id}
+                  onlineStatusSize="sm"
                 />
                 {!notification.isRead ? (
                   <span
