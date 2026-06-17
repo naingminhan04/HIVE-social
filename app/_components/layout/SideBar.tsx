@@ -148,6 +148,9 @@ const SideBar = () => {
                   fallbackSrc="/default-avatar.png"
                   showRetryButton
                   retryButtonClassName="h-8 w-8"
+                  userId={user.id}
+                  showOnlineStatus={true}
+                  onlineStatusSize="md"
                 />
                 <div className="min-w-0">
                   <p className="font-semibold truncate">{user.name}</p>

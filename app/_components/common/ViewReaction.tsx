@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import OverlayPortal from "../layout/OverlayPortal";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import RecoverableImage from "./RecoverableImage";
 
 type ReactionFilter = ReactionType | "ALL";
 
@@ -168,14 +169,20 @@ const ReactionPage = ({
             className="flex items-center gap-3 px-2 py-3 rounded-lg hover:bg-neutral-200 active:bg-neutral-200 dark:hover:bg-neutral-950 dark:active:bg-neutral-950 transition-all"
           >
             <div className="relative w-8 h-8 shrink-0">
-              <Image
+              <RecoverableImage
                 src={r.user.profilePic ?? "/default-avatar.png"}
                 alt={r.user.name}
-                fill
-                className="rounded-full object-cover bg-gray-300"
+                width={32}
+                height={32}
+                className="w-full h-full rounded-full object-cover bg-gray-300"
+                wrapperClassName="w-full h-full rounded-full"
+                fallbackSrc="/default-avatar.png"
+                userId={r.user.id}
+                showOnlineStatus
+                onlineStatusSize="sm"
               />
               {r.reactionType && (
-                <span className="absolute -bottom-1 -right-1 w-4 h-4">
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 z-10">
                   <Image
                     src={
                       REACTIONS.find((rx) => rx.type === r.reactionType)?.src ??

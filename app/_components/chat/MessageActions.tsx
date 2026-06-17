@@ -104,12 +104,6 @@ function ReactionPicker({ anchorRef, isOpen, isMine, currentReaction, isPending,
       data-chat-reaction-picker=""
       style={{ top: 0, left: 0, visibility: "hidden", pointerEvents: "none" }}
       className="fixed z-120 flex w-max max-w-[min(18rem,calc(100vw-1rem))] gap-0.5 overflow-x-auto rounded-full border border-black/10 bg-white p-1 shadow-xl scrollbar-none dark:border-white/10 dark:bg-neutral-900"
-      onMouseLeave={(e) => {
-        const related = e.relatedTarget;
-        if (related instanceof Element && pickerRef.current?.contains(related)) return;
-        if (related instanceof Element && anchorRef.current?.contains(related)) return;
-        onClose();
-      }}
     >
       {reactionOptions.map((r) => (
         <button key={r.type} type="button" disabled={isPending} onClick={() => onSelect(r.type)} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-neutral-100 active:scale-95 disabled:opacity-50 dark:hover:bg-neutral-800 ${currentReaction === r.type ? "bg-blue-50 ring-1 ring-blue-400 dark:bg-blue-500/10" : ""}`} aria-label={`React ${r.label}`} title={r.label}>
@@ -126,7 +120,7 @@ export function MessageActions({ isMine, message, currentReaction, openReactionM
   const isPickerOpen = openReactionMessageId === message.id;
 
   return (
-    <div className="relative hidden shrink-0 items-center self-center rounded-lg border border-black/10 bg-white p-0.5 text-neutral-600 opacity-0 shadow-lg transition group-hover/message:opacity-100 group-focus-within/message:opacity-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 lg:flex">
+    <div data-chat-message-actions="" className="relative hidden shrink-0 items-center self-center rounded-lg border border-black/10 bg-white p-0.5 text-neutral-600 opacity-0 shadow-lg transition group-hover/message:opacity-100 group-focus-within/message:opacity-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 lg:flex">
       <div className="relative">
         <button ref={reactButtonRef} type="button" onClick={() => setOpenReactionMessageId((prev) => (prev === message.id ? null : message.id))} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="React to message" title="React" aria-expanded={isPickerOpen}>
           <SmilePlus size={16} />

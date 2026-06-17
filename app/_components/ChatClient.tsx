@@ -1856,6 +1856,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                 if (related instanceof Element) {
                                   if (event.currentTarget.contains(related)) return;
                                   if (related.closest("[data-chat-reaction-picker]")) return;
+                                  if (related.closest("[data-chat-message-actions]")) return;
                                 }
                                 if (openReactionMessageId === message.id) setOpenReactionMessageId(null);
                               }}

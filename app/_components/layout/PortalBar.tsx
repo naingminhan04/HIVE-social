@@ -15,7 +15,7 @@ const PortalBar = () => {
         <div
           id="portal-scroll-container"
           data-home-scroll-target="true"
-          className="h-full overflow-y-auto overscroll-contain scrollbar-none"
+          className="h-full overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none"
         >
           {user && username ? (
             <Profile username={username} isPortal />

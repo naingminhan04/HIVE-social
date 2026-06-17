@@ -3,7 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import Image, { ImageProps } from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import OnlineStatusIndicator from "./OnlineStatusIndicator";
+import { useUserPresence } from "@/hooks/useUserPresence";
 
 const MAX_AUTO_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 1000;
@@ -70,6 +70,52 @@ const RecoverableImage = ({
   );
   const imageState =
     storedImageState.src === src ? storedImageState : getInitialImageState(src);
+
+  const { onlineUserIds, statuses, requestUserStatus } = useUserPresence();
+
+  useEffect(() => {
+    if (showOnlineStatus && userId && !statuses[userId]) {
+      requestUserStatus(userId);
+    }
+  }, [showOnlineStatus, userId, statuses, requestUserStatus]);
+
+  const isOnline = showOnlineStatus && userId ? (onlineUserIds.has(userId) || statuses[userId]?.isOnline) : false;
+
+  const getImageClassName = () => {
+    let base = imageProps.className || '';
+    if (!showOnlineStatus || !userId) return base;
+    
+    const getBorderWidth = () => {
+      switch (onlineStatusSize) {
+        case 'sm': return 'border-2';
+        case 'lg': return 'border-3';
+        case 'md':
+        default: return 'border-2';
+      }
+    };
+    
+    const colorClass = isOnline ? 'border-green-500' : 'border-neutral-400';
+    const darkColorClass = isOnline ? 'dark:border-green-500' : 'dark:border-neutral-400';
+    
+    // If the image already has a border, change its color (handle dark mode)
+    if (base.includes('border-')) {
+      // Replace existing border color with status color (handle dark mode)
+      if (isOnline) {
+        base = base.replace(/border-(white|neutral-\d+|gray-\d+|black)/g, 'border-green-500');
+        base = base.replace(/dark:border-(white|neutral-\d+|gray-\d+|black)/g, 'dark:border-green-500');
+      } else {
+        base = base.replace(/border-(white|green-\d+|gray-\d+|black)/g, 'border-neutral-400');
+        base = base.replace(/dark:border-(white|green-\d+|gray-\d+|black)/g, 'dark:border-neutral-400');
+      }
+      // Also add color classes at end in case of arbitrary border widths
+      base = `${base} ${colorClass} ${darkColorClass}`;
+    } else {
+      // If no border, add a status border
+      const borderWidth = getBorderWidth();
+      base = `${base} ${borderWidth} ${colorClass} ${darkColorClass}`;
+    }
+    return base;
+  };
 
   const autoRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -142,10 +188,11 @@ const RecoverableImage = ({
 
   return (
     <div className={`relative ${wrapperClassName}`}>
-      <div className="relative overflow-hidden w-full h-full">
+      <div className="relative w-full h-full overflow-hidden">
         {shouldRenderImage ? (
           <Image
             {...imageProps}
+            className={getImageClassName()}
             src={activeSrc!}
             alt={alt}
             onLoad={() => {
@@ -163,6 +210,8 @@ const RecoverableImage = ({
             onError={handleError}
           />
         ) : null}
+
+
 
         {showLoadingOverlay && imageState.isLoading && activeSrc && (
           <div
@@ -188,10 +237,6 @@ const RecoverableImage = ({
           </div>
         )}
       </div>
-
-      {showOnlineStatus && userId && (
-        <OnlineStatusIndicator userId={userId} size={onlineStatusSize} />
-      )}
     </div>
   );
 };

@@ -508,56 +508,6 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
               />
             )
           )}
-
-          {isOwner &&
-            (editCover ? (
-              <div className="absolute right-2 bottom-2 flex gap-2">
-                <button
-                  disabled={isCoverPending}
-                  className="backdrop-blur-sm p-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg"
-                  onClick={saveCoverPicture}
-                >
-                  {isCoverPending ? <Loader2 className="animate-spin" /> : <Check />}
-                </button>
-                <button
-                  disabled={isCoverPending}
-                  className="backdrop-blur-sm p-2 bg-gray-400 hover:bg-gray-300 dark:bg-neutral-600 dark:hover:bg-neutral-700 rounded-lg disabled:opacity-50"
-                  onClick={() => {
-                    setEditCover(false);
-                    setSelectedCoverFile(null);
-                    if (coverPreviewUrl) {
-                      URL.revokeObjectURL(coverPreviewUrl);
-                      setCoverPreviewUrl(null);
-                    }
-                  }}
-                >
-                  <X />
-                </button>
-              </div>
-            ) : (
-              <label
-                htmlFor="coverPic"
-                className="absolute right-2 bottom-2 p-2 backdrop-blur-md bg-white/60 dark:bg-black/60 cursor-pointer rounded-lg"
-              >
-                <Camera />
-                <input
-                  disabled={isCoverPending || isProfilePicPending}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setSelectedCoverFile(file);
-                      const url = URL.createObjectURL(file);
-                      setCoverPreviewUrl(url);
-                      setEditCover(true);
-                    }
-                  }}
-                  id="coverPic"
-                  className="hidden"
-                />
-              </label>
-            ))}
         </div>
 
         <div className="absolute z-20 w-3/14 -bottom-2/9 left-1/10">
@@ -570,7 +520,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             alt="Profile picture"
             width={200}
             height={200}
-            className="object-cover border-[1vw] md:border-[0.6vw] lg:border-[clamp(5px,1vw,7px)] border-white dark:border-neutral-900 bg-gray-300 w-full aspect-square relative rounded-full"
+            className="object-cover p-[1vw] md:p-[0.6vw] lg:p-[clamp(5px,1vw,7px)] border-0 bg-white dark:bg-neutral-900 w-full aspect-square relative rounded-full"
             wrapperClassName="w-full aspect-square rounded-full"
             fallbackSrc="/default-avatar.png"
             showRetryButton
@@ -578,9 +528,6 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             onClick={() =>
               (user?.profilePic || profilePreviewUrl) && setImageView("profile")
             }
-            userId={user?.id}
-            showOnlineStatus={!!user?.id}
-            onlineStatusSize="md"
           />
         </div>
       </div>
@@ -795,7 +742,6 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                             height={200}
                             className="aspect-square w-full rounded-full border-[1vw] border-white bg-gray-300 object-cover dark:border-neutral-900 md:border-[0.6vw] lg:border-[clamp(5px,1vw,7px)]"
                           />
-                          <span className="absolute bottom-1/10 right-1/10 aspect-square w-4 rounded-full border bg-green-500 sm:w-5" />
                         </div>
                       </div>
 
