@@ -62,7 +62,7 @@ const GoogleAuthButton = ({
     },
     onSuccess: (data) => {
       setUser(data.user);
-      setAccessToken(data.accessToken);
+      setAccessToken(data.accessToken ?? null);
 
       if (isRecheck) {
         onRecheckResult?.({ success: true, data });
