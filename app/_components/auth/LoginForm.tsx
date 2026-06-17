@@ -55,7 +55,7 @@ const LoginForm = () => {
       }
 
       setUser(result.data.user);
-      setAccessToken(result.data.accessToken);
+      setAccessToken(result.data.accessToken ?? null);
       router.replace(result.data.user.isVerified ? "/home" : "/verify");
     },
     onError: (err: Error) => {
