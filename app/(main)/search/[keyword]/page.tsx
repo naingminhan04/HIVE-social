@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { useRouter } from "nextjs-toploader/app";
 import RecoverableImage from "@/app/_components/common/RecoverableImage";
 import PostCard from "@/app/_components/post/PostCard";
 import DummyPostCard from "@/app/_components/post/DummyPostCard";
@@ -69,12 +71,21 @@ const SearchPage = () => {
 };
 
 const SearchResults = ({ keyword }: { keyword: string }) => {
+  const router = useRouter();
   const mainRef = useRef<HTMLElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const restoredScrollRef = useRef(false);
   const [activeTab, setActiveTab] = useState<SearchTab>(() => {
     return readSearchState(keyword)?.activeTab ?? "posts";
   });
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/home");
+    }
+  };
 
   const {
     data,
@@ -174,15 +185,26 @@ const SearchResults = ({ keyword }: { keyword: string }) => {
   }, [canLoadMore, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage]);
 
   return (
-    <main
-      ref={mainRef}
-      className="min-h-[calc(100dvh-60px)] md:px-2 lg:min-h-dvh"
-    >
-      <div className="sticky top-15 lg:top-0 z-20 p-2 bg-linear-to-r from-blue-100 to-blue-50 dark:from-neutral-950 dark:to-neutral-900 border-b border-blue-200/80 dark:border-neutral-800">
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-blue-200/90 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/90 px-2 py-1.5 backdrop-blur">
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 truncate">
-            Results for &quot;{keyword}&quot;
-          </p>
+    <div className="md:px-2">
+      <main
+        ref={mainRef}
+        className="min-h-[calc(100dvh-60px)] lg:min-h-dvh"
+      >
+        <div
+          className="z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <button
+              onClick={handleBack}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              aria-label="Go back"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <p className="text-sm font-semibold text-neutral-950 dark:text-neutral-50 sm:text-base truncate">
+              Results for &quot;{keyword}&quot;
+            </p>
+          </div>
           <div className="flex items-center rounded-lg border border-blue-200 dark:border-neutral-700 bg-blue-50 dark:bg-neutral-950 p-0.5 shrink-0">
             <button
               onClick={() => setActiveTab("posts")}
@@ -206,7 +228,6 @@ const SearchResults = ({ keyword }: { keyword: string }) => {
             </button>
           </div>
         </div>
-      </div>
 
       {showErrorFullPage ? (
         <div className="p-4 text-red-600 dark:text-red-400">
@@ -357,7 +378,8 @@ const SearchResults = ({ keyword }: { keyword: string }) => {
           ) : null}
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 };
 

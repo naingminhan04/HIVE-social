@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Coins, History, Loader2, Search, Send, X } from "lucide-react";
+import { Coins, History, Loader2, Search, Send, ChevronLeft } from "lucide-react";
 import toast from "react-hot-toast";
+import { useRouter } from "nextjs-toploader/app";
 import {
   dailyLoginAction,
   getDailyLoginInfoAction,
@@ -18,21 +19,15 @@ import {
   PointsTransactionsResponse,
   PointsTransactionType,
 } from "@/types/points";
-import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
-import OverviewTab from "./points-modal/OverviewTab";
-import HistoryTab from "./points-modal/HistoryTab";
-import TransferTab from "./points-modal/TransferTab";
-import LookupTab from "./points-modal/LookupTab";
-import OverlayPortal from "./layout/OverlayPortal";
-
-type PointsModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  currentUserPoints: number;
-  onPointsUpdated: (points: number) => void;
-};
+import { useAuthStore } from "@/store/auth";
+import OverviewTab from "@/app/_components/points-modal/OverviewTab";
+import HistoryTab from "@/app/_components/points-modal/HistoryTab";
+import TransferTab from "@/app/_components/points-modal/TransferTab";
+import LookupTab from "@/app/_components/points-modal/LookupTab";
 
 type PointsTab = "overview" | "history" | "transfer" | "lookup";
+
+const PAGE_SIZE = 10;
 
 const tabs: {
   id: PointsTab;
@@ -46,13 +41,13 @@ const tabs: {
   ];
 
 const TabLoadingState = ({ label }: { label: string }) => (
-  <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-black/5 bg-neutral-50/80 dark:border-white/10 dark:bg-neutral-950/80">
+  <div className="flex min-h-[320px] items-center justify-center rounded-xl border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900">
     <div className="flex flex-col items-center gap-3 text-center">
       <span className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-neutral-700 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200">
         <Loader2 size={20} className="animate-spin" />
       </span>
       <div>
-        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
           Loading {label}
         </p>
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -63,14 +58,9 @@ const TabLoadingState = ({ label }: { label: string }) => (
   </div>
 );
 
-const PointsModal = ({
-  isOpen,
-  onClose,
-  currentUserPoints,
-  onPointsUpdated,
-}: PointsModalProps) => {
+export default function PointsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<PointsTab>("overview");
-  const [currentPoints, setCurrentPoints] = useState(currentUserPoints);
   const [page, setPage] = useState(1);
   const [recipient, setRecipient] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
@@ -81,7 +71,18 @@ const PointsModal = ({
   const [isTransferring, setIsTransferring] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
 
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/home");
+    }
+  };
+
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  const [currentPoints, setCurrentPoints] = useState(user?.points ?? 0);
 
   const {
     data: dailyInfo,
@@ -90,13 +91,12 @@ const PointsModal = ({
   } = useQuery<PointsDailyLoginInfoResponse>({
     queryKey: ["pointsInfo"],
     queryFn: async () => {
-      const response = await getDailyLoginInfoAction();
-      if (!response.success) {
-        throw new Error(response.error);
+      const result = await getDailyLoginInfoAction();
+      if (!result.success) {
+        throw new Error(result.error);
       }
-      return response.data;
+      return result.data;
     },
-    enabled: isOpen,
     staleTime: 1000 * 60,
     retry: false,
   });
@@ -108,40 +108,45 @@ const PointsModal = ({
   } = useQuery<PointsTransactionSummaryType>({
     queryKey: ["pointsSummary"],
     queryFn: async () => {
-      const response = await getPointsTransactionsSummaryAction();
-      if (!response.success) {
-        throw new Error(response.error);
+      const result = await getPointsTransactionsSummaryAction();
+      if (!result.success) {
+        throw new Error(result.error);
       }
-      return response.data;
+      return result.data;
     },
-    enabled: isOpen,
     staleTime: 1000 * 60,
     retry: false,
   });
 
   const {
-    data: transactions,
+    data: transactionsData,
     isLoading: isTransactionsLoading,
     isFetching: isTransactionsFetching,
     refetch: refetchTransactions,
   } = useQuery<PointsTransactionsResponse>({
     queryKey: ["pointsTransactions", page],
     queryFn: async () => {
-      const response = await getPointsTransactionsAction({ page, limit: 5 });
-      if (!response.success) {
-        throw new Error(response.error);
+      const result = await getPointsTransactionsAction({ page, limit: PAGE_SIZE });
+      if (!result.success) {
+        throw new Error(result.error);
       }
-      return response.data;
+      return result.data;
     },
-    enabled: isOpen,
     placeholderData: (previousData) => previousData,
     staleTime: 1000 * 60,
     retry: false,
   });
 
+  const transactions = transactionsData?.transactions ?? [];
+  const totalPages = transactionsData?.totalPages ?? 1;
+  const hasNext = transactionsData?.hasNext ?? false;
+  const hasPrev = transactionsData?.hasPrev ?? false;
+
   useEffect(() => {
-    setCurrentPoints(currentUserPoints);
-  }, [currentUserPoints]);
+    if (user?.points !== undefined) {
+      setCurrentPoints(user.points);
+    }
+  }, [user?.points]);
 
   useEffect(() => {
     if (typeof summary?.currentBalance !== "number") return;
@@ -152,26 +157,10 @@ const PointsModal = ({
         : summary.currentBalance,
     );
 
-    if (currentUserPoints !== summary.currentBalance) {
-      onPointsUpdated(summary.currentBalance);
+    if (user && user.points !== summary.currentBalance) {
+      setUser({ ...user, points: summary.currentBalance });
     }
-  }, [currentUserPoints, onPointsUpdated, summary?.currentBalance]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setActiveTab("overview");
-      setPage(1);
-      setRecipient("");
-      setTransferAmount("");
-      setTransactionId("");
-      setSelectedTransaction(null);
-      setIsClaiming(false);
-      setIsTransferring(false);
-      setIsLookingUp(false);
-    }
-  }, [isOpen]);
-
-  useLockBodyScroll(isOpen);
+  }, [user, setUser, summary?.currentBalance]);
 
   const refreshPointsData = async (
     options: {
@@ -215,7 +204,9 @@ const PointsModal = ({
       const earned = result.data.points;
       const newBalance = currentPoints + earned;
       setCurrentPoints(newBalance);
-      onPointsUpdated(newBalance);
+      if (user) {
+        setUser({ ...user, points: newBalance });
+      }
 
       await refreshPointsData();
 
@@ -261,7 +252,9 @@ const PointsModal = ({
 
       const newBalance = currentPoints - amount;
       setCurrentPoints(newBalance);
-      onPointsUpdated(newBalance);
+      if (user) {
+        setUser({ ...user, points: newBalance });
+      }
       setRecipient("");
       setTransferAmount("");
 
@@ -327,125 +320,125 @@ const PointsModal = ({
     return new Date(dailyInfo.lastClaimDate).toLocaleString();
   }, [dailyInfo?.lastClaimDate]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   const isOverviewTabLoading = isInfoLoading || isSummaryLoading;
-  const isInitialHistoryLoading = isTransactionsLoading && !transactions;
+  const isInitialHistoryLoading = isTransactionsLoading && transactions.length === 0;
 
   return (
-    <OverlayPortal>
-      <div className="pointer-events-auto fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-md">
-        <div className="@container/points flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/95 shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-neutral-900/95">
-          <div className="sticky top-0 z-10 shrink-0 flex items-center justify-between gap-4 border-b border-black/5 bg-white/90 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-neutral-900/90">
-            <div className="min-w-0">
-              <h2 className="truncate text-xl font-semibold text-neutral-950 dark:text-neutral-50">
+    <div className="md:px-2">
+      <main className="flex flex-col w-full gap-2">
+        <div
+          className="z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <button
+              onClick={handleBack}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              aria-label="Go back"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
+              <Coins size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="truncate text-sm text-neutral-950 dark:text-neutral-50 sm:text-base">
                 Points Center
-              </h2>
-              <p className="hidden truncate text-sm text-neutral-500 dark:text-neutral-400 md:block">
-                Claim rewards, review history, transfer points, and lookup
-                transactions.
+              </span>
+              <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                Claim rewards & track your points
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="rounded-full border border-black/5 bg-white/80 p-2 text-neutral-600 transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className="shrink-0 border-b border-black/5 px-4 py-4 dark:border-white/10 sm:px-5">
-            <div className="flex gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-4">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${activeTab === tab.id
-                        ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
-                        : "border-black/5 bg-neutral-50 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
-                      }`}
-                  >
-                    <span
-                      className={`shrink-0 rounded-xl p-2 shadow-sm ${activeTab === tab.id
-                          ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
-                          : "bg-white text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
-                        }`}
-                    >
-                      <Icon size={16} />
-                    </span>
-                    <span className="hidden min-w-0 truncate sm:inline">
-                      {tab.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 scrollbar-none overscroll-contain sm:p-5">
-            {activeTab === "overview" &&
-              (isOverviewTabLoading ? (
-                <TabLoadingState label="overview" />
-              ) : (
-                <OverviewTab
-                  currentPoints={currentPoints}
-                  dailyInfo={dailyInfo}
-                  summary={summary}
-                  formattedLastClaim={formattedLastClaim}
-                  isClaiming={isClaiming}
-                  isInfoLoading={isInfoLoading}
-                  isSummaryLoading={isSummaryLoading}
-                  onClaimDaily={handleClaimDaily}
-                  onOpenHistory={() => setActiveTab("history")}
-                />
-              ))}
-
-            {activeTab === "history" &&
-              (isInitialHistoryLoading ? (
-                <TabLoadingState label="history" />
-              ) : (
-                <HistoryTab
-                  page={page}
-                  transactions={transactions}
-                  isLoading={isTransactionsLoading}
-                  isFetching={isTransactionsFetching}
-                  onNextPage={() => setPage((prev) => prev + 1)}
-                  onPrevPage={() => setPage((prev) => Math.max(prev - 1, 1))}
-                />
-              ))}
-
-            {activeTab === "transfer" && (
-              <TransferTab
-                recipient={recipient}
-                transferAmount={transferAmount}
-                currentPoints={currentPoints}
-                isTransferring={isTransferring}
-                onRecipientChange={setRecipient}
-                onTransferAmountChange={setTransferAmount}
-                onSubmit={handleTransfer}
-              />
-            )}
-
-            {activeTab === "lookup" && (
-              <LookupTab
-                transactionId={transactionId}
-                selectedTransaction={selectedTransaction}
-                isLookingUp={isLookingUp}
-                onTransactionIdChange={setTransactionId}
-                onSubmit={handleLookupTransaction}
-              />
-            )}
           </div>
         </div>
+
+        <div className="flex flex-wrap gap-2 z-10 sticky top-[calc(60px+56px)] lg:top-[56px]">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${activeTab === tab.id
+                  ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
+                  : "border-white bg-white dark:border-neutral-900 dark:bg-neutral-900 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                }`}
+            >
+              <span
+                className={`shrink-0 rounded-xl p-2 shadow-sm ${activeTab === tab.id
+                    ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
+                    : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+                  }`}
+              >
+                <Icon size={16} />
+              </span>
+              <span className="min-w-0 truncate hidden sm:inline">
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </OverlayPortal>
+
+      <div className="flex flex-col gap-2">
+        {activeTab === "overview" &&
+            (isOverviewTabLoading ? (
+              <TabLoadingState label="overview" />
+            ) : (
+              <OverviewTab
+                currentPoints={currentPoints}
+                dailyInfo={dailyInfo}
+                summary={summary}
+                formattedLastClaim={formattedLastClaim}
+                isClaiming={isClaiming}
+                isInfoLoading={isInfoLoading}
+                isSummaryLoading={isSummaryLoading}
+                onClaimDaily={handleClaimDaily}
+                onOpenHistory={() => setActiveTab("history")}
+              />
+            ))}
+
+        {activeTab === "history" &&
+            (isInitialHistoryLoading ? (
+              <TabLoadingState label="history" />
+            ) : (
+              <HistoryTab
+                transactions={transactions}
+                isLoading={isTransactionsLoading}
+                isFetching={isTransactionsFetching}
+                page={page}
+                totalPages={totalPages}
+                hasNext={hasNext}
+                hasPrev={hasPrev}
+                onNextPage={() => setPage((prev) => prev + 1)}
+                onPrevPage={() => setPage((prev) => Math.max(prev - 1, 1))}
+              />
+            ))}
+
+        {activeTab === "transfer" && (
+          <TransferTab
+            recipient={recipient}
+            transferAmount={transferAmount}
+            currentPoints={currentPoints}
+            isTransferring={isTransferring}
+            onRecipientChange={setRecipient}
+            onTransferAmountChange={setTransferAmount}
+            onSubmit={handleTransfer}
+          />
+        )}
+
+        {activeTab === "lookup" && (
+          <LookupTab
+            transactionId={transactionId}
+            selectedTransaction={selectedTransaction}
+            isLookingUp={isLookingUp}
+            onTransactionIdChange={setTransactionId}
+            onSubmit={handleLookupTransaction}
+          />
+        )}
+      </div>
+      </main>
+    </div>
   );
 };
-
-export default PointsModal;

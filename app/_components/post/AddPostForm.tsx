@@ -19,6 +19,7 @@ import { addPostAction } from "@/app/_actions/postAction";
 import { AddPostType, ImageType } from "@/types/post";
 import { uploadFiles } from "@/utils/uploadUtils";
 import { captureVideoThumbnail } from "@/utils/videoThumbnail";
+import { GlobalSettings } from "@/utils/global-settings";
 import toast from "react-hot-toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useAuthStore } from "@/store/auth";
@@ -305,12 +306,15 @@ export default function AddPostBtn({
                     height={100}
                     className="w-12 h-12 bg-gray-300 rounded-full object-cover"
                   />
-                  <div>
+                  <div className="flex-1">
                     <p className="font-semibold flex gap-1 text-black dark:text-white">
                       {user?.name}
                       {user?.id === userId && (
                         <span className="text-blue-600 dark:text-blue-500 font-semibold">(You)</span>
                       )}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Post cost: {GlobalSettings.postCreationCost} points
                     </p>
                   </div>
                 </div>

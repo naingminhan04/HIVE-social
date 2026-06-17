@@ -35,6 +35,10 @@ export const getMenuArr = (profileSlug: string) => [
     href: "/notifications",
   },
   {
+    name: "Points",
+    href: "/points",
+  },
+  {
     name: "Profile",
     href: profileSlug ? `/users/${profileSlug}` : "/home",
   },
@@ -43,6 +47,7 @@ const SideBar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
   const profileSlug = getProfileSlug(user);
   const MenuArr = getMenuArr(profileSlug).filter(
     (item) => item.name !== "Profile",
@@ -111,6 +116,11 @@ const SideBar = () => {
                     {notificationUnreadCount}
                   </span>
                 )}
+                {item.name === "Points" && (
+                  <span className="rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-neutral-950 dark:text-neutral-100">
+                    {user?.points ?? 0}
+                  </span>
+                )}
               </div>
             </Link>
           );
@@ -173,6 +183,7 @@ const SideBar = () => {
           <ThemeToggle />
         </div>
       </div>
+
     </div>
   );
 };

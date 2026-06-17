@@ -1870,55 +1870,53 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                         disabled: message.isDeleted || isDeleting || isPendingSend,
                                       })
                                     }
-                                    className={`relative px-4 py-2 text-sm transition-shadow min-w-[180px] ${bubbleRadius} ${isMine
+                                    className={`relative px-4 py-2 text-sm transition-shadow min-w-[200px] ${bubbleRadius} ${isMine
                                         ? "bg-blue-400 text-white dark:bg-neutral-700"
                                         : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
                                       } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
                                       }`}
                                   >
-                                    <div className="flex min-w-0 items-start gap-2">
-                                      <div className="min-w-0 flex-1 space-y-2">
-                                        {getReplyPreview(message) && (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const parentId = getParentMessageId(message);
-                                              if (parentId) scrollToChatMessage(parentId);
-                                            }}
-                                            disabled={!getParentMessageId(message)}
-                                            className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
-                                                ? "border-white/50 text-white/75"
-                                                : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
-                                              } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
-                                            aria-label="Jump to replied message"
-                                          >
-                                            <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
-                                          </button>
-                                        )}
-                                        {(message.images.length > 0 || message.attachments.length > 0) && (
-                                          <div className="grid gap-2">
-                                            {message.images.map((media, idx) => renderMediaItem(media, message.images, idx))}
-                                            {message.attachments.map((media, idx) => renderMediaItem(media, message.attachments, idx))}
-                                          </div>
-                                        )}
-                                        {(message.content || message.isDeleted) && (
-                                          <p className={`whitespace-pre-wrap wrap-break-word ${message.isDeleted ? "italic opacity-60" : ""}`}>
-                                            {message.isDeleted ? "Message deleted" : message.content}
-                                          </p>
-                                        )}
-                                        
-                                        {/* Timestamp, status, and edited flag inside bubble */}
-                                        <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
-                                          <span className={`text-xs ${isMine ? "text-white/80" : "text-neutral-500 dark:text-neutral-400"}`}>
-                                            {formatChatTimestamp(message.createdAt)}
-                                          </span>
-                                          {message.isEdited && !message.isDeleted && (
-                                            <span className={`text-xs ${isMine ? "text-white/70" : "text-neutral-500 dark:text-neutral-400"}`}>
-                                              edited
-                                            </span>
-                                          )}
-                                          {sendStatus && <MessageStatusIcon status={sendStatus} />}
+                                    <div className="flex flex-col gap-2">
+                                      {getReplyPreview(message) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const parentId = getParentMessageId(message);
+                                            if (parentId) scrollToChatMessage(parentId);
+                                          }}
+                                          disabled={!getParentMessageId(message)}
+                                          className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
+                                              ? "border-white/50 text-white/75"
+                                              : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
+                                            } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
+                                          aria-label="Jump to replied message"
+                                        >
+                                          <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
+                                        </button>
+                                      )}
+                                      {(message.images.length > 0 || message.attachments.length > 0) && (
+                                        <div className="grid gap-2">
+                                          {message.images.map((media, idx) => renderMediaItem(media, message.images, idx))}
+                                          {message.attachments.map((media, idx) => renderMediaItem(media, message.attachments, idx))}
                                         </div>
+                                      )}
+                                      {(message.content || message.isDeleted) && (
+                                        <p className={`whitespace-pre-wrap wrap-break-word ${message.isDeleted ? "italic opacity-60" : ""}`}>
+                                          {message.isDeleted ? "Message deleted" : message.content}
+                                        </p>
+                                      )}
+                                      
+                                      {/* Timestamp, status, and edited flag inside bubble */}
+                                      <div className={`flex items-center gap-1 flex-shrink-0 ${isMine ? "justify-end" : "justify-start"}`}>
+                                        <span className={`text-xs whitespace-nowrap ${isMine ? "text-white/80" : "text-neutral-500 dark:text-neutral-400"}`}>
+                                          {formatChatTimestamp(message.createdAt)}
+                                        </span>
+                                        {message.isEdited && !message.isDeleted && (
+                                          <span className={`text-xs whitespace-nowrap ${isMine ? "text-white/70" : "text-neutral-500 dark:text-neutral-400"}`}>
+                                            edited
+                                          </span>
+                                        )}
+                                        {sendStatus && <MessageStatusIcon status={sendStatus} />}
                                       </div>
                                     </div>
                                   </div>

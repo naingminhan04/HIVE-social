@@ -22,7 +22,7 @@ const TransferTab = ({
   onSubmit,
 }: TransferTabProps) => {
   return (
-    <div className="mx-auto min-w-0 max-w-2xl rounded-[28px] border border-black/5 bg-neutral-50/80 p-4 shadow-sm dark:border-white/10 dark:bg-neutral-950/80 sm:p-5">
+    <div className="rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900">
       <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
         <Send size={18} className="shrink-0" />
         <span className="min-w-0 truncate">Transfer Points</span>
@@ -32,7 +32,7 @@ const TransferTab = ({
         transaction lookup state.
       </p>
 
-      <div className="mt-4 rounded-2xl border border-black/5 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
+      <div className="mt-4 rounded-xl border border-black/10 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-800">
         <p className="truncate text-xs uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-400">
           Available balance
         </p>
@@ -47,7 +47,7 @@ const TransferTab = ({
           <input
             value={recipient}
             onChange={(event) => onRecipientChange(event.target.value)}
-            className="mt-2 w-full rounded-2xl border border-neutral-300 bg-white px-3 py-3 text-sm text-neutral-950 outline-none transition focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
+            className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-sm text-neutral-950 outline-none transition focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
             placeholder="Recipient username"
           />
         </label>
@@ -57,7 +57,7 @@ const TransferTab = ({
           <input
             value={transferAmount}
             onChange={(event) => onTransferAmountChange(event.target.value)}
-            className="mt-2 w-full rounded-2xl border border-neutral-300 bg-white px-3 py-3 text-sm text-neutral-950 outline-none transition focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
+            className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-sm text-neutral-950 outline-none transition focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50"
             placeholder="0"
             inputMode="numeric"
           />
@@ -66,7 +66,7 @@ const TransferTab = ({
         <button
           type="submit"
           disabled={isTransferring}
-          className="inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-blue-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+          className="inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-blue-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
         >
           {isTransferring ? (
             <>

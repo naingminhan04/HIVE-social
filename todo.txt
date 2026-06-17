@@ -1,0 +1,39 @@
+Plan,edit,fix,confirm and checklist the todo as u go so other agents can follow up on what u did and what to do next
+
+1.the backkey icon just should be Chevoron left not the arrow fix that for all the backkeys search page view post view chat view profile page point page noti page and other backkeys
+2.the add chat button should be fixed or sticky or absolute like the add post button on home page mobile view, as well as the chat box should be fixed or sticky or absolute at the bottom of the page like comment form.
+3.the emoji bar still disappears if i dont hover over its area, make it so that after clicking the emoji button and before selecting an emoji, only clicking and scrolling on other places should rehide the emoji bar and the emojireplycopy bar.
+4.the 4 tabs (overview etc) of the point centre page should be another fixed nav like the point nav, rn the 4 tabs are moving when scrolling up and down i dont want that and the contents are leaking from between or above the tabs.
+5.altho the navs does not have x margin or padding on views lower than md, the contents should have 2px, in chat, noti and point pages.
+6.even if a page doesnt have contents (eg lookup tab in point centre) show the background to be at least dvh so that it isnt blank.
+7.for the portal bar and other pages error views at least show a background color too.
+8.just do infinite scroll for the point centre history tab content and each tab's scroll position shouldnt be shared and resetted to top when switching between them.
+9.Remove points button card on profile page and portalbar
+10.implement thoughts features according to backend and link the thoughs notifications to route to the profile, show user thoughts as chat bubble beside pfp and below cover picture. when a thought is too long end text with ...
+POST
+/v1/api/thoughts
+Share a thought
+
+GET
+/v1/api/thoughts
+Get active thoughts for admins
+
+GET
+/v1/api/thoughts/users/{userId}/active
+Get active thought of a specific user
+
+DELETE
+/v1/api/thoughts/{id}
+Delete a thoughts
+11.Implement profile view feature add the view button beside the edit button for the owners and users can only see their own viewers not the others'. Link the noti of the profile view to the profile view modal from the profile page if device width smaller than md and just the modal if the width higher or equal md.
+POST
+/v1/api/views/profile
+Create a view for a profile (run this action right when a user reaches the profile page of a user excluding owns)
+
+GET
+/v1/api/views/profile
+Get all views for a user profile
+12.fix the message bubbles in chat being too wide even tho theres not much text in there, but treat timestamps as width too not just text, do not clip the timestamps just use text and timestamps width for the chat bubble width whichever is the widest not a fix min value. or maybe a fixed min value by calculating how wide can a timestamp possibly Get
+13.add the point usage feature for features ive implemented like adding post creating chat group according to backend codes. (show how much point is gonna cost when doing something that requires point)
+14.add a push notification website version for the chat and notifications using firebase or anything that fit, u can check backend code to see how u can implement it
+15.for all the above changes, do not change the backend, just change the frontend.

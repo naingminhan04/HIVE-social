@@ -32,8 +32,8 @@ const OverviewTab = ({
   const isDailyDisabled = isClaiming || isInfoLoading || !dailyInfo?.canClaim;
 
   return (
-    <div className="grid w-full max-w-full gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-      <div className="min-w-0 rounded-[28px] border border-black/5 bg-neutral-50/80 p-4 shadow-sm dark:border-white/10 dark:bg-neutral-950/80 sm:p-5">
+    <div className="flex w-full max-w-full flex-col gap-2">
+      <div className="rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-sm uppercase tracking-[0.16em] text-neutral-500 dark:text-neutral-400 sm:tracking-[0.2em]">
@@ -47,7 +47,7 @@ const OverviewTab = ({
             type="button"
             onClick={onClaimDaily}
             disabled={isDailyDisabled}
-            className="inline-flex min-w-0 max-w-full shrink-0 items-center gap-2 rounded-2xl bg-blue-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+            className="inline-flex min-w-0 max-w-full shrink-0 items-center gap-2 rounded-xl bg-blue-300 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
           >
             {isClaiming ? (
               <>
@@ -63,7 +63,7 @@ const OverviewTab = ({
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {[
             { label: "Streak", value: dailyInfo?.streak ?? "-" },
             {
@@ -78,7 +78,7 @@ const OverviewTab = ({
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900"
+              className="rounded-xl border border-black/10 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-800"
             >
               <p className="truncate text-xs uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
                 {item.label}
@@ -90,7 +90,7 @@ const OverviewTab = ({
           ))}
         </div>
 
-        <div className="mt-4 rounded-2xl border border-black/5 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
+        <div className="mt-2 rounded-xl border border-black/10 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-800">
           <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">
             <Info size={16} className="shrink-0" />
             <span className="min-w-0 truncate">Last claim</span>
@@ -101,7 +101,7 @@ const OverviewTab = ({
         </div>
       </div>
 
-      <div className="min-w-0 rounded-[28px] border border-black/5 bg-neutral-50/80 p-4 shadow-sm dark:border-white/10 dark:bg-neutral-950/80 sm:p-5">
+      <div className="rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900">
         <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0">
             <p className="truncate text-sm uppercase tracking-[0.16em] text-neutral-500 dark:text-neutral-400 sm:tracking-[0.2em]">
@@ -111,38 +111,38 @@ const OverviewTab = ({
               {isSummaryLoading ? "Loading..." : "Latest totals"}
             </p>
           </div>
-          <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/5 bg-white/90 text-sm text-neutral-600 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 sm:w-auto sm:gap-2 sm:px-3 sm:py-2">
+          <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-neutral-100 text-sm text-neutral-600 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 sm:w-auto sm:gap-2 sm:px-3 sm:py-2">
             <ShieldCheck size={16} />
             <span className="hidden sm:inline">secure</span>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3">
+        <div className="mt-4 grid gap-2">
           {[
             {
               label: "Earned",
               value: summary?.totalEarned ?? "-",
-              tone: "bg-neutral-100 dark:bg-neutral-900",
+              tone: "bg-neutral-100 dark:bg-neutral-800",
             },
             {
               label: "Spent",
               value: summary?.totalSpent ?? "-",
-              tone: "bg-neutral-100 dark:bg-neutral-900",
+              tone: "bg-neutral-100 dark:bg-neutral-800",
             },
             {
               label: "Balance",
               value: summary?.currentBalance ?? "-",
-              tone: "bg-neutral-100 dark:bg-neutral-900",
+              tone: "bg-neutral-100 dark:bg-neutral-800",
             },
             {
               label: "Transactions",
               value: summary?.transactionCount ?? "-",
-              tone: "bg-neutral-100 dark:bg-neutral-900",
+              tone: "bg-neutral-100 dark:bg-neutral-800",
             },
           ].map((item) => (
             <div
               key={item.label}
-              className={`rounded-2xl border border-black/5 p-4 shadow-sm dark:border-white/10 ${item.tone}`}
+              className={`rounded-xl border border-black/10 p-4 dark:border-white/10 ${item.tone}`}
             >
               <p className="truncate text-xs uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-400">
                 {item.label}
@@ -157,7 +157,7 @@ const OverviewTab = ({
         <button
           type="button"
           onClick={onOpenHistory}
-          className="mt-4 inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-neutral-900 transition hover:bg-blue-300 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:active:bg-black"
+          className="mt-2 inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 transition hover:bg-blue-300 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:active:bg-black"
         >
           <History size={16} className="shrink-0" />
           <span className="min-w-0 truncate">Transaction History</span>

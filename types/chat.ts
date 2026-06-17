@@ -121,6 +121,7 @@ export type ChatMessage = {
   myReaction?: ChatReaction | null;
   isRead?: boolean;
   isReadByMe?: boolean;
+  isDelivered?: boolean;
   readCount?: number;
 };
 
@@ -268,7 +269,7 @@ export type DraftFile = {
   kind: DraftFileKind;
 };
 
-export type MessageSendStatus = "sending" | "sent" | "read" | "failed";
+export type MessageSendStatus = "sending" | "sent" | "delivered" | "read" | "failed";
 
 export type ChatMessagesPage = {
   messages: ChatMessage[];

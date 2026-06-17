@@ -122,12 +122,12 @@ export const getMessageSendStatus = (
 
   if (!isDraftChat(chat) && chat?.type === "GROUP") {
     const requiredReaderCount = Math.max((chat.participantsCount ?? 1) - 1, 1);
-    return (message.readCount ?? 0) >= requiredReaderCount ? "read" : "sent";
+    if ((message.readCount ?? 0) >= requiredReaderCount) return "read";
+    return "delivered";
   }
 
   if (message.isRead === true) return "read";
-
-  return "sent";
+  return "delivered"; // Treat all sent non-read messages as delivered
 };
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────

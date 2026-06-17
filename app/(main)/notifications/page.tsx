@@ -9,7 +9,7 @@ import type { NotificationItem } from "@/types/notification";
 import { formatDate } from "@/utils/formatDate";
 import { getNotificationHref } from "@/utils/notification";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { Bell, ChevronLeft } from "lucide-react";
 import { useRouter } from "nextjs-toploader/app";
 import { useEffect, useRef } from "react";
 
@@ -19,6 +19,14 @@ const NotificationsPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/home");
+    }
+  };
 
   const notificationsQuery = useInfiniteQuery({
     queryKey: ["notifications"],
@@ -92,26 +100,33 @@ const NotificationsPage = () => {
     notificationsQuery.isLoading && notifications.length === 0;
 
   return (
-    <main className="flex h-[calc(100dvh-60px)] w-full min-w-0 max-w-full flex-col overflow-hidden lg:h-dvh">
-      <div className="z-10 shrink-0 p-2 pb-1">
-        <div className="rounded-xl border-2 border-white bg-white px-3 dark:border-neutral-900 dark:bg-neutral-900">
-          <div className="flex h-14 items-center gap-2.5">
+    <div className="md:px-2">
+      <main className="flex flex-col w-full gap-2">
+        <div
+          className="z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <button
+              onClick={handleBack}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              aria-label="Go back"
+            >
+              <ChevronLeft size={18} />
+            </button>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
               <Bell size={16} />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-sm font-semibold text-slate-800 dark:text-neutral-50">
+              <span className="truncate text-sm text-neutral-950 dark:text-neutral-50 sm:text-base">
                 Notifications
-              </h1>
+              </span>
               <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
                 Stay up to date with your hive
               </p>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-contain p-2 pt-0 scrollbar-none touch-pan-y">
       {notificationsQuery.error ? (
         <div className="rounded-xl border-2 border-white bg-white p-4 text-sm text-red-600 dark:border-neutral-900 dark:bg-neutral-900 dark:text-red-400">
           {(notificationsQuery.error as Error).message}
@@ -208,8 +223,8 @@ const NotificationsPage = () => {
           ) : null}
         </>
       )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 };
 

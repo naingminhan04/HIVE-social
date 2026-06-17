@@ -110,6 +110,11 @@ const MenuBtn = () => {
                           {notificationUnreadCount}
                         </span>
                       )}
+                      {item.name === "Points" && (
+                        <span className="rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-neutral-950 dark:text-neutral-100">
+                          {user?.points ?? 0}
+                        </span>
+                      )}
                     </div>
                   </Link>
                 );

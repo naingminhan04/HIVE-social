@@ -17,6 +17,13 @@ export function MessageStatusIcon({ status }: { status: MessageSendStatus }) {
       </span>
     );
   }
+  if (status === "delivered") {
+    return (
+      <span className="inline-flex items-center opacity-70" aria-label="Delivered">
+        <CheckCheck size={12} />
+      </span>
+    );
+  }
   // "sent"
   return (
     <span className="inline-flex items-center opacity-70" aria-label="Sent">

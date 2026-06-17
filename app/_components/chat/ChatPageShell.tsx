@@ -16,15 +16,17 @@ const ChatPageShell = ({ children }: ChatPageShellProps) => {
   }, [resetChatUnreadCount]);
 
   return (
-    <main
-      className="relative flex h-[calc(100dvh-60px)] w-full min-w-0 max-w-full flex-col gap-1 overflow-hidden p-2 text-neutral-900 lg:h-dvh dark:text-neutral-50"
-    >
-      {children}
-      <div
-        id="chat-overlay-root"
-        className="pointer-events-none absolute inset-0 z-20"
-      />
-    </main>
+    <div className="md:px-2">
+      <main
+        className="relative flex flex-col w-full min-w-0 max-w-full gap-2 text-neutral-900 dark:text-neutral-50"
+      >
+        {children}
+        <div
+          id="chat-overlay-root"
+          className="pointer-events-none absolute inset-0 z-20"
+        />
+      </main>
+    </div>
   );
 };
 

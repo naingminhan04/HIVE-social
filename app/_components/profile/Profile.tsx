@@ -10,9 +10,10 @@ import {
   changePasswordAction,
 } from "@/app/_actions/user";
 import { uploadFiles } from "@/utils/uploadUtils";
+import { GlobalSettings } from "@/utils/global-settings";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
+  ChevronLeft,
   ShieldCheck,
   PencilLine,
   X,
@@ -29,6 +30,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth";
@@ -36,7 +38,6 @@ import PostReel from "../post/PostReel";
 import { useEffect, useState } from "react";
 import ImageViewer from "@/app/_components/common/ImageViewer";
 import DummyProfile from "@/app/_components/common/DummyProfile";
-import PointsModal from "../PointsModal";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import OverlayPortal from "../layout/OverlayPortal";
 import RecoverableImage from "../common/RecoverableImage";
@@ -74,7 +75,6 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const normalizedUsername = username.trim();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isPointsOpen, setIsPointsOpen] = useState(false);
   const [editCover, setEditCover] = useState(false);
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
@@ -430,7 +430,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         }`}
     >
       <div
-        className={`z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${isPortal
+        className={`z-30 flex h-15 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 ${isPortal
           ? "sticky top-0 items-center gap-2 border-b border-black/5 px-3 dark:border-white/10"
           : "sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
           }`}
@@ -442,7 +442,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
               aria-label="Go back"
             >
-              <ArrowLeft size={18} />
+              <ChevronLeft size={18} />
             </button>
           )}
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-400 text-white dark:bg-white dark:text-black">
@@ -560,12 +560,12 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
           </div>
 
           {user?.id === viewerId && (
-            <button
-              onClick={() => setIsPointsOpen(true)}
+            <Link
+              href="/points"
               className="flex h-[clamp(3.25rem,14cqw,5rem)] w-[clamp(5rem,20cqw,6.5rem)] shrink-0 items-center justify-center rounded-2xl border border-black/5 bg-neutral-100 px-3 text-[clamp(0.875rem,2.8cqw,1rem)] text-neutral-800 shadow-sm transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
             >
               <p className="truncate font-medium">Points</p>
-            </button>
+            </Link>
           )}
         </div>
 
@@ -603,17 +603,6 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
           scrollContainerId={isPortal ? "portal-scroll-container" : undefined}
         />
       </section>
-
-      <PointsModal
-        isOpen={isPointsOpen}
-        onClose={() => setIsPointsOpen(false)}
-        currentUserPoints={user?.points ?? viewer?.points ?? 0}
-        onPointsUpdated={(points) => {
-          if (viewer && viewer.points !== points) {
-            setViewer({ ...viewer, points });
-          }
-        }}
-      />
 
       {imageView && (
         <ImageViewer
@@ -840,6 +829,9 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     <p className="mt-2 truncate text-sm text-gray-600 dark:text-gray-400">
                       Update your display name and bio.
                     </p>
+                    <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                      Name change cost: {GlobalSettings.nameChangeCost} points (first {GlobalSettings.freeNameChangePerMonth} per month free)
+                    </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <input
                         {...registerProfile("name")}
@@ -875,6 +867,9 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     </div>
                     <p className="mt-2 truncate text-sm text-gray-600 dark:text-gray-400">
                       Change your username and keep your profile identity current.
+                    </p>
+                    <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                      Username change cost: {GlobalSettings.usernameChangeCost} points (first {GlobalSettings.freeUsernameChangePerMonth} per month free)
                     </p>
                     <input
                       {...registerUsername("username")}
