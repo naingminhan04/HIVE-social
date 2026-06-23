@@ -9,7 +9,7 @@ import {
   getPanelSubtitle,
   isDraftChat,
 } from "@/utils/chatDisplay";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { GroupInfoModal } from "../GroupInfoModal";
@@ -66,14 +66,14 @@ const ChatPanelHeader = () => {
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2.5 border-b border-black/5 bg-white px-3 dark:border-white/10 dark:bg-neutral-900">
+      <div className="sticky top-0 z-10 flex h-15 shrink-0 items-center gap-2.5 border-b border-black/5 bg-white px-3 dark:border-white/10 dark:bg-neutral-900">
         <button
           type="button"
           onClick={leaveChat}
           className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-900"
           aria-label="Back to chats"
         >
-          <ArrowLeft size={18} />
+          <ChevronLeft size={18} />
         </button>
         {profileHref ? (
           <Link

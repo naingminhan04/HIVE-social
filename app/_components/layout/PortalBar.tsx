@@ -22,7 +22,7 @@ const PortalBar = () => {
           ) : isSessionChecking ? (
             <DummyProfile isPortal />
           ) : (
-            <div className="flex h-full items-center justify-center bg-white p-6 text-center text-sm text-gray-500 dark:bg-neutral-900 dark:text-gray-400">
+            <div className="flex min-h-[calc(100dvh-60px)] items-center justify-center bg-white p-6 text-center text-sm text-gray-500 dark:bg-neutral-950 dark:text-gray-400 lg:min-h-dvh">
               Sign in to view your profile here.
             </div>
           )}

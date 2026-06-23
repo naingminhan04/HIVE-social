@@ -4,6 +4,7 @@ import RecoverableImage from "../common/RecoverableImage";
 import { X, Search, Plus, Loader2 } from "lucide-react";
 import type { SearchUserType } from "@/types/search";
 import type { ComposeMode } from "@/types/chat";
+import { GlobalSettings } from "@/utils/global-settings";
 
 type ComposeModalProps = {
   composeMode: ComposeMode;
@@ -91,6 +92,9 @@ export function ComposeModal({
             ) : (
               <>
                 <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name" className="h-11 w-full rounded-xl border border-black/10 bg-neutral-50 px-3 text-base outline-none focus:border-blue-400 dark:border-white/10 dark:bg-neutral-900" style={{ fontSize: 16 }} />
+                <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                  Group creation cost: {GlobalSettings.groupChatCreationCost} points
+                </p>
                 {groupUsers.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {groupUsers.map((user) => (

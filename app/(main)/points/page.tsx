@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Coins, History, Loader2, Search, Send, ChevronLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "nextjs-toploader/app";
@@ -41,7 +41,7 @@ const tabs: {
   ];
 
 const TabLoadingState = ({ label }: { label: string }) => (
-  <div className="flex min-h-[320px] items-center justify-center rounded-xl border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900">
+  <div className="flex min-h-80 items-center justify-center rounded-xl border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900">
     <div className="flex flex-col items-center gap-3 text-center">
       <span className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-neutral-700 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200">
         <Loader2 size={20} className="animate-spin" />
@@ -61,7 +61,8 @@ const TabLoadingState = ({ label }: { label: string }) => (
 export default function PointsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<PointsTab>("overview");
-  const [page, setPage] = useState(1);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const historySentinelRef = useRef<HTMLDivElement | null>(null);
   const [recipient, setRecipient] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [transactionId, setTransactionId] = useState("");
@@ -122,25 +123,29 @@ export default function PointsPage() {
     data: transactionsData,
     isLoading: isTransactionsLoading,
     isFetching: isTransactionsFetching,
+    isFetchingNextPage: isTransactionsFetchingNextPage,
+    hasNextPage: hasMoreTransactions,
+    fetchNextPage: fetchNextTransactionsPage,
     refetch: refetchTransactions,
-  } = useQuery<PointsTransactionsResponse>({
-    queryKey: ["pointsTransactions", page],
-    queryFn: async () => {
+  } = useInfiniteQuery<PointsTransactionsResponse>({
+    queryKey: ["pointsTransactions"],
+    queryFn: async ({ pageParam }) => {
+      const page = typeof pageParam === "number" ? pageParam : 1;
       const result = await getPointsTransactionsAction({ page, limit: PAGE_SIZE });
       if (!result.success) {
         throw new Error(result.error);
       }
       return result.data;
     },
-    placeholderData: (previousData) => previousData,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasNext ? lastPage.page + 1 : undefined,
     staleTime: 1000 * 60,
     retry: false,
   });
 
-  const transactions = transactionsData?.transactions ?? [];
-  const totalPages = transactionsData?.totalPages ?? 1;
-  const hasNext = transactionsData?.hasNext ?? false;
-  const hasPrev = transactionsData?.hasPrev ?? false;
+  const transactions =
+    transactionsData?.pages.flatMap((transactionPage) => transactionPage.transactions) ?? [];
 
   useEffect(() => {
     if (user?.points !== undefined) {
@@ -161,6 +166,37 @@ export default function PointsPage() {
       setUser({ ...user, points: summary.currentBalance });
     }
   }, [user, setUser, summary?.currentBalance]);
+
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0 });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "history") return;
+    const sentinel = historySentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && hasMoreTransactions && !isTransactionsFetchingNextPage) {
+          void fetchNextTransactionsPage();
+        }
+      },
+      { rootMargin: "240px 0px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [
+    activeTab,
+    fetchNextTransactionsPage,
+    hasMoreTransactions,
+    isTransactionsFetchingNextPage,
+  ]);
 
   const refreshPointsData = async (
     options: {
@@ -325,14 +361,14 @@ export default function PointsPage() {
 
   return (
     <div className="md:px-2">
-      <main className="flex flex-col w-full gap-2">
+      <main className="flex min-h-dvh w-full flex-col bg-neutral-100 dark:bg-neutral-950 lg:min-h-dvh">
         <div
-          className="z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
+          className="z-30 flex h-15 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <button
               onClick={handleBack}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 active:bg-neutral-200 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700"
               aria-label="Go back"
             >
               <ChevronLeft size={18} />
@@ -351,38 +387,43 @@ export default function PointsPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 z-10 sticky top-[calc(60px+56px)] lg:top-[56px]">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
+        <div className="sticky top-[7.5rem] z-20 border-b border-black/5 bg-neutral-100/95 px-1.5 py-1.5 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 md:px-0 lg:top-15">
+          <div className="grid h-12 grid-cols-4 gap-1.5">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
 
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex min-w-0 flex-1 items-center justify-center rounded-2xl border px-3 py-3 text-sm font-semibold transition sm:justify-start sm:gap-3 sm:px-4 sm:text-left ${activeTab === tab.id
-                  ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
-                  : "border-white bg-white dark:border-neutral-900 dark:bg-neutral-900 text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
-                }`}
-            >
-              <span
-                className={`shrink-0 rounded-xl p-2 shadow-sm ${activeTab === tab.id
-                    ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
-                    : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
-                  }`}
-              >
-                <Icon size={16} />
-              </span>
-              <span className="min-w-0 truncate hidden sm:inline">
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex h-12 min-w-0 items-center justify-center rounded-xl border px-2 text-sm font-semibold transition sm:gap-2 sm:px-3 ${activeTab === tab.id
+                    ? "border-blue-400 bg-blue-400 text-white shadow-sm dark:border-black dark:bg-black dark:text-white"
+                    : "border-white bg-white text-neutral-600 hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:border-neutral-900 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                    }`}
+                >
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm ${activeTab === tab.id
+                      ? "bg-white/20 text-white dark:bg-neutral-900 dark:text-white"
+                      : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+                      }`}
+                  >
+                    <Icon size={16} />
+                  </span>
+                  <span className="hidden min-w-0 truncate md:inline">
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-      <div className="flex flex-col gap-2">
-        {activeTab === "overview" &&
+        <div
+          ref={contentRef}
+          className="flex min-h-[calc(100dvh-7.5rem)] flex-col gap-2 bg-neutral-100 px-1.5 dark:bg-neutral-950 md:px-0"
+        >
+          {activeTab === "overview" &&
             (isOverviewTabLoading ? (
               <TabLoadingState label="overview" />
             ) : (
@@ -399,7 +440,7 @@ export default function PointsPage() {
               />
             ))}
 
-        {activeTab === "history" &&
+          {activeTab === "history" &&
             (isInitialHistoryLoading ? (
               <TabLoadingState label="history" />
             ) : (
@@ -407,37 +448,34 @@ export default function PointsPage() {
                 transactions={transactions}
                 isLoading={isTransactionsLoading}
                 isFetching={isTransactionsFetching}
-                page={page}
-                totalPages={totalPages}
-                hasNext={hasNext}
-                hasPrev={hasPrev}
-                onNextPage={() => setPage((prev) => prev + 1)}
-                onPrevPage={() => setPage((prev) => Math.max(prev - 1, 1))}
+                isFetchingNextPage={isTransactionsFetchingNextPage}
+                hasNextPage={hasMoreTransactions}
+                sentinelRef={historySentinelRef}
               />
             ))}
 
-        {activeTab === "transfer" && (
-          <TransferTab
-            recipient={recipient}
-            transferAmount={transferAmount}
-            currentPoints={currentPoints}
-            isTransferring={isTransferring}
-            onRecipientChange={setRecipient}
-            onTransferAmountChange={setTransferAmount}
-            onSubmit={handleTransfer}
-          />
-        )}
+          {activeTab === "transfer" && (
+            <TransferTab
+              recipient={recipient}
+              transferAmount={transferAmount}
+              currentPoints={currentPoints}
+              isTransferring={isTransferring}
+              onRecipientChange={setRecipient}
+              onTransferAmountChange={setTransferAmount}
+              onSubmit={handleTransfer}
+            />
+          )}
 
-        {activeTab === "lookup" && (
-          <LookupTab
-            transactionId={transactionId}
-            selectedTransaction={selectedTransaction}
-            isLookingUp={isLookingUp}
-            onTransactionIdChange={setTransactionId}
-            onSubmit={handleLookupTransaction}
-          />
-        )}
-      </div>
+          {activeTab === "lookup" && (
+            <LookupTab
+              transactionId={transactionId}
+              selectedTransaction={selectedTransaction}
+              isLookingUp={isLookingUp}
+              onTransactionIdChange={setTransactionId}
+              onSubmit={handleLookupTransaction}
+            />
+          )}
+        </div>
       </main>
     </div>
   );

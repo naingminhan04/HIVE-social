@@ -3,7 +3,6 @@ import type { LucideIcon } from "lucide-react";
 import type {
   PointsDailyLoginInfoResponse,
   PointsTransactionSummaryType,
-  PointsTransactionsResponse,
   PointsTransactionType,
 } from "./points";
 
@@ -35,12 +34,11 @@ export type OverviewTabProps = {
 };
 
 export type HistoryTabProps = {
-  page: number;
-  transactions?: PointsTransactionsResponse;
+  transactions: PointsTransactionType[];
   isLoading: boolean;
   isFetching: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
+  isFetchingNextPage: boolean;
+  hasNextPage: boolean;
 };
 
 export type TransferTabProps = {

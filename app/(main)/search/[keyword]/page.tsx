@@ -191,12 +191,12 @@ const SearchResults = ({ keyword }: { keyword: string }) => {
         className="min-h-[calc(100dvh-60px)] lg:min-h-dvh"
       >
         <div
-          className="z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
+          className="z-30 flex h-15 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <button
               onClick={handleBack}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 active:bg-neutral-200 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700"
               aria-label="Go back"
             >
               <ChevronLeft size={18} />

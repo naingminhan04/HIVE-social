@@ -29,7 +29,6 @@ import type {
   ChatMessage,
   ChatReactionType,
   SelectedChat,
-  ComposeMode,
   DraftFile,
   ChatMessagesPage,
   SendMessageInput,
@@ -61,11 +60,8 @@ import {
   Edit3,
   FileText,
   Loader2,
-  MessageCircle,
-  PenLine,
   Reply,
   Trash2,
-  UsersRound,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -131,14 +127,14 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setIsSocketConnected,
     showPanel,
     syncReplyInUrl,
+    composeMode,
+    setComposeMode,
   } = useChatNavigation();
   const viewer = useAuthStore((state) => state.user);
   const replyMsgIdParam = searchParams.get("replyMsgId")?.trim() || null;
 
   // ── UI state ──
   const [isResolvingRoute, setIsResolvingRoute] = useState(Boolean(initialChatId));
-  const [composeMode, setComposeMode] = useState<ComposeMode>(null);
-  const [isComposeMenuOpen, setIsComposeMenuOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [draftFiles, setDraftFiles] = useState<DraftFile[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
@@ -154,7 +150,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const [openReactionMessageId, setOpenReactionMessageId] = useState<string | null>(null);
   const [mobileActionMessage, setMobileActionMessage] = useState<ChatMessage | null>(null);
   const [floatingTimestamp, setFloatingTimestamp] = useState<string | null>(null);
-  const [isScrolling, setIsScrolling] = useState(false);
   const [showFloatingTimestamp, setShowFloatingTimestamp] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
@@ -991,12 +986,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     if (!viewport) return;
     
     // Handle floating timestamp
-    setIsScrolling(true);
     setShowFloatingTimestamp(true);
     
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
-      setIsScrolling(false);
       setShowFloatingTimestamp(false);
     }, 1000);
 
@@ -1259,12 +1252,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setHighlightedMessageId(null);
     setJumpToMessageId(null);
     setComposeMode(null);
-    setIsComposeMenuOpen(false);
     setEditingMessageId(null);
     setEditingText("");
     setEditingImages([]);
     setEditingAttachments([]);
-  }, [showPanel]);
+  }, [setComposeMode, showPanel]);
 
   const removeDraftFile = (id: string) => {
     setDraftFiles((prev) => {
@@ -1680,25 +1672,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   if (!showPanel) {
     return (
       <>
-        <OverlayPortal container="chat">
-          <div className="pointer-events-auto absolute bottom-5 right-5 z-20">
-            <div className="relative">
-              {isComposeMenuOpen && (
-                <div className="pointer-events-auto absolute bottom-full right-0 mb-3 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-xl dark:border-white/10 dark:bg-neutral-900">
-                  <button type="button" onClick={() => { setComposeMode("private"); setIsComposeMenuOpen(false); }} className="flex h-11 w-full items-center gap-3 px-3 text-left transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black">
-                    <MessageCircle size={17} /><span>New Chat</span>
-                  </button>
-                  <button type="button" onClick={() => { setComposeMode("group"); setIsComposeMenuOpen(false); }} className="flex h-11 w-full items-center gap-3 px-3 text-left transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black">
-                    <UsersRound size={17} /><span>New Group</span>
-                  </button>
-                </div>
-              )}
-              <button type="button" onClick={() => setIsComposeMenuOpen((o) => !o)} className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-300 bg-blue-300 text-neutral-950 shadow-xl transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black" aria-label="Compose chat" aria-expanded={isComposeMenuOpen}>
-                <PenLine size={24} />
-              </button>
-            </div>
-          </div>
-        </OverlayPortal>
         {mountedChatModals}
       </>
     );
@@ -1760,11 +1733,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
             {(() => {
               let previousMessageDate: string | null = null;
-              let previousGroupIdx: number | null = null;
               
-              return messageGroups.map((group, groupIdx) => {
+              return messageGroups.map((group) => {
                 const isSystemNotice = group.senderId === "system";
-                const isGroupChat = activeChat && !isDraftChat(activeChat) && activeChat.type === "GROUP";
                 
                 if (isSystemNotice) {
                   const message = group.messages[0];
@@ -1791,7 +1762,6 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                 const isMine = group.senderId === viewer?.id;
                 const firstMessage = group.messages[0];
                 const lastMessage = group.messages[group.messages.length - 1];
-                const firstInConversation = groupIdx === 0;
                 const showTimestampForGroup = shouldShowTimestamp(previousMessageDate, firstMessage.createdAt);
                 previousMessageDate = lastMessage.createdAt;
 
@@ -1851,17 +1821,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                               key={message.id}
                               data-chat-message-id={message.id}
                               className={`group/message flex items-center gap-2 ${isMine ? "justify-end" : "justify-start"}`}
-                              onMouseLeave={(event) => {
-                                const related = event.relatedTarget;
-                                if (related instanceof Element) {
-                                  if (event.currentTarget.contains(related)) return;
-                                  if (related.closest("[data-chat-reaction-picker]")) return;
-                                  if (related.closest("[data-chat-message-actions]")) return;
-                                }
-                                if (openReactionMessageId === message.id) setOpenReactionMessageId(null);
-                              }}
                             >
-                              <div className={`max-w-[85%] flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+                              <div className={`flex max-w-[65%] flex-col lg:max-w-full ${isMine ? "items-end" : "items-start"}`}>
                                 <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
                                   {/* More rectangular bubble with subtle rounding */}
                                   <div
@@ -1870,13 +1831,13 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                         disabled: message.isDeleted || isDeleting || isPendingSend,
                                       })
                                     }
-                                    className={`relative px-4 py-2 text-sm transition-shadow min-w-[200px] ${bubbleRadius} ${isMine
+                                    className={`relative inline-block w-fit max-w-full px-4 py-2 text-sm transition-shadow ${bubbleRadius} ${isMine
                                         ? "bg-blue-400 text-white dark:bg-neutral-700"
                                         : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
                                       } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
                                       }`}
                                   >
-                                    <div className="flex flex-col gap-2">
+                                    <div className="flex w-fit max-w-full flex-col gap-2">
                                       {getReplyPreview(message) && (
                                         <button
                                           type="button"
@@ -1891,7 +1852,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                             } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
                                           aria-label="Jump to replied message"
                                         >
-                                          <p className="line-clamp-2 wrap-break-word">{getReplyPreview(message)}</p>
+                                          <p className="line-clamp-2 [overflow-wrap:anywhere]">{getReplyPreview(message)}</p>
                                         </button>
                                       )}
                                       {(message.images.length > 0 || message.attachments.length > 0) && (
@@ -1901,13 +1862,13 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                         </div>
                                       )}
                                       {(message.content || message.isDeleted) && (
-                                        <p className={`whitespace-pre-wrap wrap-break-word ${message.isDeleted ? "italic opacity-60" : ""}`}>
+                                        <p className={`whitespace-pre-wrap [overflow-wrap:anywhere] ${message.isDeleted ? "italic opacity-60" : ""}`}>
                                           {message.isDeleted ? "Message deleted" : message.content}
                                         </p>
                                       )}
                                       
                                       {/* Timestamp, status, and edited flag inside bubble */}
-                                      <div className={`flex items-center gap-1 flex-shrink-0 ${isMine ? "justify-end" : "justify-start"}`}>
+                                      <div className={`flex items-center gap-1 self-end ${isMine ? "justify-end" : "justify-start"}`}>
                                         <span className={`text-xs whitespace-nowrap ${isMine ? "text-white/80" : "text-neutral-500 dark:text-neutral-400"}`}>
                                           {formatChatTimestamp(message.createdAt)}
                                         </span>

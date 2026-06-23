@@ -4,8 +4,9 @@ import ChatListItem from "./ChatListItem";
 import { useChatNavigation } from "@/app/_components/chat/ChatNavigation";
 import { useAuthStore } from "@/store/auth";
 import { getUnreadChatsCount } from "@/utils/chatDisplay";
-import { MessageCircle, ChevronLeft } from "lucide-react";
+import { ChevronLeft, MessageCircle, UsersRound } from "lucide-react";
 import { useRouter } from "nextjs-toploader/app";
+import { useState } from "react";
 
 type ChatListSectionProps = {
   activeChatId?: string | null;
@@ -13,7 +14,12 @@ type ChatListSectionProps = {
 
 const ChatListSection = ({ activeChatId: activeChatIdProp }: ChatListSectionProps) => {
   const router = useRouter();
-  const { chats, activeChatId: contextActiveChatId } = useChatNavigation();
+  const {
+    chats,
+    activeChatId: contextActiveChatId,
+    setComposeMode,
+  } = useChatNavigation();
+  const [isComposeMenuOpen, setIsComposeMenuOpen] = useState(false);
   const activeChatId = contextActiveChatId ?? activeChatIdProp ?? null;
   const viewer = useAuthStore((state) => state.user);
   const unreadChatsCount = getUnreadChatsCount(chats, viewer?.id);
@@ -29,12 +35,12 @@ const ChatListSection = ({ activeChatId: activeChatIdProp }: ChatListSectionProp
   return (
     <div className="flex flex-col gap-1">
       <div
-        className="z-30 flex h-14 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
+        className="z-30 flex h-15 w-full justify-between bg-white/95 font-semibold backdrop-blur dark:bg-neutral-900/95 sticky top-15 items-center border-b border-black/5 px-3 dark:border-white/10 lg:top-0"
       >
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <button
             onClick={handleBack}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 active:bg-neutral-200 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700"
             aria-label="Go back"
           >
             <ChevronLeft size={18} />
@@ -49,13 +55,50 @@ const ChatListSection = ({ activeChatId: activeChatIdProp }: ChatListSectionProp
             <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
               {unreadChatsCount > 0
                 ? `${unreadChatsCount} unread ${unreadChatsCount === 1 ? "chat" : "chats"}`
-                : "All caught up"}
+              : "All caught up"}
             </p>
           </div>
         </div>
+        <div className="relative shrink-0">
+          {isComposeMenuOpen && (
+            <div className="absolute right-0 top-full z-40 mt-2 w-44 overflow-hidden rounded-lg border border-black/10 bg-white py-1 text-sm shadow-xl dark:border-white/10 dark:bg-neutral-900">
+              <button
+                type="button"
+                onClick={() => {
+                  setComposeMode("private");
+                  setIsComposeMenuOpen(false);
+                }}
+                className="flex h-11 w-full items-center gap-3 px-3 text-left transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+              >
+                <MessageCircle size={17} />
+                <span>New Chat</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setComposeMode("group");
+                  setIsComposeMenuOpen(false);
+                }}
+                className="flex h-11 w-full items-center gap-3 px-3 text-left transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+              >
+                <UsersRound size={17} />
+                <span>New Group</span>
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsComposeMenuOpen((open) => !open)}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 active:bg-neutral-200 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700"
+            aria-label="Compose chat"
+            aria-expanded={isComposeMenuOpen}
+          >
+            <MessageCircle size={18} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5 px-1.5 py-1.5  md:px-0">
         {chats.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-white bg-white px-6 py-16 text-center dark:border-neutral-900 dark:bg-neutral-900">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-500 dark:bg-blue-500/10 dark:text-blue-300">

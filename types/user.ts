@@ -17,7 +17,7 @@ export interface UserType {
   createdAt: string;
   updatedAt:string;
   hasPassword: boolean;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "SUPER_ADMIN";
   postsCount: number;
   likesCount: number;
   coverPic: string | null;

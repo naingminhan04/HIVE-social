@@ -23,7 +23,7 @@ const ChatWorkspaceLayout = ({ list, panel }: ChatWorkspaceLayoutProps) => {
       <section
         className={`w-full flex-col overflow-hidden ${
           showPanel
-            ? "flex flex-col rounded-xl border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900"
+            ? "flex h-[calc(100dvh-3.75rem)] flex-col rounded-xl border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900 lg:h-[100dvh]"
             : "hidden"
         }`}
       >

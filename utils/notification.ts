@@ -24,7 +24,7 @@ export function getNotificationHref(notification: NotificationItem): string | nu
 
   const profileUsername = notification.target.profileView?.profile?.username;
   if (notification.profileViewId && profileUsername) {
-    return `/users/${profileUsername}`;
+    return `/users/${profileUsername}?profileViews=1`;
   }
 
   return null;

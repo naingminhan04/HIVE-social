@@ -9,16 +9,29 @@ import {
   updateProfileAction,
   changePasswordAction,
 } from "@/app/_actions/user";
+import {
+  createThoughtAction,
+  deleteThoughtAction,
+  getActiveThoughtByUserAction,
+} from "@/app/_actions/thought";
+import {
+  createProfileViewAction,
+  getProfileViewsAction,
+} from "@/app/_actions/profileView";
 import { uploadFiles } from "@/utils/uploadUtils";
 import { GlobalSettings } from "@/utils/global-settings";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   ChevronLeft,
   ShieldCheck,
   PencilLine,
   X,
   Camera,
-  Check,
   Loader2,
   UserRoundCog,
   KeyRound,
@@ -26,6 +39,9 @@ import {
   ImageUp,
   MessageCircle,
   UserRound,
+  Eye,
+  Send,
+  Trash2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -35,7 +51,8 @@ import { useRouter } from "nextjs-toploader/app";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth";
 import PostReel from "../post/PostReel";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ImageViewer from "@/app/_components/common/ImageViewer";
 import DummyProfile from "@/app/_components/common/DummyProfile";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
@@ -69,13 +86,13 @@ type ProfileProps = {
 const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const viewer = useAuthStore((state) => state.user);
   const setViewer = useAuthStore((state) => state.setUser);
   const viewerId = viewer?.id;
   const normalizedUsername = username.trim();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editCover, setEditCover] = useState(false);
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(
@@ -92,6 +109,10 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const [isPasswordPending, setIsPasswordPending] = useState(false);
   const [isMessagePending, setIsMessagePending] = useState(false);
   const [activeEditTab, setActiveEditTab] = useState<EditProfileTab>("photo");
+  const [isThoughtOpen, setIsThoughtOpen] = useState(false);
+  const [thoughtText, setThoughtText] = useState("");
+  const [isViewsOpen, setIsViewsOpen] = useState(false);
+  const profileViewsSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const editTabs: {
     id: EditProfileTab;
@@ -104,7 +125,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
       { id: "password", label: "Password", icon: KeyRound },
     ];
 
-  useLockBodyScroll(isEditOpen);
+  useLockBodyScroll(isEditOpen || isThoughtOpen || isViewsOpen);
 
   const {
     data: user,
@@ -151,6 +172,73 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   } = useForm<PasswordFormValues>();
 
   const isOwner = viewerId === user?.id;
+
+  const thoughtQuery = useQuery({
+    queryKey: ["activeThought", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const result = await getActiveThoughtByUserAction(user.id);
+      if (!result.success) throw new Error(result.error);
+      return result.data.thought;
+    },
+    enabled: !!user?.id,
+    retry: false,
+  });
+
+  const profileViewsQuery = useInfiniteQuery({
+    queryKey: ["profileViews"],
+    queryFn: async ({ pageParam }) => {
+      const page = typeof pageParam === "number" ? pageParam : 1;
+      const result = await getProfileViewsAction({ page, size: 20 });
+      if (!result.success) throw new Error(result.error);
+      return result.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.metadata.nextPage ?? undefined,
+    enabled: isOwner && isViewsOpen,
+    retry: false,
+  });
+  const {
+    fetchNextPage: fetchNextProfileViewsPage,
+    hasNextPage: hasMoreProfileViews,
+    isFetchingNextPage: isFetchingMoreProfileViews,
+  } = profileViewsQuery;
+
+  const createThoughtMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const result = await createThoughtAction(text);
+      if (!result.success) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: async (data) => {
+      setThoughtText("");
+      setIsThoughtOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["activeThought", user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["pointsSummary"] });
+      if (viewer && data.thought.userId === viewer.id) {
+        setViewer({
+          ...viewer,
+          points: Math.max(0, (viewer.points ?? 0) - GlobalSettings.thoughtCreationCost),
+        });
+      }
+      toast.success(data.message || "Thought shared");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const deleteThoughtMutation = useMutation({
+    mutationFn: async (thoughtId: string) => {
+      const result = await deleteThoughtAction(thoughtId);
+      if (!result.success) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["activeThought", user?.id] });
+      toast.success(data.message || "Thought deleted");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   useEffect(() => {
     if (!user) return;
     resetProfile({
@@ -174,6 +262,45 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
       setActiveEditTab("photo");
     }
   }, [isEditOpen]);
+
+  useEffect(() => {
+    if (!user?.id || !viewerId || isOwner) return;
+    void createProfileViewAction(user.id);
+  }, [isOwner, user?.id, viewerId]);
+
+  useEffect(() => {
+    if (searchParams.get("profileViews") === "1" && isOwner) {
+      setIsViewsOpen(true);
+    }
+  }, [isOwner, searchParams]);
+
+  useEffect(() => {
+    if (!isViewsOpen) return;
+    const sentinel = profileViewsSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry?.isIntersecting &&
+          hasMoreProfileViews &&
+          !isFetchingMoreProfileViews
+        ) {
+          void fetchNextProfileViewsPage();
+        }
+      },
+      { rootMargin: "160px 0px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [
+    isViewsOpen,
+    fetchNextProfileViewsPage,
+    hasMoreProfileViews,
+    isFetchingMoreProfileViews,
+  ]);
 
   const syncUser = async () => {
     await queryClient.invalidateQueries({ queryKey: ["user"] });
@@ -321,7 +448,6 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
 
       await syncUser();
       toast.success("Cover photo updated", { id: toastId });
-      setEditCover(false);
       setSelectedCoverFile(null);
       if (coverPreviewUrl) {
         URL.revokeObjectURL(coverPreviewUrl);
@@ -375,10 +501,42 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
     }
   };
 
+  const hasSelectedPhotoChanges = Boolean(selectedProfileFile || selectedCoverFile);
+  const isPhotoSavePending = isProfilePicPending || isCoverPending;
+
+  const saveSelectedPhotos = async () => {
+    if (!hasSelectedPhotoChanges || isPhotoSavePending) return;
+
+    if (selectedProfileFile) {
+      await saveProfilePicture();
+    }
+
+    if (selectedCoverFile) {
+      await saveCoverPicture();
+    }
+  };
+
+  const cancelSelectedPhotos = () => {
+    if (isPhotoSavePending) return;
+
+    setSelectedProfileFile(null);
+    setSelectedCoverFile(null);
+
+    if (profilePreviewUrl) {
+      URL.revokeObjectURL(profilePreviewUrl);
+      setProfilePreviewUrl(null);
+    }
+
+    if (coverPreviewUrl) {
+      URL.revokeObjectURL(coverPreviewUrl);
+      setCoverPreviewUrl(null);
+    }
+  };
+
   if (isLoading) return <DummyProfile isPortal={isPortal} />;
   if (error) {
     return (
-      <div className="flex justify-center items-center lg:h-dvh h-[calc(100dvh-60px)]">
+      <div className="flex min-h-[calc(100dvh-60px)] items-center justify-center bg-white dark:bg-neutral-950 lg:min-h-dvh">
         <div className="text-center space-y-2">
           <p className="text-red-500">Error loading profile</p>
           <button
@@ -396,6 +554,11 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
   const displayedProfileSrc =
     profilePreviewUrl || user?.profilePic || "/default-avatar.png";
   const profileTitle = isOwner ? "Profile" : `${user?.name ?? "User"}'s Profile`;
+  const activeThought = thoughtQuery.data;
+  const profileViews =
+    profileViewsQuery.data?.pages.flatMap((page) => page.views) ?? [];
+  const canManageThought =
+    isOwner || viewer?.role === "ADMIN" || viewer?.role === "SUPER_ADMIN";
 
   const openMessage = async () => {
     if (!user?.id || !user.username || isMessagePending) return;
@@ -439,7 +602,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
           {!isPortal && (
             <button
               onClick={() => router.back()}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-700 transition hover:bg-neutral-100 active:bg-neutral-200 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700"
               aria-label="Go back"
             >
               <ChevronLeft size={18} />
@@ -454,17 +617,30 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         </div>
 
         {isOwner ? (
-          <button
-            onClick={() => setIsEditOpen(true)}
-            className={`ml-2 inline-flex shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-blue-100 active:bg-blue-200 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700 ${isPortal ? "h-9 w-9" : "h-9 gap-2 px-3 sm:h-10 sm:px-4"
-              }`}
-            aria-label="Edit profile"
-          >
-            <PencilLine size={16} />
-            {!isPortal ? (
-              <span className="hidden text-sm font-medium sm:inline">Edit Profile</span>
-            ) : null}
-          </button>
+          <div className="ml-2 flex shrink-0 items-center gap-1">
+            <button
+              onClick={() => setIsViewsOpen(true)}
+              className={`inline-flex shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-blue-100 active:bg-blue-200 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700 ${isPortal ? "h-9 w-9" : "h-9 gap-2 px-3 sm:h-10 sm:px-4"
+                }`}
+              aria-label="View profile viewers"
+            >
+              <Eye size={16} />
+              {!isPortal ? (
+                <span className="hidden text-sm font-medium sm:inline">Views</span>
+              ) : null}
+            </button>
+            <button
+              onClick={() => setIsEditOpen(true)}
+              className={`inline-flex shrink-0 items-center justify-center rounded-2xl border border-black/10 bg-white text-neutral-700 shadow-sm transition hover:bg-blue-100 active:bg-blue-200 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:active:bg-neutral-700 ${isPortal ? "h-9 w-9" : "h-9 gap-2 px-3 sm:h-10 sm:px-4"
+                }`}
+              aria-label="Edit profile"
+            >
+              <PencilLine size={16} />
+              {!isPortal ? (
+                <span className="hidden text-sm font-medium sm:inline">Edit Profile</span>
+              ) : null}
+            </button>
+          </div>
         ) : user?.id ? (
           <button
             onClick={openMessage}
@@ -530,6 +706,21 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             }
           />
         </div>
+
+        {(activeThought || isOwner) && (
+          <button
+            type="button"
+            onClick={() => isOwner && setIsThoughtOpen(true)}
+            disabled={!isOwner}
+            className="absolute bottom-[-30%] left-[27%] z-20 max-w-[65%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2.5 text-left text-xs text-neutral-800 shadow-lg ring-1 ring-black/10 transition enabled:hover:-translate-y-0.5 enabled:hover:shadow-xl disabled:cursor-default dark:bg-neutral-950 dark:text-neutral-100 dark:ring-white/10 sm:text-sm before:absolute before:-left-1 before:top-2.5 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-black/10 before:bg-inherit dark:before:border-white/10"
+            aria-label={isOwner ? "Edit thought" : "User thought"}
+            title={activeThought?.text ?? "Share a thought"}
+          >
+            <span className="block truncate">
+              {activeThought?.text || "Share a thought"}
+            </span>
+          </button>
+        )}
       </div>
 
       <section className="px-4 pb-4 space-y-6">
@@ -702,8 +893,10 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                             )
                           ) : null}
 
-                          <label className="absolute bottom-2 right-2 inline-flex h-10 cursor-pointer items-center justify-center rounded-lg bg-white/70 p-2 text-neutral-900 backdrop-blur-md transition hover:bg-white dark:bg-black/60 dark:text-white dark:hover:bg-black/75">
-                            <Camera size={18} />
+                          <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/35 opacity-0 transition hover:opacity-100 focus-within:opacity-100">
+                            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-neutral-900 shadow-lg backdrop-blur dark:bg-black/70 dark:text-white">
+                              <Camera size={22} />
+                            </span>
                             <input
                               type="file"
                               accept="image/*"
@@ -717,101 +910,75 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                                 }
                                 setSelectedCoverFile(file);
                                 setCoverPreviewUrl(URL.createObjectURL(file));
-                                setEditCover(true);
                               }}
                             />
                           </label>
                         </div>
 
                         <div className="absolute left-1/10 z-10 w-3/14 min-w-22 -bottom-2/9">
-                          <Image
-                            src={displayedProfileSrc}
-                            alt="Profile preview"
-                            width={200}
-                            height={200}
-                            className="aspect-square w-full rounded-full border-[1vw] border-white bg-gray-300 object-cover dark:border-neutral-900 md:border-[0.6vw] lg:border-[clamp(5px,1vw,7px)]"
-                          />
+                          <div className="relative overflow-hidden rounded-full">
+                            <Image
+                              src={displayedProfileSrc}
+                              alt="Profile preview"
+                              width={200}
+                              height={200}
+                              className="aspect-square w-full rounded-full border-[1vw] border-white bg-gray-300 object-cover dark:border-neutral-900 md:border-[0.6vw] lg:border-[clamp(5px,1vw,7px)]"
+                            />
+                            <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/40 opacity-0 transition hover:opacity-100 focus-within:opacity-100">
+                              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-neutral-900 shadow-lg backdrop-blur dark:bg-black/70 dark:text-white">
+                                <Camera size={20} />
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={isProfilePicPending || isCoverPending}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  if (profilePreviewUrl) {
+                                    URL.revokeObjectURL(profilePreviewUrl);
+                                  }
+                                  setSelectedProfileFile(file);
+                                  setProfilePreviewUrl(URL.createObjectURL(file));
+                                }}
+                              />
+                            </label>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 px-4 pb-5">
-                        <label className="inline-flex h-11 min-w-0 max-w-full cursor-pointer items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black">
-                          <span className="min-w-0 truncate">Choose Photo</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={isProfilePicPending || isCoverPending}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              if (profilePreviewUrl) {
-                                URL.revokeObjectURL(profilePreviewUrl);
-                              }
-                              setSelectedProfileFile(file);
-                              setProfilePreviewUrl(URL.createObjectURL(file));
-                            }}
-                          />
-                        </label>
-
-                        {selectedProfileFile && (
-                          <>
+                      <div className="px-4 pb-5">
+                        <div className="flex flex-col gap-3 rounded-2xl border border-black/5 bg-neutral-50 p-3 dark:border-white/10 dark:bg-neutral-950 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="min-w-0 truncate text-sm text-neutral-500 dark:text-neutral-400">
+                            {hasSelectedPhotoChanges
+                              ? [
+                                selectedProfileFile ? "profile picture" : null,
+                                selectedCoverFile ? "cover photo" : null,
+                              ].filter(Boolean).join(" and ") + " selected"
+                              : "Choose a profile picture or cover photo to save."}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2 sm:w-64">
                             <button
                               type="button"
-                              disabled={isProfilePicPending}
-                              onClick={saveProfilePicture}
-                              className="inline-flex h-11 min-w-0 max-w-full items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                              disabled={!hasSelectedPhotoChanges || isPhotoSavePending}
+                              onClick={saveSelectedPhotos}
+                              className="inline-flex h-11 min-w-0 items-center justify-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:pointer-events-none disabled:opacity-45 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                             >
                               <span className="min-w-0 truncate">
-                                {isProfilePicPending ? "Updating..." : "Update Photo"}
+                                {isPhotoSavePending ? "Saving..." : "Save"}
                               </span>
                             </button>
                             <button
                               type="button"
-                              disabled={isProfilePicPending}
-                              onClick={() => {
-                                setSelectedProfileFile(null);
-                                if (profilePreviewUrl) {
-                                  URL.revokeObjectURL(profilePreviewUrl);
-                                  setProfilePreviewUrl(null);
-                                }
-                              }}
-                              className="inline-flex h-11 min-w-0 max-w-full items-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-semibold text-black transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 disabled:opacity-50 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                              disabled={!hasSelectedPhotoChanges || isPhotoSavePending}
+                              onClick={cancelSelectedPhotos}
+                              className="inline-flex h-11 min-w-0 items-center justify-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-semibold text-black transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 disabled:pointer-events-none disabled:opacity-45 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
                             >
                               <span className="min-w-0 truncate">Cancel</span>
                             </button>
-                          </>
-                        )}
-
-                        {selectedCoverFile && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={isCoverPending}
-                              onClick={saveCoverPicture}
-                              className="inline-flex h-11 min-w-0 max-w-full items-center rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
-                            >
-                              <span className="min-w-0 truncate">
-                                {isCoverPending ? "Updating..." : "Update Banner"}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isCoverPending}
-                              onClick={() => {
-                                setEditCover(false);
-                                setSelectedCoverFile(null);
-                                if (coverPreviewUrl) {
-                                  URL.revokeObjectURL(coverPreviewUrl);
-                                  setCoverPreviewUrl(null);
-                                }
-                              }}
-                              className="inline-flex h-11 min-w-0 max-w-full items-center rounded-2xl border border-black/10 bg-white px-4 text-sm font-semibold text-black transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 disabled:opacity-50 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
-                            >
-                              <span className="min-w-0 truncate">Cancel Banner</span>
-                            </button>
-                          </>
-                        )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -938,6 +1105,160 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                       </span>
                     </button>
                   </form>
+                )}
+              </div>
+            </div>
+          </div>
+        </OverlayPortal>
+      )}
+
+      {isThoughtOpen && isOwner && (
+        <OverlayPortal>
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900">
+              <div className="flex items-center justify-between gap-3 border-b border-black/5 px-5 py-4 dark:border-white/10">
+                <div className="min-w-0">
+                  <h2 className="truncate text-lg font-semibold text-black dark:text-white">
+                    Share a Thought
+                  </h2>
+                  <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                    {GlobalSettings.thoughtCreationCost} points to post
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsThoughtOpen(false)}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-600 transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                  aria-label="Close thought editor"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-5">
+                <textarea
+                  value={thoughtText}
+                  onChange={(event) => setThoughtText(event.target.value)}
+                  maxLength={280}
+                  placeholder={activeThought?.text || "What's on your mind?"}
+                  className="h-36 w-full resize-none rounded-2xl border border-black/10 bg-neutral-50 p-4 text-sm outline-none transition focus:border-blue-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
+                />
+                <div className="mt-2 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                  <span className="truncate">
+                    {activeThought ? "Posting replaces your current thought." : "Visible from your profile."}
+                  </span>
+                  <span className="shrink-0">{thoughtText.length}/280</span>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    disabled={!activeThought || !canManageThought || deleteThoughtMutation.isPending}
+                    onClick={() => activeThought && deleteThoughtMutation.mutate(activeThought.id)}
+                    className="inline-flex h-11 items-center gap-2 rounded-2xl border border-red-200 bg-white px-4 text-sm font-semibold text-red-500 transition hover:bg-red-50 disabled:opacity-40 dark:border-red-500/20 dark:bg-neutral-900 dark:hover:bg-red-950/30"
+                  >
+                    {deleteThoughtMutation.isPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                    <span>Delete</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!thoughtText.trim() || createThoughtMutation.isPending}
+                    onClick={() => createThoughtMutation.mutate(thoughtText.trim())}
+                    className="inline-flex h-11 items-center gap-2 rounded-2xl bg-blue-300 px-4 text-sm font-semibold text-neutral-950 transition hover:bg-blue-400 hover:text-white active:bg-blue-500 disabled:opacity-50 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                  >
+                    {createThoughtMutation.isPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Send size={16} />
+                    )}
+                    <span>Share</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </OverlayPortal>
+      )}
+
+      {isViewsOpen && isOwner && (
+        <OverlayPortal>
+          <div className="fixed inset-0 z-[120] flex items-end bg-black/40 p-0 backdrop-blur-sm md:items-center md:justify-center md:p-4">
+            <div className="flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-black/5 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-900 md:rounded-3xl">
+              <div className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-black/5 px-5 dark:border-white/10">
+                <div className="min-w-0">
+                  <h2 className="truncate text-lg font-semibold text-black dark:text-white">
+                    Profile Views
+                  </h2>
+                  <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                    Recent people who opened your profile
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsViewsOpen(false)}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-600 transition hover:bg-blue-300 hover:text-neutral-900 active:bg-blue-400 dark:text-neutral-300 dark:hover:bg-neutral-950 dark:hover:text-neutral-100 dark:active:bg-black"
+                  aria-label="Close profile views"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="min-h-64 overflow-y-auto p-4 scrollbar-none overscroll-contain">
+                {profileViewsQuery.isLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-neutral-500">
+                    <Loader2 size={16} className="animate-spin" />
+                    Loading views...
+                  </div>
+                ) : profileViewsQuery.isError ? (
+                  <div className="flex min-h-64 items-center justify-center text-center text-sm text-red-500">
+                    {(profileViewsQuery.error as Error).message}
+                  </div>
+                ) : profileViews.length ? (
+                  <div className="divide-y divide-black/5 overflow-hidden rounded-2xl border border-black/5 bg-neutral-50 dark:divide-white/10 dark:border-white/10 dark:bg-neutral-950">
+                    {profileViews.map((view) => (
+                      <Link
+                        key={view.id}
+                        href={view.user?.username ? `/users/${view.user.username}` : "#"}
+                        onClick={() => setIsViewsOpen(false)}
+                        className="flex min-w-0 items-center gap-3 px-3 py-3 transition hover:bg-blue-50 dark:hover:bg-neutral-900"
+                      >
+                        <RecoverableImage
+                          src={view.user?.profilePic || "/default-avatar.png"}
+                          alt={view.user?.name || "Profile viewer"}
+                          width={44}
+                          height={44}
+                          className="h-11 w-11 rounded-full object-cover"
+                          wrapperClassName="h-11 w-11 shrink-0 rounded-full"
+                          fallbackSrc="/default-avatar.png"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold">
+                            {view.user?.name || "Unknown user"}
+                          </span>
+                          <span className="block truncate text-xs text-neutral-500">
+                            {new Date(view.createdAt).toLocaleString()}
+                          </span>
+                        </span>
+                      </Link>
+                    ))}
+                    <div ref={profileViewsSentinelRef} className="h-2" />
+                    {profileViewsQuery.isFetchingNextPage && (
+                      <div className="flex items-center justify-center gap-2 px-3 py-4 text-sm text-neutral-500">
+                        <Loader2 size={16} className="animate-spin" />
+                        Loading more...
+                      </div>
+                    )}
+                    {!profileViewsQuery.hasNextPage && (
+                      <div className="px-3 py-4 text-center text-xs text-neutral-500 dark:text-neutral-400">
+                        You are all caught up.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex min-h-64 items-center justify-center text-center text-sm text-neutral-500">
+                    No profile views yet.
+                  </div>
                 )}
               </div>
             </div>

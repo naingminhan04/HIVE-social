@@ -56,7 +56,7 @@ const UserProfilePage = () => {
 
   if (!username) {
     return (
-      <div className="flex min-h-[calc(100dvh-60px)] items-center justify-center p-4 text-sm text-red-500 lg:min-h-dvh">
+      <div className="flex min-h-[calc(100dvh-60px)] items-center justify-center bg-white p-4 text-sm text-red-500 dark:bg-neutral-950 lg:min-h-dvh">
         Invalid profile username.
       </div>
     );

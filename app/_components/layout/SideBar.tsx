@@ -47,7 +47,6 @@ const SideBar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
   const profileSlug = getProfileSlug(user);
   const MenuArr = getMenuArr(profileSlug).filter(
     (item) => item.name !== "Profile",
@@ -112,7 +111,7 @@ const SideBar = () => {
                   </span>
                 )}
                 {item.name === "Notifications" && notificationUnreadCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                  <span className="rounded-full bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-neutral-950 dark:text-neutral-100">
                     {notificationUnreadCount}
                   </span>
                 )}

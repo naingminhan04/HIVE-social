@@ -1,48 +1,31 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { PointsTransactionType } from "@/types/points";
+import type { RefObject } from "react";
 
 type HistoryTabProps = {
   transactions: PointsTransactionType[];
   isLoading: boolean;
   isFetching: boolean;
-  page: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-  onNextPage: () => void;
-  onPrevPage: () => void;
+  isFetchingNextPage: boolean;
+  hasNextPage: boolean;
+  sentinelRef: RefObject<HTMLDivElement | null>;
 };
 
 const HistoryTab = ({
   transactions,
   isLoading,
   isFetching,
-  page,
-  totalPages,
-  hasNext,
-  hasPrev,
-  onNextPage,
-  onPrevPage,
+  isFetchingNextPage,
+  hasNextPage,
+  sentinelRef,
 }: HistoryTabProps) => {
   const hasTransactions = transactions.length > 0;
 
   if (isLoading && !hasTransactions) {
     return (
       <div className="flex flex-col gap-2">
-        <div className="rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <ChevronLeft size={16} className="opacity-50" />
-              <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-                Page {page} / {totalPages}
-              </span>
-              <ChevronRight size={16} className="opacity-50" />
-            </div>
-            {isFetching && <Loader2 className="animate-spin" size={16} />}
-          </div>
-        </div>
         <div className="rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900">
           <div className="flex items-center gap-2">
             <Loader2 className="animate-spin" size={16} />
@@ -75,41 +58,14 @@ const HistoryTab = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900">
-        <div className="flex items-center justify-between gap-3">
-          <button
-            onClick={onPrevPage}
-            disabled={!hasPrev || isFetching}
-            className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm font-semibold text-neutral-700 transition hover:bg-blue-300 hover:text-neutral-900 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <ChevronLeft size={16} />
-            <span>Prev</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-              Page {page} / {totalPages}
-            </span>
-            {isFetching && <Loader2 className="animate-spin" size={16} />}
-          </div>
-          <button
-            onClick={onNextPage}
-            disabled={!hasNext || isFetching}
-            className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm font-semibold text-neutral-700 transition hover:bg-blue-300 hover:text-neutral-900 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-          >
-            <span>Next</span>
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-
-      {isFetching && (
+      {isFetching && !isFetchingNextPage && (
         <div className="rounded-xl border-2 border-white bg-white py-4 text-center text-sm text-neutral-500 dark:border-neutral-900 dark:bg-neutral-900 dark:text-neutral-400">
           <Loader2 className="animate-spin mx-auto mb-2" size={20} />
           Please wait...
         </div>
       )}
 
-      {!isFetching && transactions.map((transaction) => (
+      {transactions.map((transaction) => (
         <div
           key={transaction.id}
           className="rounded-xl border-2 border-white bg-white p-4 dark:border-neutral-900 dark:bg-neutral-900"
@@ -137,6 +93,17 @@ const HistoryTab = ({
           )}
         </div>
       ))}
+      <div ref={sentinelRef} className="h-px w-full" aria-hidden />
+      {isFetchingNextPage ? (
+        <div className="rounded-xl border-2 border-white bg-white py-4 text-center text-sm text-neutral-500 dark:border-neutral-900 dark:bg-neutral-900 dark:text-neutral-400">
+          <Loader2 className="animate-spin mx-auto mb-2" size={20} />
+          Loading more transactions...
+        </div>
+      ) : !hasNextPage ? (
+        <p className="py-4 text-center text-xs text-neutral-400">
+          End of transaction history
+        </p>
+      ) : null}
     </div>
   );
 };

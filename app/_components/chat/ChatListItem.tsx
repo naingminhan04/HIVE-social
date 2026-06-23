@@ -75,10 +75,11 @@ const ChatListItem = ({ chat, initialActive }: ChatListItemProps) => {
           )}
         </span>
         <span
-          className={`mt-1 block truncate text-sm ${hasUnread
+          className={`mt-1 block min-h-5 overflow-hidden text-sm leading-5 [display:-webkit-box] [hyphens:auto] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] ${hasUnread
             ? "font-medium text-slate-700 dark:text-neutral-200"
             : "text-neutral-500 dark:text-neutral-400"
             }`}
+          lang="en"
         >
           {getChatSubtitle(chat, viewer?.id)}
         </span>

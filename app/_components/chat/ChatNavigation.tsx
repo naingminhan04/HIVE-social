@@ -1,6 +1,6 @@
 "use client";
 
-import type { Chat, SelectedChat } from "@/types/chat";
+import type { Chat, ComposeMode, SelectedChat } from "@/types/chat";
 import {
   buildChatPath,
   findChatById,
@@ -32,6 +32,8 @@ type ChatNavigationContextValue = {
   syncReplyInUrl: (replyMsgId: string | null) => void;
   isSocketConnected: boolean;
   setIsSocketConnected: (connected: boolean) => void;
+  composeMode: ComposeMode;
+  setComposeMode: (mode: ComposeMode) => void;
 };
 
 const ChatNavigationContext = createContext<ChatNavigationContextValue | null>(null);
@@ -63,6 +65,7 @@ export const ChatNavigationProvider = ({
   );
   const [isLeavingChat, setIsLeavingChat] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [composeMode, setComposeMode] = useState<ComposeMode>(null);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -134,10 +137,13 @@ export const ChatNavigationProvider = ({
       syncReplyInUrl,
       isSocketConnected,
       setIsSocketConnected,
+      composeMode,
+      setComposeMode,
     }),
     [
       activeChatId,
       chats,
+      composeMode,
       isLeavingChat,
       isSocketConnected,
       leaveChat,
