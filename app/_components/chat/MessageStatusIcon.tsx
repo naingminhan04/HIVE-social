@@ -12,7 +12,7 @@ export function MessageStatusIcon({ status }: { status: MessageSendStatus }) {
   }
   if (status === "read") {
     return (
-      <span className="inline-flex items-center text-blue-200 dark:text-blue-300" aria-label="Read">
+      <span className="inline-flex items-center text-blue-500 dark:text-blue-300" aria-label="Read">
         <CheckCheck size={12} />
       </span>
     );

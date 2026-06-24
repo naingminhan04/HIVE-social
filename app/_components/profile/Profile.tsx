@@ -712,11 +712,11 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             type="button"
             onClick={() => isOwner && setIsThoughtOpen(true)}
             disabled={!isOwner}
-            className="absolute bottom-[-30%] left-[27%] z-20 max-w-[65%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2.5 text-left text-xs text-neutral-800 shadow-lg ring-1 ring-black/10 transition enabled:hover:-translate-y-0.5 enabled:hover:shadow-xl disabled:cursor-default dark:bg-neutral-950 dark:text-neutral-100 dark:ring-white/10 sm:text-sm before:absolute before:-left-1 before:top-2.5 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-black/10 before:bg-inherit dark:before:border-white/10"
+            className="absolute bottom-[-30%] left-[27%] z-20 max-w-[65%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2.5 text-left text-xs text-neutral-800 shadow-lg ring-1 ring-black/10 transition enabled:hover:-translate-y-0.5 enabled:hover:shadow-xl disabled:cursor-default dark:bg-neutral-800 dark:text-neutral-100 dark:ring-white/10 sm:text-sm before:absolute before:-left-1 before:top-2.5 before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-black/10 before:bg-inherit dark:before:border-white/10"
             aria-label={isOwner ? "Edit thought" : "User thought"}
             title={activeThought?.text ?? "Share a thought"}
           >
-            <span className="block truncate">
+            <span className={`block ${activeThought ?? "text-neutral-400" } truncate`}>
               {activeThought?.text || "Share a thought"}
             </span>
           </button>

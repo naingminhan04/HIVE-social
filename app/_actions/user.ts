@@ -8,6 +8,11 @@ import { ActionResponse } from "@/types/action";
 import { ImageType } from "@/types/post";
 import { SearchResponseType } from "@/types/search";
 import { normalizeUserPayload } from "@/utils/normalizeUser";
+import {
+  PointsLeaderboardResponse,
+  PopularLeaderboardResponse,
+  UsageLeaderboardResponse,
+} from "@/types/leaderboard";
 
 export async function getAllUserAction(nextPage: number = 1, limit: number = 10, keyword: string | null): Promise<ActionResponse<UserResponseType>> {
     try {
@@ -25,6 +30,66 @@ export async function getAllUserAction(nextPage: number = 1, limit: number = 10,
         if (axios.isAxiosError(error)) {
             const data = error.response?.data as APIError | undefined;
             message = data?.message || data?.error || "Failed to search users";
+        }
+        
+        return { success: false, error: message };
+    }
+}
+
+export async function getPointsLeaderboardAction(): Promise<ActionResponse<PointsLeaderboardResponse>> {
+    try {
+        const res = await api.get<PointsLeaderboardResponse>("/users/points-leaderboard");
+        return { success: true, data: res.data };
+    } catch (error) {
+        let message = "Unexpected error loading points leaderboard";
+
+        if (axios.isAxiosError(error)) {
+            const data = error.response?.data as APIError | undefined;
+            message = data?.message || data?.error || "Failed to load points leaderboard";
+        }
+        
+        return { success: false, error: message };
+    }
+}
+
+export async function getPopularUsersAction(): Promise<ActionResponse<PopularLeaderboardResponse>> {
+    try {
+        const res = await api.get<PopularLeaderboardResponse>("/users/popular-users");
+        return { success: true, data: res.data };
+    } catch (error) {
+        let message = "Unexpected error loading popular users";
+
+        if (axios.isAxiosError(error)) {
+            const data = error.response?.data as APIError | undefined;
+            message = data?.message || data?.error || "Failed to load popular users";
+        }
+        
+        return { success: false, error: message };
+    }
+}
+
+export async function getUsageLeaderboardAction(params: {
+    date: string;
+    page?: number;
+    size?: number;
+    name?: string;
+}): Promise<ActionResponse<UsageLeaderboardResponse>> {
+    try {
+        const res = await api.get<UsageLeaderboardResponse>("/users/admin/online-record-users", {
+            params: {
+                date: params.date,
+                page: params.page ?? 1,
+                size: params.size ?? 10,
+                name: params.name?.trim() || undefined,
+            },
+        });
+        return { success: true, data: res.data };
+    } catch (error) {
+        let message = "Unexpected error loading usage leaderboard";
+
+        if (axios.isAxiosError(error)) {
+            const data = error.response?.data as APIError | undefined;
+            message = data?.message || data?.error || "Failed to load usage leaderboard";
         }
         
         return { success: false, error: message };

@@ -34,7 +34,12 @@ import type {
   SendMessageInput,
 } from "@/types/chat";
 import type { SearchUserType } from "@/types/search";
-import { formatDate, formatChatTimestamp, formatScrollOverlayTimestamp, shouldShowTimestamp } from "@/utils/formatDate";
+import {
+  formatDate,
+  formatChatTimestamp,
+  formatScrollOverlayTimestamp,
+  shouldShowTimestamp,
+} from "@/utils/formatDate";
 import {
   chatMatchesId,
   findChatById,
@@ -103,7 +108,11 @@ import {
 import { ChatMessagesLoadingSkeleton } from "./chat/ChatMessagesLoadingSkeleton";
 import { MessageStatusIcon } from "./chat/MessageStatusIcon";
 import { ChatVideoTile } from "./chat/ChatVideoTile";
-import { MessageActions, reactionOptions, reactionStatKeys } from "./chat/MessageActions";
+import {
+  MessageActions,
+  reactionOptions,
+  reactionStatKeys,
+} from "./chat/MessageActions";
 import { ComposeModal } from "./chat/ComposeModal";
 import { ReactionsModal } from "./chat/ReactionsModal";
 import { ChatComposer } from "./chat/ChatComposer";
@@ -113,7 +122,10 @@ type ChatClientProps = {
   initialChatId: string | null;
 };
 
-export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => {
+export const ChatClient = ({
+  initialChats,
+  initialChatId,
+}: ChatClientProps) => {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const {
@@ -134,10 +146,14 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const replyMsgIdParam = searchParams.get("replyMsgId")?.trim() || null;
 
   // ── UI state ──
-  const [isResolvingRoute, setIsResolvingRoute] = useState(Boolean(initialChatId));
+  const [isResolvingRoute, setIsResolvingRoute] = useState(
+    Boolean(initialChatId),
+  );
   const [messageText, setMessageText] = useState("");
   const [draftFiles, setDraftFiles] = useState<DraftFile[]>([]);
-  const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(
+    null,
+  );
   const [hasMounted, setHasMounted] = useState(false);
   const [privateSearch, setPrivateSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
@@ -147,27 +163,44 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const [editingText, setEditingText] = useState("");
   const [editingImages, setEditingImages] = useState<ChatMedia[]>([]);
   const [editingAttachments, setEditingAttachments] = useState<ChatMedia[]>([]);
-  const [openReactionMessageId, setOpenReactionMessageId] = useState<string | null>(null);
-  const [mobileActionMessage, setMobileActionMessage] = useState<ChatMessage | null>(null);
-  const [floatingTimestamp, setFloatingTimestamp] = useState<string | null>(null);
+  const [openReactionMessageId, setOpenReactionMessageId] = useState<
+    string | null
+  >(null);
+  const [mobileActionMessage, setMobileActionMessage] =
+    useState<ChatMessage | null>(null);
+  const [floatingTimestamp, setFloatingTimestamp] = useState<string | null>(
+    null,
+  );
   const [showFloatingTimestamp, setShowFloatingTimestamp] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [deletingMessageIds, setDeletingMessageIds] = useState<string[]>([]);
   // Track pending messages with their local IDs
-  const [pendingSentMessages, setPendingSentMessages] = useState<{
-    id: string;
-    content: string;
-    hasAttachments: boolean;
-    createdAt: string;
-    chatId: string;
-  }[]>([]);
-  const [reactionUsersMessage, setReactionUsersMessage] = useState<ChatMessage | null>(null);
+  const [pendingSentMessages, setPendingSentMessages] = useState<
+    {
+      id: string;
+      content: string;
+      hasAttachments: boolean;
+      createdAt: string;
+      chatId: string;
+    }[]
+  >([]);
+  const [reactionUsersMessage, setReactionUsersMessage] =
+    useState<ChatMessage | null>(null);
   const [mediaViewer, setMediaViewer] = useState<{
-    items: { id: string; url: string; fileName?: string | null; mimeType?: string | null }[];
+    items: {
+      id: string;
+      url: string;
+      fileName?: string | null;
+      mimeType?: string | null;
+    }[];
     index: number;
   } | null>(null);
-  const [localReactions, setLocalReactions] = useState<Record<string, ChatReactionType | null>>({});
-  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [localReactions, setLocalReactions] = useState<
+    Record<string, ChatReactionType | null>
+  >({});
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    string | null
+  >(null);
   const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   // ── Refs ──
@@ -175,7 +208,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const lastPositionedChatRef = useRef<string | null>(null);
   const activeKeyRef = useRef<string | null>(null);
-  const pendingScrollPreserveRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+  const pendingScrollPreserveRef = useRef<{
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
   const loadOlderSentinelRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
   const socketRef = useRef<Socket | null>(null);
@@ -188,7 +224,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const handledReplyMsgIdRef = useRef<string | null>(null);
   const isResolvingRouteRef = useRef(false);
 
-  useEffect(() => { setHasMounted(true); }, []);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // ── Chats query ──
   const chatsQuery = useQuery({
@@ -202,9 +240,14 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     staleTime: 30_000,
   });
 
-  const chats = useMemo(() => chatsQuery.data ?? initialChats, [chatsQuery.data, initialChats]);
+  const chats = useMemo(
+    () => chatsQuery.data ?? initialChats,
+    [chatsQuery.data, initialChats],
+  );
 
-  useEffect(() => { setNavChats(chats); }, [chats, setNavChats]);
+  useEffect(() => {
+    setNavChats(chats);
+  }, [chats, setNavChats]);
 
   const activeChat = useMemo((): SelectedChat | null => {
     if (!showPanel) return null;
@@ -215,9 +258,15 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   const activeKey = getSelectedKey(activeChat);
 
-  useEffect(() => { activeKeyRef.current = activeKey; }, [activeKey]);
-  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
-  useEffect(() => { chatsRef.current = chats; }, [chats]);
+  useEffect(() => {
+    activeKeyRef.current = activeKey;
+  }, [activeKey]);
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   // ── Socket setup ──
   useEffect(() => {
@@ -251,7 +300,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
         const currentChat = activeChatRef.current;
         const currentKey = activeKeyRef.current;
-        if (!currentChat || !currentKey || currentKey === "none") return [...keys];
+        if (!currentChat || !currentKey || currentKey === "none")
+          return [...keys];
 
         if (!isDraftChat(currentChat) && currentChat.id === chatId) {
           keys.add(currentKey);
@@ -281,14 +331,19 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
               if (current.pages.length === 0) {
                 return {
                   ...current,
-                  pages: [{ messages: [message], cursors: null, hasMore: false }],
+                  pages: [
+                    { messages: [message], cursors: null, hasMore: false },
+                  ],
                 };
               }
               return {
                 ...current,
                 pages: current.pages.map((page, idx) =>
                   idx === current.pages.length - 1
-                    ? { ...page, messages: sortMessages([...page.messages, message]) }
+                    ? {
+                        ...page,
+                        messages: sortMessages([...page.messages, message]),
+                      }
                     : page,
                 ),
               };
@@ -298,7 +353,13 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       };
 
       const getMessageFromPayload = (
-        payload: ChatMessage | { message?: ChatMessage | string; data?: ChatMessage; chatId?: string },
+        payload:
+          | ChatMessage
+          | {
+              message?: ChatMessage | string;
+              data?: ChatMessage;
+              chatId?: string;
+            },
       ) => {
         const record = payload as {
           message?: ChatMessage | string;
@@ -309,7 +370,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           record.data ??
           (record.message && typeof record.message === "object"
             ? record.message
-            : payload as ChatMessage);
+            : (payload as ChatMessage));
         return {
           message,
           chatId: record.chatId ?? message?.chatId,
@@ -317,13 +378,20 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       };
 
       const handleIncomingMessage = (
-        payload: ChatMessage | { message?: ChatMessage | string; data?: ChatMessage; chatId?: string },
+        payload:
+          | ChatMessage
+          | {
+              message?: ChatMessage | string;
+              data?: ChatMessage;
+              chatId?: string;
+            },
       ) => {
         try {
           const { message, chatId } = getMessageFromPayload(payload);
           if (!chatId || !message?.id) return;
 
-          if (message.senderId !== viewer?.id) setMessageInQueries(chatId, message);
+          if (message.senderId !== viewer?.id)
+            setMessageInQueries(chatId, message);
 
           queryClient.setQueryData<Chat[] | undefined>(["chats"], (current) => {
             if (!current) return current;
@@ -348,26 +416,36 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       };
 
       const handleMessageUpdated = (
-        payload: ChatMessage | { message?: ChatMessage | string; data?: ChatMessage; chatId?: string },
+        payload:
+          | ChatMessage
+          | {
+              message?: ChatMessage | string;
+              data?: ChatMessage;
+              chatId?: string;
+            },
       ) => {
         try {
           const { message, chatId } = getMessageFromPayload(payload);
           if (!message?.id) return;
-          getMessageQueryKeys(chatId ?? message.chatId, message).forEach((queryKey) => {
-            queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
-              ["chatMessages", queryKey],
-              (current) => {
-                if (!current) return current;
-                return {
-                  ...current,
-                  pages: current.pages.map((page) => ({
-                    ...page,
-                    messages: page.messages.map((m) => (m.id === message.id ? message : m)),
-                  })),
-                };
-              },
-            );
-          });
+          getMessageQueryKeys(chatId ?? message.chatId, message).forEach(
+            (queryKey) => {
+              queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
+                ["chatMessages", queryKey],
+                (current) => {
+                  if (!current) return current;
+                  return {
+                    ...current,
+                    pages: current.pages.map((page) => ({
+                      ...page,
+                      messages: page.messages.map((m) =>
+                        m.id === message.id ? message : m,
+                      ),
+                    })),
+                  };
+                },
+              );
+            },
+          );
         } catch {
           // ignore
         }
@@ -393,7 +471,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                 pages: current.pages.map((page) => ({
                   ...page,
                   messages: page.messages.map((m) =>
-                    m.id === messageId ? { ...m, isDeleted: true, content: null } : m,
+                    m.id === messageId
+                      ? { ...m, isDeleted: true, content: null }
+                      : m,
                   ),
                 })),
               };
@@ -405,7 +485,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       };
 
       const handleMessageRead = (
-        payload: { messageId?: string; chatId?: string; readerId?: string } | null,
+        payload: {
+          messageId?: string;
+          chatId?: string;
+          readerId?: string;
+        } | null,
       ) => {
         try {
           if (!payload) return;
@@ -419,7 +503,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           const ak = activeKeyRef.current;
           if (!ak || ak === "none") return;
           const targetChat =
-            chatId && !isDraftChat(activeChatRef.current) && activeChatRef.current?.id === chatId
+            chatId &&
+            !isDraftChat(activeChatRef.current) &&
+            activeChatRef.current?.id === chatId
               ? activeChatRef.current
               : chatId
                 ? chatsRef.current.find((chat) => chat.id === chatId)
@@ -442,10 +528,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                       messages: page.messages.map((m) =>
                         m.id === messageId
                           ? {
-                            ...m,
-                            isRead: isGroupRead ? m.isRead : true,
-                            readCount: (m.readCount ?? 0) + 1,
-                          }
+                              ...m,
+                              isRead: isGroupRead ? m.isRead : true,
+                              readCount: (m.readCount ?? 0) + 1,
+                            }
                           : m,
                       ),
                     })),
@@ -502,7 +588,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     };
   }, [queryClient, setIsSocketConnected, viewer?.id]);
 
-  useEffect(() => { draftFilesRef.current = draftFiles; }, [draftFiles]);
+  useEffect(() => {
+    draftFilesRef.current = draftFiles;
+  }, [draftFiles]);
 
   useEffect(() => {
     return () => {
@@ -544,13 +632,16 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => {
       if (lastPage.messages.length === 0) return undefined;
-      const hasMoreOlder = lastPage.hasMore ?? (lastPage.messages.length >= MESSAGES_PAGE_SIZE);
+      const hasMoreOlder =
+        lastPage.hasMore ?? lastPage.messages.length >= MESSAGES_PAGE_SIZE;
       if (!hasMoreOlder) return undefined;
       const olderCursor = getOlderCursor(lastPage.cursors);
       if (olderCursor) return olderCursor;
       return getOldestMessageCreatedAt(lastPage.messages) ?? undefined;
     },
-    enabled: Boolean(activeChat) && (!isDraftChat(activeChat) || Boolean(activeChat.user.id)),
+    enabled:
+      Boolean(activeChat) &&
+      (!isDraftChat(activeChat) || Boolean(activeChat.user.id)),
   });
 
   useEffect(() => {
@@ -570,7 +661,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     if (!preserve) return;
     const viewport = messagesViewportRef.current;
     if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight - preserve.scrollHeight + preserve.scrollTop;
+    viewport.scrollTop =
+      viewport.scrollHeight - preserve.scrollHeight + preserve.scrollTop;
     pendingScrollPreserveRef.current = null;
   }, [messagesQuery.data?.pages.length, messagesQuery.isFetchingNextPage]);
 
@@ -613,12 +705,21 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const sendMutation = useMutation<
     ChatMessage,
     Error,
-    { content: string; parentMessageId?: string | null; draftFiles: DraftFile[] },
+    {
+      content: string;
+      parentMessageId?: string | null;
+      draftFiles: DraftFile[];
+    },
     { pendingId: string }
   >({
-    mutationFn: async ({ content, parentMessageId, draftFiles: mutationDraftFiles }) => {
+    mutationFn: async ({
+      content,
+      parentMessageId,
+      draftFiles: mutationDraftFiles,
+    }) => {
       if (!selectedChat) throw new Error("Select a chat first");
-      if (!content && mutationDraftFiles.length === 0) throw new Error("Message cannot be empty");
+      if (!content && mutationDraftFiles.length === 0)
+        throw new Error("Message cannot be empty");
 
       const input: SendMessageInput = {
         content,
@@ -626,13 +727,19 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       };
 
       if (mutationDraftFiles.length > 0) {
-        const uploadedFiles = await uploadFiles(mutationDraftFiles.map((df) => df.file));
+        const uploadedFiles = await uploadFiles(
+          mutationDraftFiles.map((df) => df.file),
+        );
         const uploadedWithKind = uploadedFiles.map((file, idx) => ({
           file: toChatMedia(file),
           kind: mutationDraftFiles[idx]?.kind ?? getMediaKind(file),
         }));
-        const media = uploadedWithKind.filter(({ kind }) => kind === "image" || kind === "video").map(({ file }) => file);
-        const attachments = uploadedWithKind.filter(({ kind }) => kind === "audio" || kind === "file").map(({ file }) => file);
+        const media = uploadedWithKind
+          .filter(({ kind }) => kind === "image" || kind === "video")
+          .map(({ file }) => file);
+        const attachments = uploadedWithKind
+          .filter(({ kind }) => kind === "audio" || kind === "file")
+          .map(({ file }) => file);
         if (media.length > 0) input.images = media;
         if (attachments.length > 0) input.attachments = attachments;
       }
@@ -655,7 +762,12 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           content,
           hasAttachments: mutationDraftFiles.length > 0,
           createdAt: new Date().toISOString(),
-          chatId: activeChat && !isDraftChat(activeChat) ? activeChat.id : selectedChat && !isDraftChat(selectedChat) ? selectedChat.id : "",
+          chatId:
+            activeChat && !isDraftChat(activeChat)
+              ? activeChat.id
+              : selectedChat && !isDraftChat(selectedChat)
+                ? selectedChat.id
+                : "",
         },
       ]);
       setMessageText("");
@@ -663,23 +775,33 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       return { pendingId };
     },
     onSuccess: async (message, _vars, context) => {
-      setPendingSentMessages((prev) => prev.filter((m) => m.id !== context?.pendingId));
+      setPendingSentMessages((prev) =>
+        prev.filter((m) => m.id !== context?.pendingId),
+      );
 
       if (activeKey) {
         queryClient.setQueryData<InfiniteData<ChatMessagesPage>>(
           ["chatMessages", activeKey],
           (current) => {
             if (!current) return current;
-            const alreadyHasMessage = current.pages.some((p) => p.messages.some((m) => m.id === message.id));
+            const alreadyHasMessage = current.pages.some((p) =>
+              p.messages.some((m) => m.id === message.id),
+            );
             if (alreadyHasMessage) return current;
             if (current.pages.length === 0) {
-              return { ...current, pages: [{ messages: [message], cursors: null, hasMore: false }] };
+              return {
+                ...current,
+                pages: [{ messages: [message], cursors: null, hasMore: false }],
+              };
             }
             return {
               ...current,
               pages: current.pages.map((page, idx) =>
                 idx === current.pages.length - 1
-                  ? { ...page, messages: sortMessages([...page.messages, message]) }
+                  ? {
+                      ...page,
+                      messages: sortMessages([...page.messages, message]),
+                    }
                   : page,
               ),
             };
@@ -695,11 +817,17 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       await queryClient.invalidateQueries({ queryKey: ["chatUnreadCount"] });
     },
     onError: (error, _vars, context) => {
-      setPendingSentMessages((prev) => prev.filter((m) => m.id !== context?.pendingId));
-      toast.error(error instanceof Error ? error.message : "Failed to send message");
+      setPendingSentMessages((prev) =>
+        prev.filter((m) => m.id !== context?.pendingId),
+      );
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message",
+      );
     },
     onSettled: (_data, _error, _vars, context) => {
-      setPendingSentMessages((prev) => prev.filter((m) => m.id !== context?.pendingId));
+      setPendingSentMessages((prev) =>
+        prev.filter((m) => m.id !== context?.pendingId),
+      );
     },
   });
 
@@ -708,7 +836,12 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     mutationFn: async () => {
       if (!editingMessageId) throw new Error("Pick a message to edit");
       const content = editingText.trim();
-      if (!content && editingImages.length === 0 && editingAttachments.length === 0 && draftFiles.length === 0) {
+      if (
+        !content &&
+        editingImages.length === 0 &&
+        editingAttachments.length === 0 &&
+        draftFiles.length === 0
+      ) {
         throw new Error("Message cannot be empty");
       }
       const input: SendMessageInput = {
@@ -717,18 +850,24 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         attachments: editingAttachments.map(toMessageInputMedia),
       };
       if (draftFiles.length > 0) {
-        const uploadedFiles = await uploadFiles(draftFiles.map((df) => df.file));
+        const uploadedFiles = await uploadFiles(
+          draftFiles.map((df) => df.file),
+        );
         const uploadedWithKind = uploadedFiles.map((file, idx) => ({
           file: toChatMedia(file),
           kind: draftFiles[idx]?.kind ?? getMediaKind(file),
         }));
         input.images = [
           ...(input.images ?? []),
-          ...uploadedWithKind.filter(({ kind }) => kind === "image" || kind === "video").map(({ file }) => file),
+          ...uploadedWithKind
+            .filter(({ kind }) => kind === "image" || kind === "video")
+            .map(({ file }) => file),
         ];
         input.attachments = [
           ...(input.attachments ?? []),
-          ...uploadedWithKind.filter(({ kind }) => kind === "audio" || kind === "file").map(({ file }) => file),
+          ...uploadedWithKind
+            .filter(({ kind }) => kind === "audio" || kind === "file")
+            .map(({ file }) => file),
         ];
       }
       const result = await updateMessageAction(editingMessageId, input);
@@ -740,12 +879,19 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       setEditingText("");
       setEditingImages([]);
       setEditingAttachments([]);
-      setDraftFiles((prev) => { prev.forEach((f) => URL.revokeObjectURL(f.previewUrl)); return []; });
+      setDraftFiles((prev) => {
+        prev.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+        return [];
+      });
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
-      await queryClient.invalidateQueries({ queryKey: ["chatMessages", activeKey] });
+      await queryClient.invalidateQueries({
+        queryKey: ["chatMessages", activeKey],
+      });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to edit message");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to edit message",
+      );
     },
   });
 
@@ -757,18 +903,25 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       return result.data.messageId;
     },
     onMutate: async (messageId) => {
-      setDeletingMessageIds((prev) => (prev.includes(messageId) ? prev : [...prev, messageId]));
+      setDeletingMessageIds((prev) =>
+        prev.includes(messageId) ? prev : [...prev, messageId],
+      );
       setOpenReactionMessageId((prev) => (prev === messageId ? null : prev));
     },
     onError: (_error, messageId) => {
       setDeletingMessageIds((prev) => prev.filter((id) => id !== messageId));
-      toast.error(_error instanceof Error ? _error.message : "Failed to delete message");
+      toast.error(
+        _error instanceof Error ? _error.message : "Failed to delete message",
+      );
     },
     onSettled: (_data, _error, messageId) => {
       if (!messageId) return;
       setDeletingMessageIds((prev) => prev.filter((id) => id !== messageId));
       queryClient.invalidateQueries({ queryKey: ["chats"] });
-      if (activeKey) queryClient.invalidateQueries({ queryKey: ["chatMessages", activeKey] });
+      if (activeKey)
+        queryClient.invalidateQueries({
+          queryKey: ["chatMessages", activeKey],
+        });
     },
   });
 
@@ -790,7 +943,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
               pages: current.pages.map((page) => ({
                 ...page,
                 messages: page.messages.map((m) =>
-                  m.id === messageId ? { ...m, isReadByMe: true, isRead: true } : m,
+                  m.id === messageId
+                    ? { ...m, isReadByMe: true, isRead: true }
+                    : m,
                 ),
               })),
             };
@@ -802,13 +957,13 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         return current.map((chat) =>
           chat.lastMessage?.id === messageId
             ? {
-              ...chat,
-              lastMessage: {
-                ...chat.lastMessage,
-                isReadByMe: true,
-                isRead: true,
-              },
-            }
+                ...chat,
+                lastMessage: {
+                  ...chat.lastMessage,
+                  isReadByMe: true,
+                  isRead: true,
+                },
+              }
             : chat,
         );
       });
@@ -825,7 +980,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       messageId,
       reactionType,
       currentReaction,
-    }: { messageId: string; reactionType: ChatReactionType; currentReaction?: ChatReactionType | null }) => {
+    }: {
+      messageId: string;
+      reactionType: ChatReactionType;
+      currentReaction?: ChatReactionType | null;
+    }) => {
       if (currentReaction === reactionType) {
         const result = await removeMessageReactionAction(messageId);
         if (!result.success) throw new Error(result.error);
@@ -837,12 +996,18 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     },
     onSuccess: async ({ messageId, reactionType }) => {
       setLocalReactions((prev) => ({ ...prev, [messageId]: reactionType }));
-      await queryClient.invalidateQueries({ queryKey: ["chatMessages", activeKey] });
-      await queryClient.invalidateQueries({ queryKey: ["chatMessageReactions", messageId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["chatMessages", activeKey],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["chatMessageReactions", messageId],
+      });
       await queryClient.invalidateQueries({ queryKey: ["chats"] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to update reaction");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update reaction",
+      );
     },
   });
 
@@ -870,7 +1035,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       toast.success("Group created");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to create group");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create group",
+      );
     },
   });
 
@@ -884,34 +1051,42 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   const combinedMessages = useMemo(() => {
     if (pendingSentMessages.length === 0 || !viewer) return messages;
-    const pendingChatMessages: ChatMessage[] = pendingSentMessages.map((pending) => ({
-      id: pending.id,
-      content: pending.content,
-      senderId: viewer.id,
-      sender: { id: viewer.id, name: viewer.name, username: viewer.username, profilePic: viewer.profilePic },
-      chatId: pending.chatId,
-      type: "CONTENT",
-      createdAt: pending.createdAt,
-      updatedAt: pending.createdAt,
-      isEdited: false,
-      isDeleted: false,
-      images: [],
-      attachments: [],
-      parentMessageId: null,
-      forwardedMessageId: null,
-      parentMessage: null,
-      forwardedMessage: null,
-      myReaction: null,
-      reactionStats: undefined,
-      mentions: [],
-    }));
+    const pendingChatMessages: ChatMessage[] = pendingSentMessages.map(
+      (pending) => ({
+        id: pending.id,
+        content: pending.content,
+        senderId: viewer.id,
+        sender: {
+          id: viewer.id,
+          name: viewer.name,
+          username: viewer.username,
+          profilePic: viewer.profilePic,
+        },
+        chatId: pending.chatId,
+        type: "CONTENT",
+        createdAt: pending.createdAt,
+        updatedAt: pending.createdAt,
+        isEdited: false,
+        isDeleted: false,
+        images: [],
+        attachments: [],
+        parentMessageId: null,
+        forwardedMessageId: null,
+        parentMessage: null,
+        forwardedMessage: null,
+        myReaction: null,
+        reactionStats: undefined,
+        mentions: [],
+      }),
+    );
     return [...messages, ...pendingChatMessages];
   }, [messages, pendingSentMessages, viewer]);
 
   // Group consecutive messages from same sender
   const messageGroups = useMemo(() => {
-    const groups: Array<{ messages: ChatMessage[], senderId: string }> = [];
-    let currentGroup: { messages: ChatMessage[], senderId: string } | null = null;
+    const groups: Array<{ messages: ChatMessage[]; senderId: string }> = [];
+    let currentGroup: { messages: ChatMessage[]; senderId: string } | null =
+      null;
 
     combinedMessages.forEach((msg) => {
       if (msg.type === "SYSTEM") {
@@ -935,7 +1110,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const updateScrollToBottomVisibility = useCallback(() => {
     const viewport = messagesViewportRef.current;
     if (!viewport) return;
-    const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    const distanceFromBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
     const nearBottom = distanceFromBottom <= SCROLL_NEAR_BOTTOM_THRESHOLD;
     isNearBottomRef.current = nearBottom;
     setShowScrollToBottom(!nearBottom);
@@ -947,11 +1123,16 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setReactionUsersMessage(null);
   }, []);
 
-  const startReplyToMessage = useCallback((message: ChatMessage) => {
-    dismissMessageOverlays();
-    setReplyToMessage(message);
-    requestAnimationFrame(() => composerTextareaRef.current?.focus({ preventScroll: true }));
-  }, [dismissMessageOverlays]);
+  const startReplyToMessage = useCallback(
+    (message: ChatMessage) => {
+      dismissMessageOverlays();
+      setReplyToMessage(message);
+      requestAnimationFrame(() =>
+        composerTextareaRef.current?.focus({ preventScroll: true }),
+      );
+    },
+    [dismissMessageOverlays],
+  );
 
   useEffect(() => {
     if (!replyToMessage) return;
@@ -971,7 +1152,12 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   const loadOlderMessages = useCallback(() => {
     const viewport = messagesViewportRef.current;
-    if (!viewport || messagesQuery.isFetchingNextPage || !messagesQuery.hasNextPage) return;
+    if (
+      !viewport ||
+      messagesQuery.isFetchingNextPage ||
+      !messagesQuery.hasNextPage
+    )
+      return;
     pendingScrollPreserveRef.current = {
       scrollHeight: viewport.scrollHeight,
       scrollTop: viewport.scrollTop,
@@ -984,24 +1170,24 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     updateScrollToBottomVisibility();
     const viewport = messagesViewportRef.current;
     if (!viewport) return;
-    
+
     // Handle floating timestamp
     setShowFloatingTimestamp(true);
-    
+
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
       setShowFloatingTimestamp(false);
     }, 1000);
 
     // Find the first visible message group
-    const messageElements = viewport.querySelectorAll('[data-chat-message-id]');
+    const messageElements = viewport.querySelectorAll("[data-chat-message-id]");
     for (const el of messageElements) {
       const rect = el.getBoundingClientRect();
       const viewportRect = viewport.getBoundingClientRect();
       if (rect.top >= viewportRect.top) {
         // Find which group this message is in and get its date
-        const messageId = el.getAttribute('data-chat-message-id');
-        const message = combinedMessages.find(m => m.id === messageId);
+        const messageId = el.getAttribute("data-chat-message-id");
+        const message = combinedMessages.find((m) => m.id === messageId);
         if (message) {
           setFloatingTimestamp(formatScrollOverlayTimestamp(message.createdAt));
         }
@@ -1013,7 +1199,14 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     if (messagesQuery.isFetchingNextPage || !messagesQuery.hasNextPage) return;
     if (viewport.scrollTop > LOAD_OLDER_SCROLL_THRESHOLD) return;
     loadOlderMessages();
-  }, [dismissMessageOverlays, loadOlderMessages, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage, updateScrollToBottomVisibility, combinedMessages]);
+  }, [
+    dismissMessageOverlays,
+    loadOlderMessages,
+    messagesQuery.hasNextPage,
+    messagesQuery.isFetchingNextPage,
+    updateScrollToBottomVisibility,
+    combinedMessages,
+  ]);
 
   useEffect(() => {
     const viewport = messagesViewportRef.current;
@@ -1030,12 +1223,15 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     return () => observer.disconnect();
   }, [loadOlderMessages, showPanel, activeKey]);
 
-  const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    const viewport = messagesViewportRef.current;
-    if (!viewport) return;
-    viewport.scrollTo({ top: viewport.scrollHeight, behavior });
-    setShowScrollToBottom(false);
-  }, []);
+  const scrollMessagesToBottom = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const viewport = messagesViewportRef.current;
+      if (!viewport) return;
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+      setShowScrollToBottom(false);
+    },
+    [],
+  );
 
   const updateReplyMsgIdInUrl = useCallback(
     (messageId: string | null) => syncReplyInUrl(messageId),
@@ -1055,22 +1251,47 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   }, [activeChatId, openChat, searchParams]);
 
   useEffect(() => {
-    if (!activeChatId) { setIsResolvingRoute(false); return; }
+    if (!activeChatId) {
+      setIsResolvingRoute(false);
+      return;
+    }
     if (isLeavingChat) return;
-    if (selectedChat && chatMatchesId(selectedChat, activeChatId)) { setIsResolvingRoute(false); return; }
+    if (selectedChat && chatMatchesId(selectedChat, activeChatId)) {
+      setIsResolvingRoute(false);
+      return;
+    }
     const matched = findChatById(chats, activeChatId);
-    if (matched) { setSelectedChat(matched); setIsResolvingRoute(false); return; }
+    if (matched) {
+      setSelectedChat(matched);
+      setIsResolvingRoute(false);
+      return;
+    }
     if (!chatsQuery.isFetched || isResolvingRouteRef.current) return;
     isResolvingRouteRef.current = true;
     setIsResolvingRoute(true);
     void (async () => {
       try {
         const chatById = await getChatByIdAction(activeChatId);
-        if (chatById.success) { openChat(chatById.data, { navigate: false }); return; }
+        if (chatById.success) {
+          openChat(chatById.data, { navigate: false });
+          return;
+        }
         const privateChat = await getPrivateChatByUserIdAction(activeChatId);
-        if (privateChat.success) { openChat(privateChat.data.chat, { navigate: false }); return; }
+        if (privateChat.success) {
+          openChat(privateChat.data.chat, { navigate: false });
+          return;
+        }
         const userResult = await getUserAction(activeChatId);
-        if (userResult.success) { openChat({ type: "PRIVATE_DRAFT", user: userToDraftChatUser(userResult.data) }, { navigate: false }); return; }
+        if (userResult.success) {
+          openChat(
+            {
+              type: "PRIVATE_DRAFT",
+              user: userToDraftChatUser(userResult.data),
+            },
+            { navigate: false },
+          );
+          return;
+        }
         toast.error("Chat not found");
         leaveChat();
       } finally {
@@ -1078,7 +1299,16 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
         setIsResolvingRoute(false);
       }
     })();
-  }, [activeChatId, chats, chatsQuery.isFetched, isLeavingChat, leaveChat, openChat, selectedChat, setSelectedChat]);
+  }, [
+    activeChatId,
+    chats,
+    chatsQuery.isFetched,
+    isLeavingChat,
+    leaveChat,
+    openChat,
+    selectedChat,
+    setSelectedChat,
+  ]);
 
   useEffect(() => {
     if (!replyMsgIdParam || !activeChat || messagesQuery.isPending) return;
@@ -1104,7 +1334,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   useEffect(() => {
     const unread = messages.filter(
-      (m) => m.senderId !== viewer?.id && !m.isReadByMe && !readMessageIdsRef.current.has(m.id),
+      (m) =>
+        m.senderId !== viewer?.id &&
+        !m.isReadByMe &&
+        !readMessageIdsRef.current.has(m.id),
     );
     unread.forEach((m) => {
       readMessageIdsRef.current.add(m.id);
@@ -1134,7 +1367,12 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     }
     toast.error("Original message is not available");
     setJumpToMessageId(null);
-  }, [jumpToMessageId, messages, messagesQuery, updateScrollToBottomVisibility]);
+  }, [
+    jumpToMessageId,
+    messages,
+    messagesQuery,
+    updateScrollToBottomVisibility,
+  ]);
 
   useEffect(() => {
     if (messagesQuery.isPending) return;
@@ -1166,11 +1404,18 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
       setShowScrollToBottom(false);
     }
-  }, [activeChat, activeKey, messages, messagesQuery.isPending, sendMutation.isPending]);
+  }, [
+    activeChat,
+    activeKey,
+    messages,
+    messagesQuery.isPending,
+    sendMutation.isPending,
+  ]);
 
   // ── Composer state ──
   const composerSubmitEnabled =
-    Boolean(activeChat) && (!isDraftChat(activeChat) || Boolean(activeChat.user.id));
+    Boolean(activeChat) &&
+    (!isDraftChat(activeChat) || Boolean(activeChat.user.id));
 
   const openPrivateDraft = (user: SearchUserType) => {
     openChat({ type: "PRIVATE_DRAFT", user });
@@ -1180,7 +1425,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
 
   const toggleGroupUser = (user: SearchUserType) => {
     setGroupUsers((prev) =>
-      prev.some((m) => m.id === user.id) ? prev.filter((m) => m.id !== user.id) : [...prev, user],
+      prev.some((m) => m.id === user.id)
+        ? prev.filter((m) => m.id !== user.id)
+        : [...prev, user],
     );
   };
 
@@ -1214,21 +1461,34 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     event.target.value = "";
   };
 
-  const handleComposerPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+  const handleComposerPaste = (
+    event: React.ClipboardEvent<HTMLTextAreaElement>,
+  ) => {
     const pastedFiles = Array.from(event.clipboardData.items)
       .filter((item) => item.kind === "file")
       .map((item) => item.getAsFile())
       .filter((f): f is File => Boolean(f));
-    const files = pastedFiles.length > 0 ? pastedFiles : Array.from(event.clipboardData.files);
+    const files =
+      pastedFiles.length > 0
+        ? pastedFiles
+        : Array.from(event.clipboardData.files);
     if (files.length === 0) return;
     event.preventDefault();
     addDraftFiles(files);
   };
 
-  const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+  const handleComposerKeyDown = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    )
+      return;
     event.preventDefault();
-    if (composerIsPending || !composerCanSubmit || !composerSubmitEnabled) return;
+    if (composerIsPending || !composerCanSubmit || !composerSubmitEnabled)
+      return;
     submitComposer();
   };
 
@@ -1239,7 +1499,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setEditingImages([]);
     setEditingAttachments([]);
     setReplyToMessage(null);
-    setDraftFiles((prev) => { prev.forEach((f) => URL.revokeObjectURL(f.previewUrl)); return []; });
+    setDraftFiles((prev) => {
+      prev.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+      return [];
+    });
   };
 
   useEffect(() => {
@@ -1272,15 +1535,24 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const isEditing = Boolean(editingMessageId);
   const composerText = isEditing ? editingText : messageText;
   const setComposerText = isEditing ? setEditingText : setMessageText;
-  const composerIsPending = isEditing ? editMutation.isPending : sendMutation.isPending;
+  const composerIsPending = isEditing
+    ? editMutation.isPending
+    : sendMutation.isPending;
   const composerCanSubmit =
     Boolean(composerText.trim()) ||
     draftFiles.length > 0 ||
     (isEditing && (editingImages.length > 0 || editingAttachments.length > 0));
 
   const submitComposer = () => {
-    if (isEditing) { editMutation.mutate(); return; }
-    sendMutation.mutate({ content: messageText.trim(), parentMessageId: replyToMessage?.id ?? null, draftFiles });
+    if (isEditing) {
+      editMutation.mutate();
+      return;
+    }
+    sendMutation.mutate({
+      content: messageText.trim(),
+      parentMessageId: replyToMessage?.id ?? null,
+      draftFiles,
+    });
   };
 
   const startEditing = (message: ChatMessage) => {
@@ -1290,7 +1562,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     setReplyToMessage(null);
     setEditingImages(message.images ?? []);
     setEditingAttachments(message.attachments ?? []);
-    setDraftFiles((prev) => { prev.forEach((f) => URL.revokeObjectURL(f.previewUrl)); return []; });
+    setDraftFiles((prev) => {
+      prev.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+      return [];
+    });
     setOpenReactionMessageId(null);
   };
 
@@ -1298,7 +1573,8 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const getCurrentReaction = (message: ChatMessage) =>
     localReactions[message.id] ?? message.myReaction?.reactionType ?? null;
 
-  const getReactionTotal = (message: ChatMessage) => message.reactionStats?.total ?? 0;
+  const getReactionTotal = (message: ChatMessage) =>
+    message.reactionStats?.total ?? 0;
 
   const getVisibleReactions = (message: ChatMessage) => {
     if (!message.reactionStats) return [];
@@ -1308,10 +1584,17 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       { type: "HAHA" as ChatReactionType, label: "Haha", image: "/haha.png" },
       { type: "WOW" as ChatReactionType, label: "Wow", image: "/wow.png" },
       { type: "SAD" as ChatReactionType, label: "Sad", image: "/sad.png" },
-      { type: "ANGRY" as ChatReactionType, label: "Angry", image: "/angry.png" },
+      {
+        type: "ANGRY" as ChatReactionType,
+        label: "Angry",
+        image: "/angry.png",
+      },
     ];
     return optionsList
-      .map((r) => ({ ...r, count: message.reactionStats?.[reactionStatKeys[r.type]] ?? 0 }))
+      .map((r) => ({
+        ...r,
+        count: message.reactionStats?.[reactionStatKeys[r.type]] ?? 0,
+      }))
       .filter((r) => r.count > 0);
   };
 
@@ -1324,7 +1607,12 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const openMessageMediaViewer = (items: ChatMedia[], index: number) => {
     const viewerItems = items
       .filter((m) => m.url || m.thumbnailUrl)
-      .map((m) => ({ id: m.id ?? m.key, url: m.url ?? m.thumbnailUrl ?? "", fileName: m.fileName, mimeType: m.mimeType }));
+      .map((m) => ({
+        id: m.id ?? m.key,
+        url: m.url ?? m.thumbnailUrl ?? "",
+        fileName: m.fileName,
+        mimeType: m.mimeType,
+      }));
     if (viewerItems.length === 0) return;
     setMediaViewer({ items: viewerItems, index });
   };
@@ -1332,16 +1620,18 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   const getSystemNoticeText = (message: ChatMessage) => {
     if (message.content?.trim()) return message.content.trim();
     if (message.systemType === "CREATED") {
-      return activeChat && !isDraftChat(activeChat) && activeChat.type === "GROUP"
+      return activeChat &&
+        !isDraftChat(activeChat) &&
+        activeChat.type === "GROUP"
         ? "Group created"
         : "Account created";
     }
     return message.systemType
       ? message.systemType
-        .toLowerCase()
-        .split("_")
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ")
+          .toLowerCase()
+          .split("_")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ")
       : "Chat update";
   };
 
@@ -1373,7 +1663,11 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     );
   };
 
-  const renderMediaItem = (media: ChatMedia, mediaGroup?: ChatMedia[], index = 0) => {
+  const renderMediaItem = (
+    media: ChatMedia,
+    mediaGroup?: ChatMedia[],
+    index = 0,
+  ) => {
     const kind = getMediaKind(media);
     const url = media.url || media.thumbnailUrl;
     if (kind === "image" && url) {
@@ -1408,7 +1702,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
     }
     if (kind === "audio" && media.url) {
       return (
-        <div key={media.id ?? media.key} className="rounded-lg bg-black/5 p-2 dark:bg-white/10">
+        <div
+          key={media.id ?? media.key}
+          className="rounded-lg bg-black/5 p-2 dark:bg-white/10"
+        >
           <p className="mb-1 truncate text-xs opacity-70">{media.fileName}</p>
           <audio src={media.url} controls className="h-10 w-full" />
         </div>
@@ -1424,7 +1721,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
       >
         <FileText size={16} className="shrink-0" />
         <span className="min-w-0 flex-1 truncate">{media.fileName}</span>
-        <span className="shrink-0 opacity-60">{formatFileSize(media.fileSize)}</span>
+        <span className="shrink-0 opacity-60">
+          {formatFileSize(media.fileSize)}
+        </span>
       </a>
     );
   };
@@ -1458,156 +1757,169 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   };
 
   const isMessagesLoading =
-    Boolean(activeChat) && messages.length === 0 && (messagesQuery.isPending || messagesQuery.isFetching);
-  const composerPlaceholderName = activeChat ? getChatTitle(activeChat) : "chat";
-  const isRouteResolving = Boolean(activeChatId && !activeChat && isResolvingRoute);
+    Boolean(activeChat) &&
+    messages.length === 0 &&
+    (messagesQuery.isPending || messagesQuery.isFetching);
+  const composerPlaceholderName = activeChat
+    ? getChatTitle(activeChat)
+    : "chat";
+  const isRouteResolving = Boolean(
+    activeChatId && !activeChat && isResolvingRoute,
+  );
 
-  const mobileMessageActionSheet = mobileActionMessage ? (() => {
-    const message = mobileActionMessage;
-    const isMine = message.senderId === viewer?.id;
-    const currentReaction = getCurrentReaction(message);
-    const canCopy = Boolean(message.content?.trim());
-    const canEdit = isMine && !message.isDeleted;
-    const isDeleting = deletingMessageIds.includes(message.id);
-    const attachmentLinks = message.attachments.filter((media) => media.url);
+  const mobileMessageActionSheet = mobileActionMessage
+    ? (() => {
+        const message = mobileActionMessage;
+        const isMine = message.senderId === viewer?.id;
+        const currentReaction = getCurrentReaction(message);
+        const canCopy = Boolean(message.content?.trim());
+        const canEdit = isMine && !message.isDeleted;
+        const isDeleting = deletingMessageIds.includes(message.id);
+        const attachmentLinks = message.attachments.filter(
+          (media) => media.url,
+        );
 
-    return (
-      <OverlayPortal>
-        <div
-          className="pointer-events-auto fixed inset-0 z-[120] flex items-end bg-black/40 backdrop-blur-sm lg:hidden"
-          onClick={() => setMobileActionMessage(null)}
-        >
-          <div
-            className="w-full rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-neutral-950"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-700" />
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                  {message.sender.name}
-                </p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {formatDate(message.createdAt, false, true)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMobileActionMessage(null)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                aria-label="Close message actions"
+        return (
+          <OverlayPortal>
+            <div
+              className="pointer-events-auto fixed inset-0 z-[120] flex items-end bg-black/40 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileActionMessage(null)}
+            >
+              <div
+                className="w-full rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-neutral-950"
+                onClick={(event) => event.stopPropagation()}
               >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="mt-4 flex flex-wrap justify-center gap-1.5 rounded-full border border-black/5 bg-neutral-50 p-1 dark:border-white/10 dark:bg-neutral-900">
-              {reactionOptions.map((reaction) => (
-                <button
-                  key={reaction.type}
-                  type="button"
-                  disabled={reactionMutation.isPending}
-                  onClick={() => {
-                    setMobileActionMessage(null);
-                    reactionMutation.mutate({
-                      messageId: message.id,
-                      reactionType: reaction.type,
-                      currentReaction,
-                    });
-                  }}
-                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-50 ${currentReaction === reaction.type
-                    ? "bg-blue-100 ring-1 ring-blue-400 dark:bg-neutral-800"
-                    : "hover:bg-white dark:hover:bg-neutral-800"
-                    }`}
-                  aria-label={`React ${reaction.label}`}
-                >
-                  <Image
-                    src={reaction.image}
-                    alt={reaction.label}
-                    width={26}
-                    height={26}
-                    className="h-6.5 w-6.5"
-                  />
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-3 grid gap-1 overflow-hidden rounded-xl border border-black/5 dark:border-white/10">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileActionMessage(null);
-                  startReplyToMessage(message);
-                }}
-                className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
-              >
-                <Reply size={18} />
-                <span>Reply</span>
-              </button>
-              {canCopy && (
-                <button
-                  type="button"
-                  onClick={() => void copyMessageContent(message)}
-                  className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
-                >
-                  <Clipboard size={18} />
-                  <span>Copy message</span>
-                </button>
-              )}
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileActionMessage(null);
-                    startEditing(message);
-                  }}
-                  className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
-                >
-                  <Edit3 size={18} />
-                  <span>Edit</span>
-                </button>
-              )}
-              {isMine && (
-                <button
-                  type="button"
-                  disabled={isDeleting}
-                  onClick={() => {
-                    setMobileActionMessage(null);
-                    deleteMutation.mutate(message.id);
-                  }}
-                  className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-red-500 transition hover:bg-red-50 active:bg-red-100 disabled:opacity-50 dark:hover:bg-red-950/30"
-                >
-                  <Trash2 size={18} />
-                  <span>{isDeleting ? "Deleting..." : "Delete"}</span>
-                </button>
-              )}
-            </div>
-
-            {attachmentLinks.length > 0 && (
-              <div className="mt-3 grid gap-1 overflow-hidden rounded-xl border border-black/5 dark:border-white/10">
-                {attachmentLinks.map((media) => (
-                  <a
-                    key={media.id ?? media.key}
-                    href={media.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex h-12 min-w-0 items-center gap-3 px-4 text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-700" />
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                      {message.sender.name}
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {formatDate(message.createdAt, false, true)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
                     onClick={() => setMobileActionMessage(null)}
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                    aria-label="Close message actions"
                   >
-                    <FileText size={18} className="shrink-0" />
-                    <span className="min-w-0 flex-1 truncate">{media.fileName}</span>
-                    <span className="shrink-0 text-xs text-neutral-400">
-                      {formatFileSize(media.fileSize)}
-                    </span>
-                  </a>
-                ))}
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="mt-4 flex flex-wrap justify-center gap-1.5 rounded-full border border-black/5 bg-neutral-50 p-1 dark:border-white/10 dark:bg-neutral-900">
+                  {reactionOptions.map((reaction) => (
+                    <button
+                      key={reaction.type}
+                      type="button"
+                      disabled={reactionMutation.isPending}
+                      onClick={() => {
+                        setMobileActionMessage(null);
+                        reactionMutation.mutate({
+                          messageId: message.id,
+                          reactionType: reaction.type,
+                          currentReaction,
+                        });
+                      }}
+                      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-50 ${
+                        currentReaction === reaction.type
+                          ? "bg-blue-100 ring-1 ring-blue-400 dark:bg-neutral-800"
+                          : "hover:bg-white dark:hover:bg-neutral-800"
+                      }`}
+                      aria-label={`React ${reaction.label}`}
+                    >
+                      <Image
+                        src={reaction.image}
+                        alt={reaction.label}
+                        width={26}
+                        height={26}
+                        className="h-6.5 w-6.5"
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 grid gap-1 overflow-hidden rounded-xl border border-black/5 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileActionMessage(null);
+                      startReplyToMessage(message);
+                    }}
+                    className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                  >
+                    <Reply size={18} />
+                    <span>Reply</span>
+                  </button>
+                  {canCopy && (
+                    <button
+                      type="button"
+                      onClick={() => void copyMessageContent(message)}
+                      className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                    >
+                      <Clipboard size={18} />
+                      <span>Copy message</span>
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileActionMessage(null);
+                        startEditing(message);
+                      }}
+                      className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                    >
+                      <Edit3 size={18} />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                  {isMine && (
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => {
+                        setMobileActionMessage(null);
+                        deleteMutation.mutate(message.id);
+                      }}
+                      className="flex h-12 items-center gap-3 px-4 text-left text-sm font-medium text-red-500 transition hover:bg-red-50 active:bg-red-100 disabled:opacity-50 dark:hover:bg-red-950/30"
+                    >
+                      <Trash2 size={18} />
+                      <span>{isDeleting ? "Deleting..." : "Delete"}</span>
+                    </button>
+                  )}
+                </div>
+
+                {attachmentLinks.length > 0 && (
+                  <div className="mt-3 grid gap-1 overflow-hidden rounded-xl border border-black/5 dark:border-white/10">
+                    {attachmentLinks.map((media) => (
+                      <a
+                        key={media.id ?? media.key}
+                        href={media.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex h-12 min-w-0 items-center gap-3 px-4 text-sm font-medium text-neutral-800 transition hover:bg-blue-50 active:bg-blue-100 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                        onClick={() => setMobileActionMessage(null)}
+                      >
+                        <FileText size={18} className="shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">
+                          {media.fileName}
+                        </span>
+                        <span className="shrink-0 text-xs text-neutral-400">
+                          {formatFileSize(media.fileSize)}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      </OverlayPortal>
-    );
-  })() : null;
+            </div>
+          </OverlayPortal>
+        );
+      })()
+    : null;
 
   const chatModals = (
     <>
@@ -1656,7 +1968,9 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
           images={mediaViewer.items}
           index={mediaViewer.index}
           onClose={() => setMediaViewer(null)}
-          onChange={(idx) => setMediaViewer((prev) => (prev ? { ...prev, index: idx } : prev))}
+          onChange={(idx) =>
+            setMediaViewer((prev) => (prev ? { ...prev, index: idx } : prev))
+          }
           showPaginationOnVideo
         />
       )}
@@ -1670,11 +1984,7 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
   if (!showPanel && !hasMounted) return null;
 
   if (!showPanel) {
-    return (
-      <>
-        {mountedChatModals}
-      </>
-    );
+    return <>{mountedChatModals}</>;
   }
 
   return (
@@ -1697,22 +2007,26 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             className="@container/chatview flex-1 space-y-3 overflow-y-auto bg-neutral-50/80 px-3 py-4 pb-5 scrollbar-none dark:bg-neutral-950 sm:px-4"
           >
             {/* Floating Timestamp Overlay */}
-                    {showFloatingTimestamp && floatingTimestamp && (
-                      <div className="sticky top-2 z-10 flex justify-center transition-opacity duration-300 ease-in-out opacity-100">
-                        <div className="rounded-full bg-white/90 dark:bg-neutral-900/90 px-4 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 shadow-lg backdrop-blur-sm">
-                          {floatingTimestamp}
-                        </div>
-                      </div>
-                    )}
-                    {!showFloatingTimestamp && floatingTimestamp && (
-                      <div className="sticky top-2 z-10 flex justify-center transition-opacity duration-300 ease-in-out opacity-0 pointer-events-none">
-                        <div className="rounded-full bg-white/90 dark:bg-neutral-900/90 px-4 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 shadow-lg backdrop-blur-sm">
-                          {floatingTimestamp}
-                        </div>
-                      </div>
-                    )}
+            {showFloatingTimestamp && floatingTimestamp && (
+              <div className="sticky top-2 z-10 flex justify-center transition-opacity duration-300 ease-in-out opacity-100">
+                <div className="rounded-full bg-white/90 dark:bg-neutral-900/90 px-4 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 shadow-lg backdrop-blur-sm">
+                  {floatingTimestamp}
+                </div>
+              </div>
+            )}
+            {!showFloatingTimestamp && floatingTimestamp && (
+              <div className="sticky top-2 z-10 flex justify-center transition-opacity duration-300 ease-in-out opacity-0 pointer-events-none">
+                <div className="rounded-full bg-white/90 dark:bg-neutral-900/90 px-4 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 shadow-lg backdrop-blur-sm">
+                  {floatingTimestamp}
+                </div>
+              </div>
+            )}
 
-            <div ref={loadOlderSentinelRef} className="h-px w-full shrink-0" aria-hidden />
+            <div
+              ref={loadOlderSentinelRef}
+              className="h-px w-full shrink-0"
+              aria-hidden
+            />
 
             {messagesQuery.isFetchingNextPage && (
               <div className="flex justify-center py-3">
@@ -1723,20 +2037,22 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
               </div>
             )}
 
-            {!messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage && messages.length > 0 && (
-              <div className="flex justify-center py-2">
-                <span className="rounded-full border border-black/5 bg-white px-3 py-1 text-xs text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
-                  Beginning of conversation
-                </span>
-              </div>
-            )}
+            {!messagesQuery.hasNextPage &&
+              !messagesQuery.isFetchingNextPage &&
+              messages.length > 0 && (
+                <div className="flex justify-center py-2">
+                  <span className="rounded-full border border-black/5 bg-white px-3 py-1 text-xs text-neutral-400 dark:border-white/10 dark:bg-neutral-900">
+                    Beginning of conversation
+                  </span>
+                </div>
+              )}
 
             {(() => {
               let previousMessageDate: string | null = null;
-              
+
               return messageGroups.map((group) => {
                 const isSystemNotice = group.senderId === "system";
-                
+
                 if (isSystemNotice) {
                   const message = group.messages[0];
                   previousMessageDate = null;
@@ -1747,10 +2063,15 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                       className="flex justify-center px-6 py-1"
                     >
                       <div
-                        className={`max-w-[85%] rounded-full border border-black/5 bg-white px-3 py-1 text-center text-xs text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
-                          }`}
+                        className={`max-w-[85%] rounded-full border border-black/5 bg-white px-3 py-1 text-center text-xs text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-400 ${
+                          highlightedMessageId === message.id
+                            ? "ring-2 ring-blue-300/90 dark:ring-white/35"
+                            : ""
+                        }`}
                       >
-                        <span className="wrap-break-word">{getSystemNoticeText(message)}</span>
+                        <span className="wrap-break-word">
+                          {getSystemNoticeText(message)}
+                        </span>
                         <span className="ml-2 whitespace-nowrap text-[10px] opacity-60">
                           {formatDate(message.createdAt, false, true)}
                         </span>
@@ -1762,11 +2083,17 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                 const isMine = group.senderId === viewer?.id;
                 const firstMessage = group.messages[0];
                 const lastMessage = group.messages[group.messages.length - 1];
-                const showTimestampForGroup = shouldShowTimestamp(previousMessageDate, firstMessage.createdAt);
+                const showTimestampForGroup = shouldShowTimestamp(
+                  previousMessageDate,
+                  firstMessage.createdAt,
+                );
                 previousMessageDate = lastMessage.createdAt;
 
                 return (
-                  <div key={`group-${firstMessage.id}`} className="flex flex-col">
+                  <div
+                    key={`group-${firstMessage.id}`}
+                    className="flex flex-col"
+                  >
                     {/* Date pill when date changes */}
                     {showTimestampForGroup && (
                       <div className="flex justify-center py-2">
@@ -1775,45 +2102,70 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                         </div>
                       </div>
                     )}
-                    
-                    <div className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}>
+
+                    <div
+                      className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}
+                    >
                       {/* Avatar only on last message of group if not mine */}
                       <div className="w-9 shrink-0">
-                        {!isMine && lastMessage && renderSenderAvatar(lastMessage)}
+                        {!isMine &&
+                          lastMessage &&
+                          renderSenderAvatar(lastMessage)}
                       </div>
 
-                      <div className={`max-w-[85%] flex flex-col ${isMine ? "items-end" : "items-start"} space-y-1`}>
+                      <div
+                        className={`max-w-[85%] flex flex-col ${isMine ? "items-end" : "items-start"} space-y-1`}
+                      >
                         {/* Show sender name only (no timestamp) for non-mine messages */}
-                        {!isMine && activeChat && !isDraftChat(activeChat) && activeChat.type === "GROUP" && (
-                          <div className="ml-3 mb-1">
-                            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                              {firstMessage.sender.name}
-                            </span>
-                          </div>
-                        )}
+                        {!isMine &&
+                          activeChat &&
+                          !isDraftChat(activeChat) &&
+                          activeChat.type === "GROUP" && (
+                            <div className="ml-3 mb-1">
+                              <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                                {firstMessage.sender.name}
+                              </span>
+                            </div>
+                          )}
                         {group.messages.map((message, idx) => {
                           const isFirst = idx === 0;
                           const isLast = idx === group.messages.length - 1;
                           const currentReaction = getCurrentReaction(message);
                           const reactionTotal = getReactionTotal(message);
                           const visibleReactions = getVisibleReactions(message);
-                          const isDeleting = deletingMessageIds.includes(message.id);
-                          const isPendingSend = message.id.startsWith("pending-");
+                          const isDeleting = deletingMessageIds.includes(
+                            message.id,
+                          );
+                          const isPendingSend =
+                            message.id.startsWith("pending-");
                           const sendStatus = isMine
-                            ? getMessageSendStatus(message, activeChat, isPendingSend)
+                            ? getMessageSendStatus(
+                                message,
+                                activeChat,
+                                isPendingSend,
+                              )
                             : null;
-                          const showActions = !message.isDeleted && !isDeleting && !isPendingSend;
-                          
+                          const showActions =
+                            !message.isDeleted && !isDeleting && !isPendingSend;
+
                           // Calculate bubble border radius
                           let bubbleRadius = "rounded-lg";
                           if (group.messages.length === 1) {
-                            bubbleRadius = isMine ? "rounded-2xl rounded-br-md" : "rounded-2xl rounded-bl-md";
+                            bubbleRadius = isMine
+                              ? "rounded-2xl rounded-br-md"
+                              : "rounded-2xl rounded-bl-md";
                           } else if (isFirst) {
-                            bubbleRadius = isMine ? "rounded-2xl rounded-tr-md" : "rounded-2xl rounded-tl-md";
+                            bubbleRadius = isMine
+                              ? "rounded-2xl rounded-tr-md"
+                              : "rounded-2xl rounded-tl-md";
                           } else if (isLast) {
-                            bubbleRadius = isMine ? "rounded-2xl rounded-br-md" : "rounded-2xl rounded-bl-md";
+                            bubbleRadius = isMine
+                              ? "rounded-2xl rounded-br-md"
+                              : "rounded-2xl rounded-bl-md";
                           } else {
-                            bubbleRadius = isMine ? "rounded-xl rounded-tr-sm rounded-br-sm" : "rounded-xl rounded-tl-sm rounded-bl-sm";
+                            bubbleRadius = isMine
+                              ? "rounded-xl rounded-tr-sm rounded-br-sm"
+                              : "rounded-xl rounded-tl-sm rounded-bl-sm";
                           }
 
                           return (
@@ -1822,62 +2174,112 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                               data-chat-message-id={message.id}
                               className={`group/message flex items-center gap-2 ${isMine ? "justify-end" : "justify-start"}`}
                             >
-                              <div className={`flex max-w-[65%] flex-col lg:max-w-full ${isMine ? "items-end" : "items-start"}`}>
-                                <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
+                              <div
+                                className={`flex max-w-[65%] flex-col lg:max-w-full ${isMine ? "items-end" : "items-start"}`}
+                              >
+                                <div
+                                  className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : ""}`}
+                                >
                                   {/* More rectangular bubble with subtle rounding */}
                                   <div
                                     onClick={(event) =>
                                       openMobileMessageActions(event, message, {
-                                        disabled: message.isDeleted || isDeleting || isPendingSend,
+                                        disabled:
+                                          message.isDeleted ||
+                                          isDeleting ||
+                                          isPendingSend,
                                       })
                                     }
-                                    className={`relative inline-block w-fit max-w-full px-4 py-2 text-sm transition-shadow ${bubbleRadius} ${isMine
-                                        ? "bg-blue-400 text-white dark:bg-neutral-700"
+                                    className={`relative inline-block w-fit max-w-full px-4 py-2 text-sm transition-shadow ${bubbleRadius} ${
+                                      isMine
+                                        ? "border border-black/10 bg-white text-neutral-900 shadow-sm dark:border-transparent dark:bg-neutral-700 dark:text-white"
                                         : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
-                                      } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${highlightedMessageId === message.id ? "ring-2 ring-blue-300/90 dark:ring-white/35" : ""
-                                      }`}
+                                    } ${isDeleting || isPendingSend ? "opacity-60" : ""} ${
+                                      highlightedMessageId === message.id
+                                        ? "ring-2 ring-blue-300/90 dark:ring-white/35"
+                                        : ""
+                                    }`}
                                   >
                                     <div className="flex w-fit max-w-full flex-col gap-2">
                                       {getReplyPreview(message) && (
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            const parentId = getParentMessageId(message);
-                                            if (parentId) scrollToChatMessage(parentId);
+                                            const parentId =
+                                              getParentMessageId(message);
+                                            if (parentId)
+                                              scrollToChatMessage(parentId);
                                           }}
-                                          disabled={!getParentMessageId(message)}
-                                          className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${isMine
-                                              ? "border-white/50 text-white/75"
+                                          disabled={
+                                            !getParentMessageId(message)
+                                          }
+                                          className={`w-full border-l-2 py-1 pl-2 text-left text-xs transition hover:opacity-90 disabled:cursor-default disabled:hover:opacity-100 ${
+                                            isMine
+                                              ? "border-neutral-300 text-neutral-600 dark:border-white/50 dark:text-white/75"
                                               : "border-blue-300 text-neutral-600 dark:border-neutral-500 dark:text-neutral-300"
-                                            } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
+                                          } ${getParentMessageId(message) ? "cursor-pointer" : ""}`}
                                           aria-label="Jump to replied message"
                                         >
-                                          <p className="line-clamp-2 [overflow-wrap:anywhere]">{getReplyPreview(message)}</p>
+                                          <p className="line-clamp-2 [overflow-wrap:anywhere]">
+                                            {getReplyPreview(message)}
+                                          </p>
                                         </button>
                                       )}
-                                      {(message.images.length > 0 || message.attachments.length > 0) && (
+                                      {(message.images.length > 0 ||
+                                        message.attachments.length > 0) && (
                                         <div className="grid gap-2">
-                                          {message.images.map((media, idx) => renderMediaItem(media, message.images, idx))}
-                                          {message.attachments.map((media, idx) => renderMediaItem(media, message.attachments, idx))}
+                                          {message.images.map((media, idx) =>
+                                            renderMediaItem(
+                                              media,
+                                              message.images,
+                                              idx,
+                                            ),
+                                          )}
+                                          {message.attachments.map(
+                                            (media, idx) =>
+                                              renderMediaItem(
+                                                media,
+                                                message.attachments,
+                                                idx,
+                                              ),
+                                          )}
                                         </div>
                                       )}
-                                      {(message.content || message.isDeleted) && (
-                                        <p className={`whitespace-pre-wrap [overflow-wrap:anywhere] ${message.isDeleted ? "italic opacity-60" : ""}`}>
-                                          {message.isDeleted ? "Message deleted" : message.content}
+                                      {(message.content ||
+                                        message.isDeleted) && (
+                                        <p
+                                          className={`whitespace-pre-wrap [overflow-wrap:anywhere] ${message.isDeleted ? "italic opacity-60" : ""}`}
+                                        >
+                                          {message.isDeleted
+                                            ? "Message deleted"
+                                            : message.content}
                                         </p>
                                       )}
-                                      
+
                                       {/* Timestamp, status, and edited flag inside bubble */}
-                                      <div className={`flex items-center gap-1 self-end ${isMine ? "justify-end" : "justify-start"}`}>
-                                        <span className={`text-xs whitespace-nowrap ${isMine ? "text-white/80" : "text-neutral-500 dark:text-neutral-400"}`}>
-                                          {formatChatTimestamp(message.createdAt)}
+                                      <div
+                                        className={`flex items-center gap-1 self-end ${isMine ? "justify-end" : "justify-start"}`}
+                                      >
+                                        <span
+                                          className={`text-xs whitespace-nowrap ${isMine ? "text-neutral-500 dark:text-white/80" : "text-neutral-500 dark:text-neutral-400"}`}
+                                        >
+                                          {formatChatTimestamp(
+                                            message.createdAt,
+                                          )}
                                         </span>
-                                        {message.isEdited && !message.isDeleted && (
-                                          <span className={`text-xs whitespace-nowrap ${isMine ? "text-white/70" : "text-neutral-500 dark:text-neutral-400"}`}>
-                                            edited
-                                          </span>
+                                        {message.isEdited &&
+                                          !message.isDeleted && (
+                                            <span
+                                              className={`text-xs whitespace-nowrap ${isMine ? "text-neutral-500 dark:text-white/70" : "text-neutral-500 dark:text-neutral-400"}`}
+                                            >
+                                              edited
+                                            </span>
+                                          )}
+                                        {sendStatus && (
+                                          <MessageStatusIcon
+                                            status={sendStatus}
+                                          />
                                         )}
-                                        {sendStatus && <MessageStatusIcon status={sendStatus} />}
                                       </div>
                                     </div>
                                   </div>
@@ -1887,8 +2289,12 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                       isMine={isMine}
                                       message={message}
                                       currentReaction={currentReaction}
-                                      openReactionMessageId={openReactionMessageId}
-                                      setOpenReactionMessageId={setOpenReactionMessageId}
+                                      openReactionMessageId={
+                                        openReactionMessageId
+                                      }
+                                      setOpenReactionMessageId={
+                                        setOpenReactionMessageId
+                                      }
                                       onReply={startReplyToMessage}
                                       startEditing={startEditing}
                                       deleteMutation={deleteMutation}
@@ -1899,24 +2305,39 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
                                 </div>
 
                                 {/* Reactions */}
-                                {!message.isDeleted && !isDeleting && !isPendingSend && visibleReactions.length > 0 && (
-                                  <div className={`relative mt-1 flex max-w-full flex-wrap items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setReactionUsersMessage(message)}
-                                      className={`inline-flex h-8 max-w-full items-center gap-1 rounded-full border border-black/10 bg-white px-2 text-xs font-medium text-neutral-600 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 ${currentReaction ? "ring-1 ring-blue-400/60" : ""}`}
-                                      aria-label="Message reactions"
+                                {!message.isDeleted &&
+                                  !isDeleting &&
+                                  !isPendingSend &&
+                                  visibleReactions.length > 0 && (
+                                    <div
+                                      className={`relative mt-1 flex max-w-full flex-wrap items-center gap-1.5 ${isMine ? "justify-end" : "justify-start"}`}
                                     >
-                                      <span className="flex -space-x-1">
-                                        {visibleReactions.slice(0, 3).map((r) => (
-                                          <Image key={r.type} src={r.image} alt={r.label} width={18} height={18} className="h-4.5 w-4.5 rounded-full" />
-                                        ))}
-                                      </span>
-                                      <span>{reactionTotal}</span>
-                                    </button>
-                                  </div>
-                                )}
-
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setReactionUsersMessage(message)
+                                        }
+                                        className={`inline-flex h-8 max-w-full items-center gap-1 rounded-full border border-black/10 bg-white px-2 text-xs font-medium text-neutral-600 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 ${currentReaction ? "ring-1 ring-blue-400/60" : ""}`}
+                                        aria-label="Message reactions"
+                                      >
+                                        <span className="flex -space-x-1">
+                                          {visibleReactions
+                                            .slice(0, 3)
+                                            .map((r) => (
+                                              <Image
+                                                key={r.type}
+                                                src={r.image}
+                                                alt={r.label}
+                                                width={18}
+                                                height={18}
+                                                className="h-4.5 w-4.5 rounded-full"
+                                              />
+                                            ))}
+                                        </span>
+                                        <span>{reactionTotal}</span>
+                                      </button>
+                                    </div>
+                                  )}
                               </div>
                             </div>
                           );
@@ -1973,7 +2394,10 @@ export const ChatClient = ({ initialChats, initialChatId }: ChatClientProps) => 
             composerIsPending={composerIsPending}
             composerCanSubmit={composerCanSubmit}
             composerSubmitEnabled={composerSubmitEnabled}
-            onSubmit={(e) => { e.preventDefault(); submitComposer(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitComposer();
+            }}
           />
         )}
       </div>
