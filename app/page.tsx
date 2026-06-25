@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import LoginForm from "./_components/auth/LoginForm";
+import { createMetadata } from "./seo";
+
+export const metadata: Metadata = createMetadata({
+  title: "Sign In",
+  description:
+    "Sign in to HIVE to share posts, explore profiles, manage points, chat, and follow community updates.",
+  path: "/",
+  noIndex: true,
+});
 
 const Home = () => {
   return (

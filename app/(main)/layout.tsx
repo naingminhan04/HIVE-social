@@ -1,9 +1,16 @@
 import { Metadata } from "next";
 import NavBar from "@/app/_components/layout/NavBar";
 import PortalBar from "@/app/_components/layout/PortalBar";
+import { createMetadata } from "@/app/seo";
 
 export const metadata: Metadata = {
-  title: "HIVE - Social Hub For Bees",
+  ...createMetadata({
+    title: "HIVE Social Hub",
+    description:
+      "Enter HIVE's polished social workspace for posts, conversations, profiles, points, and community discovery.",
+    path: "/home",
+    noIndex: true,
+  }),
 };
 
 export default function MainLayout({
