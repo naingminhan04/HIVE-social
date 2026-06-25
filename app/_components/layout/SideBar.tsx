@@ -138,6 +138,7 @@ const SideBar = () => {
                   src={user.coverPic}
                   alt="Cover"
                   fill
+                  sizes="18rem"
                   className="object-cover"
                   wrapperClassName="h-full w-full"
                   showRetryButton

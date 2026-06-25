@@ -667,6 +667,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
               src={coverPreviewUrl}
               onClick={() => setImageView("cover")}
               fill
+              sizes="(min-width: 1024px) 66vw, 100vw"
               alt="Cover photo preview"
               className="object-cover"
             />
@@ -676,6 +677,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                 src={user.coverPic}
                 onClick={() => setImageView("cover")}
                 fill
+                sizes="(min-width: 1024px) 66vw, 100vw"
                 alt="Cover photo"
                 className="object-cover"
                 wrapperClassName="h-full w-full"
@@ -877,6 +879,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                               <Image
                                 src={coverPreviewUrl}
                                 fill
+                                sizes="(min-width: 768px) 42rem, 100vw"
                                 alt="Cover photo preview"
                                 className="object-cover"
                               />
@@ -884,6 +887,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                               <RecoverableImage
                                 src={displayedCoverSrc}
                                 fill
+                                sizes="(min-width: 768px) 42rem, 100vw"
                                 alt="Cover photo"
                                 className="object-cover"
                                 wrapperClassName="h-full w-full"

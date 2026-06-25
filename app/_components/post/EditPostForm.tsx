@@ -463,6 +463,7 @@ export default function EditPostForm({
                                   src={posterUrl}
                                   alt="Video thumbnail"
                                   fill
+                                  sizes="(min-width: 768px) 10rem, 33vw"
                                   className="object-cover"
                                 />
                               ) : (
@@ -483,6 +484,7 @@ export default function EditPostForm({
                               src={src}
                               alt="Existing image"
                               fill
+                              sizes="(min-width: 768px) 10rem, 33vw"
                               className="object-cover"
                             />
                           ) : (
@@ -530,6 +532,7 @@ export default function EditPostForm({
                             src={previewUrls[index]}
                             alt="Preview"
                             fill
+                            sizes="(min-width: 768px) 10rem, 33vw"
                             className="object-cover"
                           />
                         )}

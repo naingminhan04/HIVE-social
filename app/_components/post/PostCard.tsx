@@ -238,6 +238,7 @@ function PostMediaTile({
             <RecoverableImage
               src={posterUrl}
               fill
+              sizes="(min-width: 1024px) 32vw, (min-width: 768px) 66vw, 100vw"
               alt="Video thumbnail"
               className="object-cover"
               wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"
@@ -266,6 +267,7 @@ function PostMediaTile({
         <RecoverableImage
           src={media.url}
           fill
+          sizes="(min-width: 1024px) 32vw, (min-width: 768px) 66vw, 100vw"
           alt="Post Image"
           className="object-cover"
           wrapperClassName="h-full w-full bg-gray-300 dark:bg-neutral-700"

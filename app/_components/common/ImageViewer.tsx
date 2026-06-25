@@ -238,6 +238,7 @@ const ImageViewer = ({
                 src={resolvedImageUrl}
                 alt="viewer"
                 fill
+                sizes="100vw"
                 className={`object-contain transition-opacity duration-200 ${viewerState.isImageLoading || viewerState.isImageBroken
                     ? "opacity-0"
                     : "opacity-100"

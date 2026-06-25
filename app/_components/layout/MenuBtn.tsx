@@ -133,6 +133,7 @@ const MenuBtn = () => {
                         src={user.coverPic}
                         alt="Cover"
                         fill
+                        sizes="17.5rem"
                         className="object-cover"
                         wrapperClassName="h-full w-full"
                         showRetryButton

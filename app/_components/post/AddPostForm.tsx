@@ -421,6 +421,7 @@ export default function AddPostBtn({
                                 src={previewUrls[index]}
                                 alt={`Preview ${index + 1}`}
                                 fill
+                                sizes="(min-width: 768px) 10rem, 33vw"
                                 className="object-cover"
                               />
                             )}

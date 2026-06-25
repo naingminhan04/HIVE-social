@@ -107,7 +107,7 @@ export function ChatComposer({
             return (
               <div key={mediaKey} className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg border border-black/10 bg-neutral-100 dark:border-white/10 dark:bg-neutral-900">
                 {kind === "image" && (media.url || media.thumbnailUrl) && (
-                  <RecoverableImage src={media.url || media.thumbnailUrl} alt={media.fileName} fill className="object-cover" wrapperClassName="h-full w-full" showLoadingOverlay />
+                  <RecoverableImage src={media.url || media.thumbnailUrl} alt={media.fileName} fill sizes="6rem" className="object-cover" wrapperClassName="h-full w-full" showLoadingOverlay />
                 )}
                 {kind === "video" && (media.url || media.thumbnailUrl) && (
                   <div className="relative h-full w-full bg-black">

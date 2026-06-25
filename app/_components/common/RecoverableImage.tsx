@@ -134,6 +134,9 @@ const RecoverableImage = ({
 
   const activeSrc = imageState.useFallback ? fallbackSrc ?? null : primarySrc;
   const shouldRenderImage = Boolean(activeSrc) && !imageState.hasError;
+  const resolvedSizes =
+    imageProps.fill && !imageProps.sizes ? "100vw" : imageProps.sizes;
+  const resolvedQuality = imageProps.quality ?? 75;
 
   const handleRetry = () => {
     if (autoRetryTimerRef.current !== null) {
@@ -192,6 +195,8 @@ const RecoverableImage = ({
         {shouldRenderImage ? (
           <Image
             {...imageProps}
+            sizes={resolvedSizes}
+            quality={resolvedQuality}
             className={getImageClassName()}
             src={activeSrc!}
             alt={alt}

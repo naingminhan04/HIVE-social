@@ -786,6 +786,7 @@ export const CommentForm = ({
             src={previewUrl}
             alt="Preview"
             fill
+            sizes="5rem"
             className="rounded-lg object-cover cursor-pointer duration-300 ease-out hover:brightness-90 hover:contrast-105 transition-all"
             onClick={() => onViewImage?.(previewUrl)}
           />
