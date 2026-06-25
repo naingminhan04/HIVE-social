@@ -19,10 +19,9 @@ export const generateMetadata = async ({
 }: Omit<SearchLayoutProps, "children">): Promise<Metadata> => {
   const { keyword } = await params;
   const searchTerm = getKeyword(keyword);
-  const title = searchTerm ? `Search ${searchTerm}` : "Search";
 
   return createMetadata({
-    title,
+    title: "Search",
     description: truncateMetadataText(
       searchTerm
         ? `Search HIVE for posts and people matching "${searchTerm}" in a fast, focused discovery view.`

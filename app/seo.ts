@@ -21,6 +21,7 @@ export const siteConfig = {
   description:
     "A social hub for sharing posts, discovering people, tracking points, and staying connected with your hive.",
   image: "/Hive.jpeg",
+  defaultTitle: "HIVE - Social Hub For Bees",
 };
 
 type CreateMetadataOptions = {
@@ -41,6 +42,28 @@ const getImageUrl = (image?: string | null) => {
   return getCanonicalUrl(siteConfig.image);
 };
 
+const createBrandedTitle = (title: string) => {
+  const normalizedTitle = title.trim();
+
+  if (!normalizedTitle || normalizedTitle === siteConfig.name) {
+    return siteConfig.defaultTitle;
+  }
+
+  if (normalizedTitle.startsWith(`${siteConfig.name} - `)) {
+    return normalizedTitle;
+  }
+
+  if (normalizedTitle.startsWith(`${siteConfig.name} `)) {
+    return `${siteConfig.name} - ${normalizedTitle.slice(siteConfig.name.length).trim()}`;
+  }
+
+  if (normalizedTitle.endsWith(`| ${siteConfig.name}`)) {
+    return normalizedTitle;
+  }
+
+  return `${siteConfig.name} - ${normalizedTitle}`;
+};
+
 export const createMetadata = ({
   title,
   description,
@@ -51,10 +74,12 @@ export const createMetadata = ({
 }: CreateMetadataOptions): Metadata => {
   const canonical = getCanonicalUrl(path);
   const imageUrl = getImageUrl(image);
-  const brandedTitle = title === siteConfig.name ? title : `${title} | ${siteConfig.name}`;
+  const brandedTitle = createBrandedTitle(title);
 
   return {
-    title,
+    title: {
+      absolute: brandedTitle,
+    },
     description,
     alternates: {
       canonical,

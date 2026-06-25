@@ -159,6 +159,14 @@ const Verify = () => {
     return (
       <main className="flex min-h-dvh w-dvw items-center justify-center p-5">
         <div className="flex max-w-md flex-col items-center gap-4 text-center">
+          <Image
+            src="/Hive.jpeg"
+            alt="Hive Social Logo"
+            width={96}
+            height={96}
+            priority
+            className="h-24 w-24 rounded-3xl object-cover shadow-sm"
+          />
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             No pending account found. Sign in to continue.
           </p>
@@ -181,7 +189,8 @@ const Verify = () => {
           alt="Hive Social Logo"
           width={96}
           height={96}
-          className="rounded-full"
+          priority
+          className="h-24 w-24 rounded-3xl object-cover shadow-sm"
         />
 
         <div className="flex flex-col items-center gap-3">

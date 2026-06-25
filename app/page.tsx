@@ -18,9 +18,10 @@ const Home = () => {
         <Image
           src="/Hive.jpeg"
           alt="Hive Logo"
-          width={100}
-          height={100}
-          className="rounded-4xl  mb-5"
+          width={112}
+          height={112}
+          priority
+          className="mb-5 h-28 w-28 rounded-3xl object-cover shadow-sm"
         />
         <h1 className="text-2xl text-black dark:text-white font-bold mb-1">Welcome Back</h1>
         <p className="text-gray-600 dark:text-gray-300 text-sm">

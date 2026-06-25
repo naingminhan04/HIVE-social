@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getUserByUsernameAction } from "@/app/_actions/user";
-import { createMetadata, truncateMetadataText } from "@/app/seo";
+import { createMetadata } from "@/app/seo";
 
 type UserLayoutProps = {
   children: React.ReactNode;
@@ -21,30 +21,16 @@ export const generateMetadata = async ({
   const { username: routeUsername } = await params;
   const username = getUsername(routeUsername);
   const result = await getUserByUsernameAction(username);
-
-  if (!result.success) {
-    return createMetadata({
-      title: username ? `@${username}` : "Profile",
-      description:
-        "View this HIVE profile, posts, activity, points, and community presence.",
-      path: `/users/${encodeURIComponent(username || routeUsername)}`,
-      noIndex: true,
-    });
-  }
-
-  const user = result.data;
-  const displayName = user.name || `@${user.username}`;
-  const description = truncateMetadataText(
-    user.bio ||
-      `View ${displayName}'s HIVE profile, posts, points, and community activity.`,
-  );
+  const user = result.success ? result.data : null;
+  const displayName = user?.name || username;
+  const profileUsername = user?.username || username;
 
   return createMetadata({
-    title: `${displayName} (@${user.username})`,
-    description,
-    path: `/users/${encodeURIComponent(user.username)}`,
-    image: user.profilePic,
-    noIndex: true,
+    title: `${displayName}'s Profile`,
+    description: profileUsername
+      ? `View @${profileUsername}'s HIVE profile.`
+      : "View this HIVE profile.",
+    path: `/users/${encodeURIComponent(profileUsername || routeUsername)}`,
   });
 };
 

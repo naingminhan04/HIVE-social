@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     apple: "/Hive.jpeg",
   },
   title: {
-    default: "HIVE",
-    template: "%s | HIVE",
+    default: siteConfig.defaultTitle,
+    template: `${siteConfig.name} - %s`,
   },
 };
 
