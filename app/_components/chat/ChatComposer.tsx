@@ -77,7 +77,7 @@ export function ChatComposer({
   return (
     <form
       onSubmit={onSubmit}
-      className="sticky bottom-0 z-20 shrink-0 border-t border-black/5 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm dark:border-white/10 dark:bg-neutral-950/95 sm:px-4"
+      className="ios-keyboard-docked sticky bottom-0 z-20 shrink-0 border-t border-black/5 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm dark:border-white/10 dark:bg-neutral-950/95 sm:px-4"
     >
       {isEditing && (
         <div className={composerBannerClass}>

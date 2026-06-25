@@ -50,7 +50,7 @@ import {
   isDraftChat,
   visibleChatHasMessage,
 } from "@/utils/chatDisplay";
-import { uploadFiles } from "@/utils/uploadUtils";
+import { MAX_UPLOAD_FILE_SIZE_BYTES, uploadFiles } from "@/utils/uploadUtils";
 import { createVideoPreviewUrl } from "@/utils/videoThumbnail";
 import {
   useInfiniteQuery,
@@ -1433,6 +1433,12 @@ export const ChatClient = ({
 
   const addDraftFiles = (files: File[]) => {
     if (files.length === 0) return;
+
+    const oversizedFile = files.find((file) => file.size > MAX_UPLOAD_FILE_SIZE_BYTES);
+    if (oversizedFile) {
+      toast.error("Maximum file size is 50MB.");
+      return;
+    }
 
     void (async () => {
       const nextDrafts = await Promise.all(

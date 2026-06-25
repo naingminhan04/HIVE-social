@@ -10,6 +10,10 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+  .ios-keyboard-docked {
+    transform: translateY(calc(var(--ios-keyboard-inset-bottom, 0px) * -1));
+    transition: transform 120ms ease;
+  }
 }
 
 @theme inline {

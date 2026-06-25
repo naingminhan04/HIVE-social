@@ -33,7 +33,7 @@ type FormValues = {
 
 const MAX_MEDIA = 20;
 const MAX_ATTACHMENTS = 10;
-const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 const isVideoFile = (file: File) => file.type.startsWith("video/");
 const isImageFile = (file: File) => file.type.startsWith("image/");
@@ -158,11 +158,11 @@ export default function AddPostBtn({
         e.target.value = "";
         return;
       }
-      const oversizedVideo = filesArray.find(
-        (file) => isVideoFile(file) && file.size > MAX_VIDEO_SIZE_BYTES,
+      const oversizedFile = filesArray.find(
+        (file) => file.size > MAX_FILE_SIZE_BYTES,
       );
-      if (oversizedVideo) {
-        toast.error("Maximum video size is 50MB per video.");
+      if (oversizedFile) {
+        toast.error("Maximum file size is 50MB.");
         e.target.value = "";
         return;
       }
@@ -199,6 +199,15 @@ export default function AddPostBtn({
       const totalAttachments = selectedAttachments.length + filesArray.length;
       if (totalAttachments > MAX_ATTACHMENTS) {
         toast.error(`You can upload up to ${MAX_ATTACHMENTS} attachments.`);
+        e.target.value = "";
+        return;
+      }
+
+      const oversizedAttachment = filesArray.find(
+        (file) => file.size > MAX_FILE_SIZE_BYTES,
+      );
+      if (oversizedAttachment) {
+        toast.error("Maximum file size is 50MB.");
         e.target.value = "";
         return;
       }

@@ -660,7 +660,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         ) : null}
       </div>
 
-      <div className="relative mb-[10vw] md:mb-[6vw] lg:mb-[clamp(10px,5vw,60px)]">
+      <div className="relative mb-[13vw] md:mb-[8vw] lg:mb-[clamp(10px,5vw,60px)]">
         <div className="w-full aspect-5/2 relative bg-gray-300">
           {coverPreviewUrl ? (
             <Image
@@ -716,14 +716,14 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
             aria-label={isOwner ? "Edit thought" : "User thought"}
             title={activeThought?.text ?? "Share a thought"}
           >
-            <span className={`block ${activeThought ?? "text-neutral-400" } truncate`}>
+            <span className={`block ${activeThought ? "" : "text-neutral-400"} truncate`}>
               {activeThought?.text || "Share a thought"}
             </span>
           </button>
         )}
       </div>
 
-      <section className="px-4 pb-4 space-y-6">
+      <section className="mt-2 space-y-6 px-4 pb-4 md:mt-2 lg:mt-0">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="flex min-w-0 items-center font-semibold text-[clamp(1.5rem,6cqw,2.25rem)] text-black dark:text-white">

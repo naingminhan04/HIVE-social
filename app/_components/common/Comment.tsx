@@ -281,7 +281,7 @@ export const CommentPage = ({ postId }: { postId: string }) => {
 
         )}
       </div>
-      <div className="pb-2 bg-gray-100 dark:bg-neutral-950 -mx-2 px-2 sticky bottom-0 z-10 pt-2 space-y-2">
+      <div className="ios-keyboard-docked pb-2 bg-gray-100 dark:bg-neutral-950 -mx-2 px-2 sticky bottom-0 z-10 pt-2 space-y-2">
         {(activeFormMode === "reply" || activeFormMode === "edit") &&
           activeComment && (
             <div className="flex items-center justify-between text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300">

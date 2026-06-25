@@ -1,5 +1,10 @@
 import type { NotificationItem } from "@/types/notification";
 
+const isThoughtNotification = (notification: NotificationItem) => {
+  const text = notification.text?.toLowerCase() ?? "";
+  return text.includes("shared a thought");
+};
+
 export function getNotificationHref(notification: NotificationItem): string | null {
   if (notification.postId) {
     return `/posts/${notification.postId}`;
@@ -25,6 +30,10 @@ export function getNotificationHref(notification: NotificationItem): string | nu
   const profileUsername = notification.target.profileView?.profile?.username;
   if (notification.profileViewId && profileUsername) {
     return `/users/${profileUsername}?profileViews=1`;
+  }
+
+  if (isThoughtNotification(notification) && notification.actorUser?.username) {
+    return `/users/${notification.actorUser.username}`;
   }
 
   return null;

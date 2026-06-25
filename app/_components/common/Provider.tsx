@@ -8,6 +8,7 @@ import UserRefresher from "./Refresher";
 import { ThemeProvider } from "next-themes";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { UserPresenceProvider } from "./UserPresenceProvider";
+import IOSKeyboardViewportFix from "./IOSKeyboardViewportFix";
 
 export function Provider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -24,6 +25,7 @@ export function Provider({ children }: { children: ReactNode }) {
         >
           <NextTopLoader color="white" height={2} showSpinner={false} />
           <UserRefresher />
+          <IOSKeyboardViewportFix />
           <UserPresenceProvider>{children}</UserPresenceProvider>
           <Toaster position="top-center" reverseOrder={false} />
         </ThemeProvider>

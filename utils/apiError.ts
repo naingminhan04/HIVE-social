@@ -1,24 +1,49 @@
 import axios from "axios";
 
+const normalizeUploadError = (message: string) => {
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("unexpected end of form") ||
+    lower.includes("payload too large") ||
+    lower.includes("request entity too large") ||
+    lower.includes("file too large") ||
+    lower.includes("entity too large") ||
+    lower.includes("multipart") ||
+    lower.includes("form data") && lower.includes("aborted")
+  ) {
+    return "Maximum file size is 50MB.";
+  }
+
+  return message;
+};
+
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (!axios.isAxiosError(err)) {
+    if (err instanceof Error) {
+      return normalizeUploadError(err.message);
+    }
     return fallback;
   }
 
-  const message = err.response?.data?.message;
+  const data = err.response?.data;
+  const rawMessage =
+    typeof data === "string"
+      ? data
+      : data?.message;
 
-  if (typeof message === "string") {
-    return message;
+  if (typeof rawMessage === "string") {
+    return normalizeUploadError(rawMessage);
   }
 
-  if (Array.isArray(message)) {
-    return message.join(", ");
+  if (Array.isArray(rawMessage)) {
+    return normalizeUploadError(rawMessage.join(", "));
   }
 
-  if (message && typeof message === "object" && "message" in message) {
-    const nested = (message as { message?: unknown }).message;
+  if (rawMessage && typeof rawMessage === "object" && "message" in rawMessage) {
+    const nested = (rawMessage as { message?: unknown }).message;
     if (typeof nested === "string") {
-      return nested;
+      return normalizeUploadError(nested);
     }
   }
 
