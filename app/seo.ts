@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-const siteUrl = appUrl
-  ? (/^https?:\/\//i.test(appUrl) ? appUrl : `https://${appUrl}`).replace(/\/+$/, "")
-  : "";
+const siteUrl = (
+  appUrl
+    ? /^https?:\/\//i.test(appUrl)
+      ? appUrl
+      : `https://${appUrl}`
+    : "https://hive-social.netlify.app"
+).replace(/\/+$/, "");
 
 const isAbsoluteUrl = (value: string) => /^https?:\/\//i.test(value);
 

@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { createMetadata } from "@/app/seo";
 
 type PostLayoutProps = {
@@ -6,19 +5,12 @@ type PostLayoutProps = {
   params: Promise<{ postId: string }>;
 };
 
-export const generateMetadata = async ({
-  params,
-}: Omit<PostLayoutProps, "children">): Promise<Metadata> => {
-  const { postId } = await params;
-
-  return createMetadata({
-    title: "Post",
-    description:
-      "Open this HIVE post to view the full conversation, reactions, comments, and shared media.",
-    path: `/posts/${encodeURIComponent(postId)}`,
-    type: "article",
-  });
-};
+export const metadata = createMetadata({
+  title: "Post",
+  description: "View post on HIVE.",
+  path: "/posts",
+  type: "article",
+});
 
 const PostLayout = ({ children }: PostLayoutProps) => children;
 
