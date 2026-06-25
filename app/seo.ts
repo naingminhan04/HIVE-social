@@ -1,10 +1,23 @@
 import type { Metadata } from "next";
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+const getSiteUrl = () => {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const fallbackUrl = "https://hive-social.netlify.app";
+
+  if (!appUrl) return new URL(fallbackUrl);
+
+  const normalizedUrl = /^https?:\/\//i.test(appUrl) ? appUrl : `https://${appUrl}`;
+
+  try {
+    return new URL(normalizedUrl);
+  } catch {
+    return new URL(fallbackUrl);
+  }
+};
 
 export const siteConfig = {
   name: "HIVE",
-  url: new URL(siteUrl),
+  url: getSiteUrl(),
   description:
     "A social hub for sharing posts, discovering people, tracking points, and staying connected with your hive.",
   image: "/Hive.jpeg",
