@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 
-const getSiteUrl = () => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  const fallbackUrl = "https://hive-social.netlify.app";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+const siteUrl = appUrl
+  ? (/^https?:\/\//i.test(appUrl) ? appUrl : `https://${appUrl}`).replace(/\/+$/, "")
+  : "";
 
-  if (!appUrl) return new URL(fallbackUrl);
+const isAbsoluteUrl = (value: string) => /^https?:\/\//i.test(value);
 
-  const normalizedUrl = /^https?:\/\//i.test(appUrl) ? appUrl : `https://${appUrl}`;
+const getCanonicalUrl = (path: string) => {
+  if (isAbsoluteUrl(path)) return path;
 
-  try {
-    return new URL(normalizedUrl);
-  } catch {
-    return new URL(fallbackUrl);
-  }
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  return siteUrl ? `${siteUrl}${normalizedPath}` : normalizedPath;
 };
 
 export const siteConfig = {
   name: "HIVE",
-  url: getSiteUrl(),
+  url: siteUrl,
   description:
     "A social hub for sharing posts, discovering people, tracking points, and staying connected with your hive.",
   image: "/Hive.jpeg",
@@ -33,13 +33,12 @@ type CreateMetadataOptions = {
 };
 
 const getImageUrl = (image?: string | null) => {
-  if (!image) return siteConfig.image;
+  if (!image) return getCanonicalUrl(siteConfig.image);
 
-  try {
-    return new URL(image).toString();
-  } catch {
-    return image.startsWith("/") ? image : siteConfig.image;
-  }
+  if (isAbsoluteUrl(image)) return image;
+  if (image.startsWith("/")) return getCanonicalUrl(image);
+
+  return getCanonicalUrl(siteConfig.image);
 };
 
 export const createMetadata = ({
@@ -50,7 +49,7 @@ export const createMetadata = ({
   type = "website",
   noIndex = false,
 }: CreateMetadataOptions): Metadata => {
-  const canonical = new URL(path, siteConfig.url);
+  const canonical = getCanonicalUrl(path);
   const imageUrl = getImageUrl(image);
   const brandedTitle = title === siteConfig.name ? title : `${title} | ${siteConfig.name}`;
 

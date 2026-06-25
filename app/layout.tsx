@@ -15,7 +15,6 @@ export const metadata: Metadata = {
     title: "HIVE",
     description: siteConfig.description,
   }),
-  metadataBase: siteConfig.url,
   applicationName: siteConfig.name,
   generator: "Next.js",
   keywords: [

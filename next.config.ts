@@ -1,18 +1,5 @@
 import type { NextConfig } from "next";
 
-const normalizePublicAppUrl = () => {
-  const fallbackUrl = "https://hive-social.netlify.app";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  process.env.NEXT_PUBLIC_APP_URL = appUrl
-    ? /^https?:\/\//i.test(appUrl)
-      ? appUrl
-      : `https://${appUrl}`
-    : fallbackUrl;
-};
-
-normalizePublicAppUrl();
-
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
