@@ -68,12 +68,14 @@ export const createMetadata = ({
         {
           url: imageUrl,
           alt: brandedTitle,
+          width: 100,
+          height: 100,
         },
       ],
       type,
     },
     twitter: {
-      card: "summary_large_image",
+      card: "summary",
       title: brandedTitle,
       description,
       images: [imageUrl],
@@ -93,7 +95,7 @@ export const createMetadata = ({
           googleBot: {
             index: true,
             follow: true,
-            "max-image-preview": "large",
+            "max-image-preview": "standard",
             "max-snippet": -1,
             "max-video-preview": -1,
           },

@@ -8,10 +8,13 @@ const protectedRoutes = [
   "/posts",
   "/leaderboard",
   "/search",
+  "/points",
 ];
 
 const guestRoutes = ["/"];
 const verifyRoute = ["/verify"];
+const metadataCrawlerPattern =
+  /\b(bot|crawler|spider|preview|facebookexternalhit|twitterbot|slackbot|discordbot|linkedinbot|whatsapp|telegrambot|googlebot|bingbot|duckduckbot|applebot|pinterest|skypeuripreview)\b/i;
 
 function hasPendingApproval(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   const approved = cookieStore.get("user_approved")?.value;
@@ -27,6 +30,10 @@ export async function proxy(req: NextRequest) {
   const isGuestRoute = guestRoutes.includes(path);
   const isSignupRoute = path === "/signup";
   const isVerifyRoute = verifyRoute.includes(path);
+  const isReadRequest = req.method === "GET" || req.method === "HEAD";
+  const isMetadataCrawler = metadataCrawlerPattern.test(
+    req.headers.get("user-agent") ?? "",
+  );
   const cookieStore = await cookies();
   const token = cookieStore.get("refresh_token")?.value;
   const pendingApproval = hasPendingApproval(cookieStore);
@@ -36,6 +43,10 @@ export async function proxy(req: NextRequest) {
   }
 
   if (isProtectedRoute) {
+    if (isReadRequest && isMetadataCrawler) {
+      return NextResponse.next();
+    }
+
     if (pendingApproval) {
       return NextResponse.redirect(new URL("/verify", req.nextUrl));
     }
