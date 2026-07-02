@@ -160,7 +160,7 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
             <div
               onClick={() => {
                 navigator.clipboard.writeText(
-                  `https://stareducationacademy.netlify.app/posts/${post.id}`,
+                  `${process.env.NEXT_PUBLIC_APP_URL}/posts/${post.id}`,
                 );
                 toast.success("Link copied to clipboard", {
                   id: `share-${post.id}`,
@@ -183,7 +183,7 @@ const PostCard = ({ post, view }: { post: PostType; view: boolean }) => {
       </div>
 
       {viewerOpen && (
-        <div className="z-[100]">
+        <div className="z-100">
           <ImageViewer
             images={images}
             index={viewerIndex}
