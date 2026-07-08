@@ -39,9 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-chat-endpoint-api.txt
-chat-leaderboard-endpoint-plan.txt
-
-todo.txt
-agentic-todo.txt

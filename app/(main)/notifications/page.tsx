@@ -128,8 +128,8 @@ const NotificationsPage = () => {
       const previousNotifications = queryClient.getQueryData(["notifications"]);
       
       // Optimistically update to mark as read
-      queryClient.setQueriesData({ queryKey: ["notifications"] }, (old: typeof previousNotifications) => {
-        if (!old) return old;
+      queryClient.setQueriesData({ queryKey: ["notifications"] }, (old: any) => {
+        if (!old || !old.pages) return old;
         return {
           ...old,
           pages: old.pages.map((page: any) => ({
