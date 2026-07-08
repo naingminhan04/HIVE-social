@@ -1,7 +1,7 @@
 import React from "react";
 import OverlayPortal from "../layout/OverlayPortal";
 import RecoverableImage from "../common/RecoverableImage";
-import { X, Search, Plus, Loader2 } from "lucide-react";
+import { Coins, Plus, Search, X, Loader2 } from "lucide-react";
 import type { SearchUserType } from "@/types/search";
 import type { ComposeMode } from "@/types/chat";
 import { GlobalSettings } from "@/utils/global-settings";
@@ -92,8 +92,9 @@ export function ComposeModal({
             ) : (
               <>
                 <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name" className="h-11 w-full rounded-xl border border-black/10 bg-neutral-50 px-3 text-base outline-none focus:border-blue-400 dark:border-white/10 dark:bg-neutral-900" style={{ fontSize: 16 }} />
-                <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                  Group creation cost: {GlobalSettings.groupChatCreationCost} points
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 border border-neutral-200 dark:bg-black dark:border-neutral-700 dark:text-neutral-300">
+                  <Coins size={12} className="text-amber-500 dark:text-amber-400" />
+                  <span>Group creation: {GlobalSettings.groupChatCreationCost} points</span>
                 </p>
                 {groupUsers.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">

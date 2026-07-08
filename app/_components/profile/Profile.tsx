@@ -28,6 +28,7 @@ import {
 } from "@tanstack/react-query";
 import {
   ChevronLeft,
+  Coins,
   ShieldCheck,
   PencilLine,
   X,
@@ -1000,8 +1001,9 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     <p className="mt-2 truncate text-sm text-gray-600 dark:text-gray-400">
                       Update your display name and bio.
                     </p>
-                    <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                      Name change cost: {GlobalSettings.nameChangeCost} points (first {GlobalSettings.freeNameChangePerMonth} per month free)
+                    <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 border border-neutral-200 dark:bg-black dark:border-neutral-700 dark:text-neutral-300">
+                      <Coins size={12} className="text-amber-500 dark:text-amber-400" />
+                      <span>Name change: {GlobalSettings.nameChangeCost} points ({GlobalSettings.freeNameChangePerMonth} free/month)</span>
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <input
@@ -1039,8 +1041,9 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     <p className="mt-2 truncate text-sm text-gray-600 dark:text-gray-400">
                       Change your username and keep your profile identity current.
                     </p>
-                    <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                      Username change cost: {GlobalSettings.usernameChangeCost} points (first {GlobalSettings.freeUsernameChangePerMonth} per month free)
+                    <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 border border-neutral-200 dark:bg-black dark:border-neutral-700 dark:text-neutral-300">
+                      <Coins size={12} className="text-amber-500 dark:text-amber-400" />
+                      <span>Username change: {GlobalSettings.usernameChangeCost} points ({GlobalSettings.freeUsernameChangePerMonth} free/month)</span>
                     </p>
                     <input
                       {...registerUsername("username")}

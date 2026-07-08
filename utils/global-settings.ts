@@ -18,10 +18,10 @@ export const GlobalSettings = {
   nameChangeCost: 100,
   usernameChangeCost: 150,
   pollCreationCost: 50,
-  postCreationCost: 3,
+  postCreationCost: 5,
   chatroomCreationCost: 3,
   groupChatCreationCost: 200,
-  thoughtCreationCost: 3,
+  thoughtCreationCost: 5,
   hotItemThreshold: 20,
   chatroomParticipantsSize: 6,
 

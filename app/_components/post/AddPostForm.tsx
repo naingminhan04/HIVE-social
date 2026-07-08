@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Coins,
   FileIcon,
   ImageIcon,
   LoaderIcon,
@@ -322,8 +323,9 @@ export default function AddPostBtn({
                         <span className="text-blue-600 dark:text-blue-500 font-semibold">(You)</span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Post cost: {GlobalSettings.postCreationCost} points
+                    <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 border border-neutral-200 dark:bg-black dark:border-neutral-700 dark:text-neutral-300">
+                      <Coins size={12} className="text-amber-500 dark:text-amber-400" />
+                      <span>{GlobalSettings.postCreationCost} points to post</span>
                     </p>
                   </div>
                 </div>
