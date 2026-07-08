@@ -12,8 +12,77 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { Bell, ChevronLeft } from "lucide-react";
 import { useRouter } from "nextjs-toploader/app";
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 
 const PAGE_SIZE = 15;
+
+// Helper function to get notification icon and type
+const getNotificationInfo = (notification: NotificationItem) => {
+  const text = notification.text?.toLowerCase() || '';
+  
+  // Improved reaction detection - check for specific emoji patterns
+  const reactionType = notification.reactionType?.toLowerCase() || 
+                      notification.target.postReaction?.reactionType?.toLowerCase() ||
+                      notification.target.commentReaction?.reactionType?.toLowerCase() || '';
+  
+  if (text.includes('reacted') || text.includes('reaction') || reactionType) {
+    // Use reactionType from notification if available
+    if (reactionType.includes('like') || text.includes('like')) return { icon: 'like', type: 'reaction', label: 'Like', color: 'text-blue-500' };
+    if (reactionType.includes('love') || text.includes('love')) return { icon: 'love', type: 'reaction', label: 'Love', color: 'text-pink-500' };
+    if (reactionType.includes('haha') || text.includes('haha') || text.includes('😂') || text.includes('😄')) return { icon: 'haha', type: 'reaction', label: 'Haha', color: 'text-yellow-500' };
+    if (reactionType.includes('wow') || text.includes('wow') || text.includes('😮')) return { icon: 'wow', type: 'reaction', label: 'Wow', color: 'text-purple-500' };
+    if (reactionType.includes('sad') || text.includes('sad') || text.includes('😢') || text.includes('😭')) return { icon: 'sad', type: 'reaction', label: 'Sad', color: 'text-indigo-500' };
+    if (reactionType.includes('angry') || text.includes('angry') || text.includes('😠') || text.includes('😡')) return { icon: 'angry', type: 'reaction', label: 'Angry', color: 'text-red-500' };
+    return { icon: 'like', type: 'reaction', label: 'Reaction', color: 'text-blue-500' };
+  }
+  
+  if (text.includes('comment') || notification.commentId) {
+    return { icon: 'comment', type: 'comment', label: 'Comment', color: 'text-green-500' };
+  }
+  
+  if (text.includes('shared a thought')) {
+    return { icon: 'thought', type: 'thought', label: 'Thought', color: 'text-amber-500' };
+  }
+  
+  if (text.includes('message') || notification.messageId) {
+    return { icon: 'message', type: 'message', label: 'Message', color: 'text-blue-400' };
+  }
+  
+  if (text.includes('profile') || notification.profileViewId) {
+    return { icon: 'profile', type: 'profile', label: 'Profile View', color: 'text-cyan-500' };
+  }
+  
+  if (text.includes('points') || notification.pointTransactionId) {
+    return { icon: 'points', type: 'points', label: 'Points', color: 'text-amber-600' };
+  }
+  
+  return { icon: 'general', type: 'general', label: 'Notification', color: 'text-gray-500' };
+};
+
+// Helper function to format notification text with semibold names
+const formatNotificationText = (text: string, actorName?: string) => {
+  if (!text) return text;
+  
+  // Remove all emojis from the text
+  const textWithoutEmojis = text.replace(
+    /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{1F300}-\u{1F5FF}]/gu,
+    ''
+  ).replace(/\s+/g, ' ').trim();
+  
+  // Use provided actor name or return plain text
+  if (actorName && textWithoutEmojis.includes(actorName)) {
+    const parts = textWithoutEmojis.split(actorName);
+    return (
+      <>
+        {parts[0]}
+        <span className="font-semibold">{actorName}</span>
+        {parts[1]}
+      </>
+    );
+  }
+  
+  return textWithoutEmojis;
+};
 
 const NotificationsPage = () => {
   const router = useRouter();
@@ -51,8 +120,38 @@ const NotificationsPage = () => {
       }
       return result.data;
     },
+    onMutate: async (notificationId: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      
+      // Snapshot the previous value
+      const previousNotifications = queryClient.getQueryData(["notifications"]);
+      
+      // Optimistically update to mark as read
+      queryClient.setQueriesData({ queryKey: ["notifications"] }, (old: typeof previousNotifications) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((n: NotificationItem) => 
+              n.id === notificationId ? { ...n, isRead: true } : n
+            ),
+          })),
+        };
+      });
+      
+      return { previousNotifications };
+    },
+    onError: (err, notificationId, context) => {
+      // Rollback on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(["notifications"], context.previousNotifications);
+      }
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notificationUnreadCount"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
@@ -89,9 +188,10 @@ const NotificationsPage = () => {
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  const handleNotificationClick = (notification: NotificationItem) => {
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    // Mark as read first before navigating
     if (!notification.isRead) {
-      markReadMutation.mutate(notification.id);
+      await markReadMutation.mutateAsync(notification.id);
     }
 
     const href = getNotificationHref(notification);
@@ -180,18 +280,45 @@ const NotificationsPage = () => {
                     }`}
                 >
                   <div className="relative shrink-0">
-                    <RecoverableImage
-                      src={notification.actorUser?.profilePic || "/default-avatar.png"}
-                      alt={notification.actorUser?.name || "Notification"}
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 rounded-full object-cover"
-                      wrapperClassName="h-12 w-12 shrink-0 rounded-full"
-                      fallbackSrc="/default-avatar.png"
-                      userId={notification.actorUser?.id}
-                      showOnlineStatus={!!notification.actorUser?.id}
-                      onlineStatusSize="sm"
-                    />
+                    {/* Show PNG for reactions, profile pic for other notifications */}
+                    {getNotificationInfo(notification).type === 'reaction' ? (
+                      <div className="relative h-12 w-12">
+                        <RecoverableImage
+                          src={notification.actorUser?.profilePic || "/default-avatar.png"}
+                          alt={notification.actorUser?.name || "Notification"}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-full object-cover"
+                          wrapperClassName="h-12 w-12 shrink-0 rounded-full"
+                          fallbackSrc="/default-avatar.png"
+                          userId={notification.actorUser?.id}
+                          showOnlineStatus={!!notification.actorUser?.id}
+                          onlineStatusSize="sm"
+                        />
+                        <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full border-2 border-white bg-white dark:border-neutral-900 dark:bg-neutral-900 p-0.5">
+                          <Image
+                            src={`/${getNotificationInfo(notification).icon}.png`}
+                            alt={getNotificationInfo(notification).label}
+                            width={20}
+                            height={20}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <RecoverableImage
+                        src={notification.actorUser?.profilePic || "/default-avatar.png"}
+                        alt={notification.actorUser?.name || "Notification"}
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 rounded-full object-cover"
+                        wrapperClassName="h-12 w-12 shrink-0 rounded-full"
+                        fallbackSrc="/default-avatar.png"
+                        userId={notification.actorUser?.id}
+                        showOnlineStatus={!!notification.actorUser?.id}
+                        onlineStatusSize="sm"
+                      />
+                    )}
                     {!notification.isRead ? (
                       <span
                         className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-blue-500 dark:border-neutral-900"
@@ -203,10 +330,10 @@ const NotificationsPage = () => {
                     <span
                       className={`block text-sm leading-relaxed wrap-break-word ${notification.isRead
                         ? "text-neutral-700 dark:text-neutral-200"
-                        : "font-semibold text-neutral-900 dark:text-neutral-50"
+                        : "text-neutral-900 dark:text-neutral-50"
                         }`}
                     >
-                      {notification.text || "You have a new notification"}
+                      {formatNotificationText(notification.text || "You have a new notification", notification.actorUser?.name)}
                     </span>
                     <span className="mt-1.5 block text-xs text-neutral-500 dark:text-neutral-400">
                       {formatDate(notification.createdAt, false, true)}

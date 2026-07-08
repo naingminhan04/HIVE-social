@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "nextjs-toploader/app";
-import { Clock3, LogOut, RefreshCw } from "lucide-react";
+import { Clock3, LogOut, RefreshCw, User } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/auth";
+import loginAction from "../_actions/login";
 import { logoutAction } from "../_actions/logout";
 import { ensurePendingAuthContextAction } from "../_actions/ensurePendingAuthContext";
 import { checkAccountStatusAction } from "../_actions/checkAccountStatus";
@@ -18,6 +19,7 @@ const Verify = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const logOut = useAuthStore((state) => state.logOut);
   const isAuthResolved = useAuthResolved();
   const isAuthLoading = useAuthLoading();
@@ -95,13 +97,15 @@ const Verify = () => {
     setUser(result.data.user);
 
     if (result.data.user.isVerified) {
-      toast.success("Your account has been approved!");
+      toast.success("Your account has been approved!", { id: "check-status" });
       router.replace("/home");
       return;
     }
 
     if (!options?.silentPending) {
-      toast("Still waiting for admin approval.", { icon: "⏳" });
+      toast("Still waiting for admin approval.", { 
+        id: "check-status" // Use same ID to prevent multiple toasts
+      });
     }
   }, [router, setUser]);
 
@@ -120,9 +124,43 @@ const Verify = () => {
 
   const logoutMutation = useMutation({
     mutationFn: logoutAction,
-    onSettled: () => {
+    onMutate: () => {
+      // Don't clear auth store yet to prevent layout shift
+      return { userBeforeLogout: user };
+    },
+    onSettled: async () => {
+      // Wait for routing to complete before clearing auth store
+      await router.replace("/");
+      // Only clear auth store after routing is complete
       logOut();
-      router.replace("/");
+    },
+  });
+
+  const demoLoginMutation = useMutation({
+    mutationFn: async () => {
+      const demoEmail = process.env.DEMO_EMAIL || "demouser@gmail.com";
+      const demoPassword = process.env.DEMO_PASSWORD || "12345678";
+      
+      return await loginAction({ email: demoEmail, password: demoPassword });
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        setUser(result.data.user);
+        setAccessToken(result.data.accessToken ?? null);
+        toast.success("Logged in as demo user");
+        router.replace("/home");
+      } else if (result.notVerified && result.email) {
+        // Handle verification needed
+        setUser(null);
+        setAccessToken(null);
+        toast("Demo account needs verification", { icon: "⏳" });
+        router.replace("/verify");
+      } else {
+        toast.error(result.error || "Failed to login as demo user");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to login as demo user");
     },
   });
 
@@ -194,8 +232,8 @@ const Verify = () => {
         />
 
         <div className="flex flex-col items-center gap-3">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-            <Clock3 size={24} />
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white border border-neutral-200 dark:bg-black dark:border-neutral-700">
+            <Clock3 size={24} className="text-black dark:text-white" />
           </span>
           <div>
             <h1 className="text-2xl font-bold text-neutral-950 dark:text-neutral-50">
@@ -226,21 +264,33 @@ const Verify = () => {
           ) : null}
 
           {showSessionCheck || showPasswordRecheck ? (
-            <button
-              type="button"
-              onClick={() => checkStatusMutation.mutate()}
-              disabled={
-                checkStatusMutation.isPending ||
-                (showPasswordRecheck && !password.trim() && !showSessionCheck)
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100"
-            >
-              <RefreshCw
-                size={16}
-                className={checkStatusMutation.isPending ? "animate-spin" : undefined}
-              />
-              {checkStatusMutation.isPending ? "Checking..." : "Check status"}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => checkStatusMutation.mutate()}
+                disabled={
+                  checkStatusMutation.isPending ||
+                  (showPasswordRecheck && !password.trim() && !showSessionCheck)
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100"
+              >
+                <RefreshCw
+                  size={16}
+                  className={checkStatusMutation.isPending ? "animate-spin" : undefined}
+                />
+                {checkStatusMutation.isPending ? "Checking..." : "Check status"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => demoLoginMutation.mutate()}
+                disabled={demoLoginMutation.isPending}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100"
+              >
+                <User size={16} className={demoLoginMutation.isPending ? "animate-spin" : undefined} />
+                {demoLoginMutation.isPending ? "Logging in..." : "Login as demo user"}
+              </button>
+            </>
           ) : null}
 
           <button

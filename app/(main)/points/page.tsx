@@ -387,7 +387,7 @@ export default function PointsPage() {
           </div>
         </div>
 
-        <div className="sticky top-[7.5rem] z-20 border-b border-black/5 bg-neutral-100/95 px-1.5 py-1.5 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 md:px-0 lg:top-15">
+        <div className="sticky top-30 z-20 border-b border-black/5 bg-neutral-100/95 px-1.5 py-1.5 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95 md:px-0 lg:top-15">
           <div className="grid h-12 grid-cols-4 gap-1.5">
             {tabs.map((tab) => {
               const Icon = tab.icon;

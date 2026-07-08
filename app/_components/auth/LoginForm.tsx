@@ -8,6 +8,7 @@ import loginAction from "@/app/_actions/login";
 import { useState } from "react";
 import { PiWarningCircle } from "react-icons/pi";
 import GoogleAuthButton from "./GoogleAuthButton";
+import { Info, X } from "lucide-react";
 
 type Inputs = {
   email: string;
@@ -19,6 +20,7 @@ const LoginForm = () => {
   const setAccessToken = useAuthStore((state) => state.setAccessToken);
   const router = useRouter();
   const [error, setError] = useState("");
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   const {
     register,
@@ -39,13 +41,14 @@ const LoginForm = () => {
       return { needsVerification: false as const, data: result.data };
     },
     onSuccess: (result) => {
-      reset();
       setError("");
 
       if (result.needsVerification) {
         setUser(null);
         setAccessToken(null);
+        // Don't clear form until routing completes
         router.replace("/verify");
+        setTimeout(() => reset(), 100); // Small delay to ensure routing started
         return;
       }
 
@@ -56,7 +59,9 @@ const LoginForm = () => {
 
       setUser(result.data.user);
       setAccessToken(result.data.accessToken ?? null);
+      // Don't clear form until routing completes
       router.replace(result.data.user.isVerified ? "/home" : "/verify");
+      setTimeout(() => reset(), 100); // Small delay to ensure routing started
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -96,7 +101,7 @@ const LoginForm = () => {
             className={`peer w-full border border-gray-300 dark:border-neutral-700 outline-0 p-4 rounded-md ${errors.email
                 ? "border-red-600"
                 : "focus:border-black dark:focus:border-white"
-              }`}
+              } ${mutation.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
             {...register("email", {
               required: "Please enter your email",
               pattern: {
@@ -104,6 +109,7 @@ const LoginForm = () => {
                 message: "Please enter a valid email",
               },
             })}
+            disabled={mutation.isPending}
           />
           <label
             htmlFor="email"
@@ -112,6 +118,7 @@ const LoginForm = () => {
             peer-focus:-top-2 peer-focus:left-2 peer-focus:text-xs peer-focus:text-gray-700 dark:peer-focus:text-gray-200
             peer-not-placeholder-shown:-top-2 peer-not-placeholder-shown:left-2 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-gray-700 dark:peer-not-placeholder-shown:text-gray-200
             ${errors.email && "peer-focus:text-red-600 peer-not-placeholder-shown:text-red-600"}
+            ${mutation.isPending ? 'opacity-70' : ''}
           `}
           >
             Email address
@@ -127,10 +134,11 @@ const LoginForm = () => {
             className={`peer w-full border border-gray-300 dark:border-neutral-700 outline-0 p-4 rounded-md ${errors.password
                 ? "border-red-600"
                 : "focus:border-black dark:focus:border-white"
-              }`}
+              } ${mutation.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
             {...register("password", {
               required: "Please enter your password",
             })}
+            disabled={mutation.isPending}
           />
           <label
             htmlFor="password"
@@ -139,6 +147,7 @@ const LoginForm = () => {
             peer-focus:-top-2 peer-focus:left-2 peer-focus:text-xs peer-focus:text-gray-700 dark:peer-focus:text-gray-200
             peer-not-placeholder-shown:-top-2 peer-not-placeholder-shown:left-2 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-gray-700 dark:peer-not-placeholder-shown:text-gray-200
             ${errors.password && "peer-focus:text-red-600 peer-not-placeholder-shown:text-red-600"}
+            ${mutation.isPending ? 'opacity-70' : ''}
           `}
           >
             Password
@@ -148,7 +157,7 @@ const LoginForm = () => {
 
         <button
           type="submit"
-          className="p-3 font-bold bg-neutral-800 dark:bg-neutral-300 hover:bg-neutral-950 dark:hover:bg-neutral-50 active:bg-neutral-800 dark:active:bg-neutral-200 text-white dark:text-black rounded-md"
+          className="p-3 font-bold bg-neutral-800 dark:bg-neutral-300 hover:bg-neutral-950 dark:hover:bg-neutral-50 active:bg-neutral-800 dark:active:bg-neutral-200 text-white dark:text-black rounded-md disabled:opacity-70 disabled:cursor-not-allowed"
           disabled={mutation.isPending}
         >
           {mutation.isPending ? "Logging in..." : "Login"}
@@ -162,6 +171,78 @@ const LoginForm = () => {
         )}
       </form>
 
+      {/* Info Modal */}
+      {showInfoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-neutral-200 dark:bg-black dark:border-neutral-700">
+                  <Info size={20} className="text-black dark:text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  Welcome to HIVE
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="rounded-full p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+              <p>
+                <strong>New users need to get verified</strong> by an admin before accessing all features.
+              </p>
+              <p>
+                While waiting for verification, you can try our demo account to explore the platform.
+              </p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Demo account has same functionalities as user accounts but shared between demo users.
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const demoEmail = process.env.DEMO_EMAIL || "demouser@gmail.com";
+                    const demoPassword = process.env.DEMO_PASSWORD || "12345678";
+                    
+                    // Call the login mutation directly with demo credentials
+                    mutation.mutate({ email: demoEmail, password: demoPassword });
+                    setShowInfoModal(false);
+                  } catch (error) {
+                    console.error("Failed to login with demo credentials:", error);
+                    setError("Failed to login as demo user");
+                  }
+                }}
+                disabled={mutation.isPending}
+                className="p-3 font-bold bg-neutral-800 dark:bg-neutral-300 hover:bg-neutral-950 dark:hover:bg-neutral-50 active:bg-neutral-800 dark:active:bg-neutral-200 text-white dark:text-black rounded-md disabled:opacity-60"
+              >
+                {mutation.isPending ? "Logging in..." : "Log In as demo user"}
+              </button>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="rounded-lg border border-neutral-300 px-4 py-3 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-800"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info Button */}
+      <button
+        onClick={() => setShowInfoModal(true)}
+        className="fixed right-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-white border border-neutral-200 shadow-lg transition hover:bg-neutral-50 dark:bg-black dark:border-neutral-700 dark:hover:bg-neutral-900"
+        aria-label="Information"
+      >
+        <Info size={20} className="text-black dark:text-white" />
+      </button>
     </div>
   );
 };

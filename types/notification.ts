@@ -17,6 +17,7 @@ export type NotificationItem = {
   messageId: string | null;
   profileViewId: string | null;
   pointTransactionId: string | null;
+  reactionType: string | null;
   target: {
     post: { id: string } | null;
     comment: { id: string; post?: { id: string } | null } | null;
@@ -25,8 +26,14 @@ export type NotificationItem = {
       profile?: { username?: string | null } | null;
     } | null;
     pointTransaction: unknown | null;
-    postReaction: { post?: { id: string } | null } | null;
-    commentReaction: { comment?: { post?: { id: string } | null } | null } | null;
+    postReaction: { 
+      reactionType?: string | null;
+      post?: { id: string } | null 
+    } | null;
+    commentReaction: { 
+      reactionType?: string | null;
+      comment?: { post?: { id: string } | null } | null 
+    } | null;
   };
   createdAt: string;
   updatedAt: string;

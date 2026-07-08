@@ -216,6 +216,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
       setIsThoughtOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["activeThought", user?.id] });
       await queryClient.invalidateQueries({ queryKey: ["pointsSummary"] });
+      await queryClient.invalidateQueries({ queryKey: ["pointsInfo"] });
       if (viewer && data.thought.userId === viewer.id) {
         setViewer({
           ...viewer,
@@ -330,6 +331,9 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
         });
       }
       await syncUser();
+      // Revalidate points after profile update
+      await queryClient.invalidateQueries({ queryKey: ["pointsInfo"] });
+      await queryClient.invalidateQueries({ queryKey: ["pointsSummary"] });
       toast.success("Profile updated", { id: toastId });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update", {
@@ -368,6 +372,9 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
           setViewer({ ...viewer, username: result.data.username });
         }
         setIsEditOpen(false);
+        // Revalidate points after username change
+        await queryClient.invalidateQueries({ queryKey: ["pointsInfo"] });
+        await queryClient.invalidateQueries({ queryKey: ["pointsSummary"] });
         if (!isPortal) {
           router.replace(`/users/${result.data.username}`);
         }
@@ -1003,7 +1010,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     </p>
                     <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 border border-neutral-200 dark:bg-black dark:border-neutral-700 dark:text-neutral-300">
                       <Coins size={12} className="text-amber-500 dark:text-amber-400" />
-                      <span>Name change: {GlobalSettings.nameChangeCost} points ({GlobalSettings.freeNameChangePerMonth} free/month)</span>
+                      <span>Name change: {GlobalSettings.nameChangeCost} points</span>
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <input
@@ -1043,7 +1050,7 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                     </p>
                     <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 border border-neutral-200 dark:bg-black dark:border-neutral-700 dark:text-neutral-300">
                       <Coins size={12} className="text-amber-500 dark:text-amber-400" />
-                      <span>Username change: {GlobalSettings.usernameChangeCost} points ({GlobalSettings.freeUsernameChangePerMonth} free/month)</span>
+                      <span>Username change: {GlobalSettings.usernameChangeCost} points</span>
                     </p>
                     <input
                       {...registerUsername("username")}
@@ -1128,9 +1135,10 @@ const Profile = ({ username, isPortal = false }: ProfileProps) => {
                   <h2 className="truncate text-lg font-semibold text-black dark:text-white">
                     Share a Thought
                   </h2>
-                  <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
-                    {GlobalSettings.thoughtCreationCost} points to post
-                  </p>
+                  <div className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 border border-neutral-200 dark:bg-black dark:border-neutral-700 dark:text-neutral-300">
+                    <Coins size={12} className="text-amber-500 dark:text-amber-400" />
+                    <span>{GlobalSettings.thoughtCreationCost} points to post</span>
+                  </div>
                 </div>
                 <button
                   type="button"

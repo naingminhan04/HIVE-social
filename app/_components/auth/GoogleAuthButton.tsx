@@ -91,7 +91,7 @@ const GoogleAuthButton = ({
         >
           <div
             aria-hidden
-            className={`flex h-full w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white p-3 text-sm font-bold text-neutral-900 transition hover:bg-neutral-100 active:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-50 dark:active:bg-neutral-300 ${isDisabled ? "opacity-60" : ""
+            className={`flex h-full w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white p-3 text-sm font-bold text-neutral-900 transition hover:bg-neutral-100 active:bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-50 dark:active:bg-neutral-300 ${isDisabled ? "opacity-70 cursor-not-allowed" : ""
               }`}
           >
             <FcGoogle className="h-5 w-5 shrink-0" />

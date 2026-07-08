@@ -65,14 +65,17 @@ const OverviewTab = ({
 
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {[
-            { label: "Streak", value: dailyInfo?.streak ?? "-" },
             {
               label: "Remaining Balance",
               value: dailyInfo?.remainingBalance ?? "-",
             },
-            { label: "Points Earned", value: dailyInfo?.pointsEarned ?? "-" },
+            { label: "Streak", value: dailyInfo?.streak ?? "-" },
             {
-              label: "Available Today",
+              label: "Points Earned",
+              value: dailyInfo?.pointsEarned ?? "-",
+            },
+            {
+              label: dailyInfo?.canClaim ? "Available Today" : "Available Tomorrow",
               value: dailyInfo?.pointsAvailable ?? "-",
             },
           ].map((item) => (

@@ -27,9 +27,9 @@ export function getNotificationHref(notification: NotificationItem): string | nu
     return `/chat/${chatId}`;
   }
 
-  const profileUsername = notification.target.profileView?.profile?.username;
-  if (notification.profileViewId && profileUsername) {
-    return `/users/${profileUsername}?profileViews=1`;
+  // Profile view notifications - don't route anywhere
+  if (notification.profileViewId) {
+    return null;
   }
 
   if (isThoughtNotification(notification) && notification.actorUser?.username) {

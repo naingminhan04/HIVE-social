@@ -21,7 +21,7 @@ export const GlobalSettings = {
   postCreationCost: 5,
   chatroomCreationCost: 3,
   groupChatCreationCost: 200,
-  thoughtCreationCost: 5,
+  thoughtCreationCost: 3,
   hotItemThreshold: 20,
   chatroomParticipantsSize: 6,
 
